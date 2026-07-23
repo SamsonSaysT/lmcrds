@@ -132,6 +132,7 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
   display:inline-block;margin-left:8px;font-size:.66rem;text-transform:uppercase;
   letter-spacing:.1em;color:var(--rind-text);font-weight:700;vertical-align:1px;
 }
+.rkind.approx{color:var(--muted)}
 .results .cc{display:block;color:var(--muted);font-size:.82rem;margin-top:2px;line-height:1.35}
 .searchbox input.busy{
   background-image:linear-gradient(90deg,transparent,var(--zest),transparent);
@@ -1025,9 +1026,18 @@ function contextLine(o, name){
   return bits.filter(Boolean).join(", ");
 }
 
-async function fromPhoton(q, near, signal){
-  const bias = near ? `&lat=${near.lat.toFixed(4)}&lon=${near.lon.toFixed(4)}` : "";
-  const r = await fetch(`${PHOTON}/?q=${encodeURIComponent(q)}&limit=8${bias}`, { signal });
+async function fromPhoton(q, near, signal, local){
+  let extra = "";
+  if(near){
+    extra = `&lat=${near.lat.toFixed(4)}&lon=${near.lon.toFixed(4)}`;
+    if(local){
+      /* a hard box around home — a soft bias alone loses to big far-away cities */
+      const d = 0.9;
+      extra += `&bbox=${(near.lon-d).toFixed(3)},${(near.lat-d).toFixed(3)},` +
+               `${(near.lon+d).toFixed(3)},${(near.lat+d).toFixed(3)}`;
+    }
+  }
+  const r = await fetch(`${PHOTON}/?q=${encodeURIComponent(q)}&limit=8${extra}`, { signal });
   if(!r.ok) throw new Error("photon");
   const j = await r.json();
   return (j.features || []).map((f, i) =>{
@@ -1046,13 +1056,57 @@ async function fromPhoton(q, near, signal){
   }).filter(x => isFinite(x.lat) && isFinite(x.lon));
 }
 
-async function fromNominatim(q, near, signal){
-  /* viewbox with bounded=0 nudges toward home without hiding anything else */
+/* ---------- US address fallback ----------
+   OSM's US house-number coverage is patchy — plenty of real addresses simply
+   aren't mapped, which is why a search can miss a street it draws on the map.
+   The Census geocoder covers every US address via TIGER range interpolation.
+   It's free and keyless; JSONP because CORS there is unreliable. */
+function jsonp(url, ms = 5000){
+  return new Promise((res, rej)=>{
+    const cb = "__lc" + Math.random().toString(36).slice(2);
+    const s = document.createElement("script");
+    const timer = setTimeout(()=>{ cleanup(); rej(new Error("timeout")); }, ms);
+    function cleanup(){ clearTimeout(timer); delete window[cb]; s.remove(); }
+    window[cb] = d =>{ cleanup(); res(d); };
+    s.onerror = ()=>{ cleanup(); rej(new Error("jsonp")); };
+    s.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cb;
+    document.head.appendChild(s);
+  });
+}
+async function fromCensus(q){
+  /* the geocoder wants a town — reuse the last one we resolved an address in */
+  let addr = q;
+  if(!/,/.test(q)){
+    const town = (()=>{ try{ return localStorage.getItem("lemoncoords.town") || ""; }catch{ return ""; } })();
+    if(town) addr = q + ", " + town;
+  }
+  const url = "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress" +
+    "?benchmark=Public_AR_Current&format=jsonp&address=" + encodeURIComponent(addr);
+  const j = await jsonp(url);
+  const hits = j?.result?.addressMatches || [];
+  return hits.slice(0, 4).map((m, i) =>{
+    const c = m.coordinates || {}, a = m.addressComponents || {};
+    const street = [a.preDirection, a.streetName, a.suffixType, a.postDirection]
+      .filter(Boolean).join(" ");
+    const name = [a.fromAddress, street].filter(Boolean).join(" ") || m.matchedAddress;
+    return {
+      lat: +c.y, lon: +c.x, name: titleCase(name), rank: i,
+      housenumber: a.fromAddress || "", kind: "address", cc: "us",
+      ctx: contextLine({ city: titleCase(a.city || ""), state: a.state,
+                         postcode: a.zip, country: "United States", cc: "us" }, name)
+    };
+  }).filter(x => isFinite(x.lat) && isFinite(x.lon));
+}
+function titleCase(s){
+  return String(s).toLowerCase().replace(/\b([a-z])/g, m => m.toUpperCase());
+}
+
+async function fromNominatim(q, near, signal, local){
   let box = "";
   if(near){
-    const d = 1.6;
+    const d = local ? 0.9 : 1.6;
     box = `&viewbox=${(near.lon-d).toFixed(3)},${(near.lat+d).toFixed(3)},` +
-          `${(near.lon+d).toFixed(3)},${(near.lat-d).toFixed(3)}&bounded=0`;
+          `${(near.lon+d).toFixed(3)},${(near.lat-d).toFixed(3)}&bounded=${local ? 1 : 0}`;
   }
   const r = await fetch(
     `${NOM}/search?format=jsonv2&limit=8&addressdetails=1${box}&q=${encodeURIComponent(q)}`,
@@ -1089,7 +1143,7 @@ function rankHits(list, q, near){
     if(num){
       if(h.housenumber === num) s -= 30; /* the exact house beats the street it's on */
       else if(h.kind === "address") s -= 4;
-      else s += 6;                       /* a bare street when a number was typed */
+      else if(!h.approx) s += 6;         /* a bare street when a number was typed */
     }
     const hay = (h.name + " " + h.ctx).toLowerCase();
     if(words.length && words.every(w => hay.includes(w))) s -= 7;
@@ -1114,6 +1168,12 @@ async function reverseGeocode(p){
   const line1 = [a.house_number, a.road].filter(Boolean).join(" ");
   const city  = a.city || a.town || a.village || a.hamlet || a.county || "";
   const line2 = [city, a.state, a.postcode].filter(Boolean).join(", ");
+  /* remember the town so an address search knows which one to look in */
+  if(city && a.state){
+    try{ localStorage.setItem("lemoncoords.town",
+      city + ", " + (ABBR[a.state] || a.state)); }catch{}
+  }
+  if(a.country_code) biasCC = a.country_code.toLowerCase();
   return [line1, line2].filter(Boolean).join(", ") || j.display_name || null;
 }
 
@@ -1526,8 +1586,8 @@ function renderResults(hits){
     top.textContent = h.name;
 
     const kind = document.createElement("span");
-    kind.className = "rkind";
-    kind.textContent = h.kind;
+    kind.className = "rkind" + (h.approx ? " approx" : "");
+    kind.textContent = h.approx ? "street" : h.kind;
 
     const sub = document.createElement("span");
     sub.className = "cc";
@@ -1569,6 +1629,10 @@ function coordShortcut(q){
   return true;
 }
 
+function leadingNumber(q){
+  return (q.match(/^\s*(\d{1,6})\b/) || [])[1] || "";
+}
+
 async function liveSearch(){
   const q = $("#searchBox").value.trim();
   frontError("");
@@ -1587,43 +1651,72 @@ async function liveSearch(){
   if(searchCache.has(q)){ renderResults(searchCache.get(q)); return; }
 
   $("#searchBox").classList.add("busy");
-  searchTimer = setTimeout(()=>{
-    const ac = new AbortController();
-    searchAbort = ac;
-    const near = biasPoint();
-    const live = () => searchAbort === ac && !ac.signal.aborted;
-    let photonHits = null, done = 0;
+  searchTimer = setTimeout(()=> runAllSources(q), 160);
+}
 
-    const settle = ()=>{
-      if(++done === 2 && live()){
-        searchAbort = null;
-        $("#searchBox").classList.remove("busy");
+function runAllSources(q){
+  const ac = new AbortController();
+  searchAbort = ac;
+  const near = biasPoint();
+  const num = leadingNumber(q);
+  const live = ()=> searchAbort === ac && !ac.signal.aborted;
+
+  let pool = [];
+  let pending = 0;
+
+  const paint = ()=>{
+    if(!live()) return;
+    const ranked = rankHits(dedupe(pool), q, near).slice(0, 7);
+    renderResults(ranked);
+    return ranked;
+  };
+
+  const add = list =>{ if(list && list.length){ pool = pool.concat(list); paint(); } };
+
+  const track = pr =>{
+    pending++;
+    return pr.then(add).catch(()=>{}).finally(()=>{
+      if(--pending === 0) finish();
+    });
+  };
+
+  async function finish(){
+    if(!live()) return;
+    /* A house number was typed but nothing matched it. Rather than show streets
+       in the wrong state, look up the street itself near home and say so. */
+    if(num && !pool.some(h => h.housenumber === num)){
+      const streetOnly = q.replace(/^\s*\d{1,6}\s*/, "").trim();
+      if(streetOnly.length > 2){
+        try{
+          const fallback = await fromPhoton(streetOnly, near, ac.signal, true);
+          if(live() && fallback.length){
+            pool = fallback.map(h => ({
+              ...h, approx: true,
+              ctx: h.ctx ? h.ctx + " · street only — drag the pin to the house"
+                         : "street only — drag the pin to the house"
+            })).concat(pool);
+          }
+        }catch{}
       }
-    };
+    }
+    if(!live()) return;
+    const ranked = paint() || [];
+    searchCache.set(q, ranked);
+    if(searchCache.size > 40) searchCache.delete(searchCache.keys().next().value);
+    if(!ranked.length) frontError("Nothing found. Try adding the city, or just the street.");
+    searchAbort = null;
+    $("#searchBox").classList.remove("busy");
+  }
 
-    /* whatever arrives first goes on screen; the second pass merges and re-ranks */
-    const show = (hits, final)=>{
-      if(!live()) return;
-      const ranked = rankHits(dedupe(hits), q, near).slice(0, 7);
-      if(final) searchCache.set(q, ranked);
-      if(searchCache.size > 40) searchCache.delete(searchCache.keys().next().value);
-      renderResults(ranked);
-      if(final && !ranked.length) frontError("Nothing found. Try adding the city or the street.");
-    };
+  /* fast, forgiving, and one pass pinned to home so local streets can't lose */
+  track(fromPhoton(q, near, ac.signal, true));
+  track(fromPhoton(q, near, ac.signal, false));
 
-    fromPhoton(q, near, ac.signal)
-      .then(hits =>{ photonHits = hits; show(hits, false); })
-      .catch(()=>{ photonHits = []; })
-      .finally(settle);
-
-    fromNominatim(q, near, ac.signal)
-      .then(nom =>{
-        const merged = (photonHits || []).concat(nom);
-        show(merged.length ? merged : nom, true);
-      })
-      .catch(()=>{ if(photonHits) show(photonHits, true); })
-      .finally(settle);
-  }, 170);
+  if(num){
+    /* an address was typed — bring in the sources that actually know house numbers */
+    track(fromNominatim(q, near, ac.signal, true));
+    if((near?.cc || biasCC) === "us") track(fromCensus(q));
+  }
 }
 
 $("#searchBox").addEventListener("input", liveSearch);
