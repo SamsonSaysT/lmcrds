@@ -568,7 +568,7 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
         <div class="rows">
           <div class="rowline">
             <div>
-              <div class="k">Address</div>
+              <div class="k">Approximate Address</div>
               <div class="v addr" id="addrVal"><span class="pending">finding the address…</span></div>
             </div>
             <button class="linkish" data-copy="addr">copy</button>
@@ -1128,11 +1128,7 @@ async function fromPhoton(q, near, signal, local){
   }).filter(x => isFinite(x.lat) && isFinite(x.lon));
 }
 
-/* ---------- US address fallback ----------
-   OSM's US house-number coverage is patchy — plenty of real addresses simply
-   aren't mapped, which is why a search can miss a street it draws on the map.
-   The Census geocoder covers every US address via TIGER range interpolation.
-   It's free and keyless; JSONP because CORS there is unreliable. */
+
 function jsonp(url, ms = 5000){
   return new Promise((res, rej)=>{
     const cb = "__lc" + Math.random().toString(36).slice(2);
@@ -1152,9 +1148,7 @@ async function fromCensus(q){
   const hits = j?.result?.addressMatches || [];
   return hits.slice(0, 4).map((m, i) =>{
     const c = m.coordinates || {};
-    /* matchedAddress is the address asked for. addressComponents.fromAddress is
-       only where the TIGER block's number range begins — using it renames
-       23164 to 23028. The coordinates are already interpolated for the real one. */
+
     const parts = String(m.matchedAddress || "").split(",").map(s => s.trim());
     const line = parts[0] || "";
     const hn = (line.match(/^(\d+[A-Za-z]?)\b/) || [])[1] || "";
@@ -1201,18 +1195,17 @@ async function fromNominatim(q, near, signal, local){
   }).filter(x => isFinite(x.lat) && isFinite(x.lon));
 }
 
-/* Rank by how well it answers what was typed, then how far it is. Lower wins. */
+
 const STATE_TOKEN = new RegExp("\\b(" +
   Object.values(ABBR).join("|") + "|" +
   Object.keys(ABBR).join("|") + ")\\b", "i");
 
 function rankHits(list, q, near){
   const num = leadingNumber(q);
-  /* strip punctuation, or "dr," never matches "dr" */
+ 
   const words = q.toLowerCase().replace(/[.,]/g, " ").split(/\s+/)
     .filter(w => w.length > 2 && w !== num);
-  /* If they typed a city or state, they meant somewhere specific — maybe an
-     Airbnb three states over. Distance shouldn't drag it under the local noise. */
+
   const explicit = /,/.test(q) || STATE_TOKEN.test(q) || words.length >= 3;
   const distWeight = explicit ? 3 : 15;
 
@@ -1223,14 +1216,13 @@ function rankHits(list, q, near){
       s += Math.log10(1 + km) * distWeight;
     }
     if(num){
-      if(h.housenumber === num) s -= 60;  /* the exact house, wherever it is */
+      if(h.housenumber === num) s -= 60; 
       else if(h.kind === "address") s -= 4;
       else if(!h.approx) s += 6;
     }
     const hay = (h.name + " " + h.ctx).toLowerCase();
     if(words.length && words.every(w => hay.includes(w))) s -= 7;
-    /* words that land in the town/state line are the strongest hint of all —
-       it's how you tell the Miami Beach one from the one down the road */
+
     const ctxHay = h.ctx.toLowerCase();
     const ctxHits = words.filter(w => ctxHay.includes(w)).length;
     s -= Math.min(3, ctxHits) * 8;
@@ -1259,10 +1251,7 @@ async function reverseGeocode(p){
   return [line1, line2].filter(Boolean).join(", ") || j.display_name || null;
 }
 
-/* ---------- geolocation ----------
-   One getCurrentPosition often hands back a coarse network fix. We watch for a
-   few seconds instead and keep the tightest reading, bailing early once the GPS
-   settles under the target. Meaningfully more exact on a phone. */
+
 function locate(opts = {}){
   const { target = 12, maxWait = 12000, onProgress = null, register = null } = opts;
   return new Promise((res, rej)=>{
@@ -1276,7 +1265,6 @@ function locate(opts = {}){
       if(watchId !== null) navigator.geolocation.clearWatch(watchId);
       if(best) res(best); else rej(err || new Error("timeout"));
     };
-    /* let the UI stop early once a fix exists — tapping the squeeze screen */
     if(register) register(()=>{ if(best) finish(); });
     timer = setTimeout(()=> finish(new Error("timeout")), maxWait);
     watchId = navigator.geolocation.watchPosition(
