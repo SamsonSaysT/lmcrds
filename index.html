@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>LEMONCOORDS.</title>
+<meta name="description" content="Drop a pin. Send it. Every way to find you, in one link.">
+<meta property="og:title" content="LEMONCOORDS.">
+<meta property="og:description" content="Someone sent you a pin. Open it.">
+<meta name="theme-color" content="#FFFDF4">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Lemoncoords">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="%23F4CE3E"/><circle cx="50" cy="50" r="30" fill="%23FFFDF4"/><g stroke="%23F4CE3E" stroke-width="6" stroke-linecap="round"><path d="M50 28v44M28 50h44M35 35l30 30M65 35L35 65"/></g></svg>'>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,560;9..144,640&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --pith:#FFFDF4;        /* paper cream */
+  --flesh:#FBF0B2;       /* pale lemon flesh */
+  --zest:#F4CE3E;        /* lemon yellow */
+  --rind:#DDB32A;        /* deep rind — decorative only */
+  --rind-text:#8F6608;   /* gold darkened for real text on cream */
+  --leaf:#4E7A3A;        /* leaf green */
+  --ink:#23241B;         /* olive black */
+  --muted:#6D6D57;       /* readable olive gray */
+  --hairline:rgba(35,36,27,.14);
+  --display:'Fraunces',Georgia,serif;
+  --body:'Instrument Sans',system-ui,-apple-system,sans-serif;
+  --z-map:1; --z-mapui:20; --z-modal:60; --z-intro:100;
+}
+:root[data-theme="dark"]{
+  --pith:#15150F;        /* midnight grove */
+  --flesh:#262418;
+  --zest:#F4CE3E;
+  --rind:#D9B23A;
+  --rind-text:#E9C75B;
+  --leaf:#8CBE62;
+  --ink:#F0ECDA;         /* cream becomes the ink */
+  --muted:#9E9C82;
+  --hairline:rgba(240,236,218,.16);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--body);
+  background:var(--pith);
+  color:var(--ink);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+  font-size:16px;
+  line-height:1.5;
+}
+button{font-family:var(--body);cursor:pointer;background:none;border:none;color:inherit}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:2px}
+::selection{background:var(--zest);color:#23241B}
+.hidden{display:none !important}
+
+/* ---------- shell ---------- */
+.wrap{max-width:680px;margin:0 auto;padding:0 20px}
+header.site{padding:22px 0 10px;border-bottom:1px solid var(--ink)}
+.headtop{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+.brand svg{display:block}
+.wordmark{font-family:var(--display);font-weight:640;font-size:1.3rem;letter-spacing:.01em}
+.wordmark .dot{color:var(--rind)}
+.headctl{display:flex;align-items:center;gap:10px}
+.themebtn{
+  width:33px;height:33px;border-radius:50%;border:1px solid var(--ink);
+  display:grid;place-items:center;padding:0;transition:transform .15s cubic-bezier(.16,1,.3,1);
+}
+.themebtn:hover{transform:translateY(-1px)}
+.themebtn svg{display:block}
+
+footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--muted);font-size:.78rem;line-height:1.7;margin-top:44px}
+
+/* ---------- shared bits ---------- */
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--ink);color:var(--pith);font-weight:600;font-size:.95rem;
+  padding:12px 22px;border-radius:999px;transition:transform .15s cubic-bezier(.16,1,.3,1),background .15s ease;
+}
+.btn:hover{background:#000;transform:translateY(-1px)}
+:root[data-theme="dark"] .btn:hover{background:#fff}
+.btn:active{transform:none}
+.btn svg{display:block}
+.linkish{
+  font-size:.85rem;font-weight:600;text-decoration:underline;text-underline-offset:3px;
+  text-decoration-color:var(--rind);text-decoration-thickness:2px;
+}
+.linkish:hover{color:var(--rind-text)}
+.microhead{
+  font-size:.72rem;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);
+  font-weight:600;text-align:center;
+}
+.or{display:block;margin:24px 0 14px;color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.14em}
+#toast{
+  position:fixed;left:50%;bottom:22px;transform:translate(-50%,18px);opacity:0;pointer-events:none;
+  background:var(--ink);color:var(--pith);padding:10px 15px;border-radius:999px;font-weight:700;
+  font-size:.84rem;z-index:calc(var(--z-intro) + 1);transition:opacity .18s ease,transform .18s ease;
+  box-shadow:0 12px 30px rgba(35,36,27,.16);
+}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ---------- front / locscreen ---------- */
+.locscreen{padding:56px 0 60px;text-align:center}
+.locscreen h1{font-family:var(--display);font-weight:640;font-size:clamp(1.8rem,6vw,2.6rem);text-wrap:balance;margin-bottom:8px}
+.locscreen .lede{color:var(--muted);max-width:42ch;margin:0 auto 28px}
+.quickrow{margin-top:14px}
+.searchbox{position:relative;max-width:360px;margin:0 auto}
+.searchbox input{
+  width:100%;font-family:var(--body);font-size:1rem;color:var(--ink);
+  background:transparent;border:none;border-bottom:1px solid var(--ink);
+  padding:10px 2px;text-align:center;
+}
+.searchbox input::placeholder{color:var(--muted)}
+.lochelp{max-width:48ch;margin:16px auto 0;color:var(--muted);font-size:.82rem;line-height:1.45}
+.locerror{max-width:46ch;margin:14px auto 0;color:#8b3b22;font-weight:650;font-size:.88rem}
+:root[data-theme="dark"] .locerror{color:#E58A66}
+.results{list-style:none;text-align:left;margin-top:10px;border:1px solid var(--hairline);border-radius:10px;overflow:hidden;background:var(--pith);max-width:360px;margin-left:auto;margin-right:auto}
+.results:empty{border:none}
+.results button{display:block;width:100%;text-align:left;padding:12px 16px;font-size:.95rem;border-bottom:1px solid var(--hairline)}
+.results li:last-child button{border-bottom:none}
+.results button:hover{background:var(--flesh)}
+.results .cc{color:var(--muted);font-size:.85rem}
+
+/* ---------- pin page ---------- */
+.pinscreen{padding:20px 0 0}
+.coordshero{padding:16px 0 22px;text-align:center}
+.bigcoords{
+  font-family:var(--display);font-weight:560;font-optical-sizing:auto;
+  font-size:clamp(1.7rem,7.6vw,2.7rem);line-height:1.12;letter-spacing:-.01em;
+  font-variant-numeric:tabular-nums;user-select:all;
+}
+.quip{
+  max-width:34ch;margin:12px auto 0;color:var(--muted);
+  font-size:.87rem;line-height:1.45;text-wrap:balance;
+}
+.sharehero{margin-top:16px;font-size:1rem;padding:13px 26px}
+.btn-ghost{
+  background:transparent;color:var(--ink);border:1px solid var(--ink);
+}
+.btn-ghost:hover{background:var(--flesh);transform:translateY(-1px)}
+:root[data-theme="dark"] .btn-ghost:hover{background:var(--flesh)}
+.mapwrap{position:relative}
+#map{
+  height:min(48vh,440px);min-height:300px;border-radius:14px;border:1px solid var(--ink);
+  z-index:var(--z-map);background:#EDEBDD;overflow:hidden;
+}
+:root[data-theme="dark"] #map{background:#1A1A12}
+.mapui{
+  position:absolute;right:10px;bottom:10px;z-index:var(--z-mapui);
+}
+.adjustbtn{
+  font-size:.8rem;font-weight:700;color:var(--ink);
+  background:var(--pith);border:1px solid var(--ink);border-radius:999px;padding:7px 14px;
+}
+.adjustbtn[aria-pressed="true"]{background:var(--ink);color:var(--pith)}
+[data-theme] .leaflet-tile{transition:filter .2s ease}
+:root[data-theme="dark"] .leaflet-tile{filter:sepia(.55) hue-rotate(14deg) saturate(1.45) brightness(.88)}
+:root:not([data-theme="dark"]) .leaflet-tile{filter:sepia(.3) hue-rotate(6deg) saturate(1.12)}
+.leaflet-container{font-family:var(--body)}
+.leaflet-control-zoom a{display:block;width:30px;height:30px;line-height:30px;text-align:center;text-decoration:none;background:var(--pith);color:var(--ink);border-bottom:1px solid var(--hairline);font-weight:700}
+.leaflet-control-zoom{border:1px solid var(--ink);border-radius:8px;overflow:hidden;background:var(--pith)}
+.leaflet-control-zoom a:last-child{border-bottom:none}
+.leaflet-control-attribution{background:rgba(255,253,244,.88);padding:2px 6px;font-size:10px;color:var(--muted)}
+:root[data-theme="dark"] .leaflet-control-attribution{background:rgba(21,21,15,.85);color:var(--muted)}
+:root[data-theme="dark"] .leaflet-control-attribution a{color:var(--rind-text)}
+.lemonpinicon{filter:drop-shadow(0 6px 10px rgba(35,36,27,.22))}
+:root[data-theme="dark"] .lemonpinicon{filter:drop-shadow(0 6px 12px rgba(0,0,0,.5))}
+.youdot{background:var(--leaf);border:2.5px solid var(--pith);border-radius:50%;box-shadow:0 0 0 3px rgba(78,122,58,.3)}
+
+/* dropped line */
+.dropline{
+  display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+  padding:16px 2px 0;font-size:.88rem;color:var(--muted);
+}
+.dropline .when{font-family:var(--display);font-weight:560;font-size:1.02rem;color:var(--ink)}
+.notefield{margin:10px 0 0}
+.notefield input{
+  width:100%;font-family:var(--body);font-size:.95rem;color:var(--ink);
+  background:transparent;border:none;border-bottom:1px solid var(--hairline);
+  padding:9px 2px;
+}
+.notefield input::placeholder{color:var(--muted)}
+.notefield input:focus{border-bottom-color:var(--ink);outline:none}
+
+/* sections: microhead + bordered rows */
+.section{padding:28px 0 0}
+.section .microhead{margin-bottom:12px}
+.rows{border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline)}
+.rowline{
+  display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;
+  padding:13px 2px;
+}
+.rowline + .rowline{border-top:1px solid var(--hairline)}
+.rowline .k{
+  font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);
+  font-weight:600;margin-bottom:3px;
+}
+.rowline .v{
+  font-family:var(--display);font-weight:560;font-size:1.06rem;line-height:1.35;
+  overflow-wrap:anywhere;font-variant-numeric:tabular-nums;
+}
+.rowline .v.addr{font-family:var(--body);font-weight:500;font-size:.95rem}
+.rowline .v .pending{color:var(--muted);font-weight:400;font-style:italic;font-family:var(--body);font-size:.9rem}
+
+/* open in */
+.approw{
+  display:flex;align-items:center;gap:14px;padding:13px 2px;
+}
+.approw + .approw{border-top:1px solid var(--hairline)}
+.approw .an{flex:1;font-weight:600;font-size:.95rem}
+.approw .linkish{flex:none}
+.minibtn{
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--ink);color:var(--pith);border:1px solid var(--ink);
+  font-weight:600;font-size:.82rem;padding:8px 0;width:78px;border-radius:999px;text-decoration:none;
+  transition:transform .15s cubic-bezier(.16,1,.3,1),background .15s ease;
+}
+.minibtn:hover{transform:translateY(-1px)}
+.minibtn.ghost{background:transparent;color:var(--ink)}
+.minibtn.ghost:hover{background:var(--flesh)}
+
+/* how far */
+.farwrap{padding:14px 0 0;text-align:center}
+.faranswer{
+  margin-top:14px;padding:14px 4px;border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline);
+  font-size:.95rem;
+}
+.faranswer b{font-family:var(--display);font-weight:640;font-size:1.15rem;border-bottom:2px solid var(--zest);padding-bottom:1px}
+.faranswer.softerr{color:var(--muted);font-size:.88rem}
+
+/* qr */
+.qrsection{padding:32px 0 0;text-align:center}
+.qrframe{
+  display:inline-block;background:#FFFDF4;border:1px solid var(--hairline);
+  border-radius:14px;padding:16px;width:100%;max-width:420px;
+}
+:root[data-theme="dark"] .qrframe{border-color:rgba(240,236,218,.28)}
+@media (min-width:600px){.qrframe{max-width:300px;padding:14px}}
+#qr img,#qr canvas{width:100% !important;height:auto !important;display:block;image-rendering:pixelated}
+.qrsection .microhead{margin-top:12px}
+
+/* ---------- quick share modal ---------- */
+.sheet{
+  position:fixed;inset:0;z-index:var(--z-modal);background:var(--pith);
+  display:grid;place-items:center;overflow-y:auto;padding:32px 20px;
+  animation:sheetin .22s cubic-bezier(.16,1,.3,1);
+}
+@keyframes sheetin{from{opacity:0}to{opacity:1}}
+.modalclose{
+  position:fixed;top:16px;right:20px;font-size:1.9rem;line-height:1;color:var(--muted);
+  padding:6px 10px;z-index:1;transition:color .15s ease;
+}
+.modalclose:hover{color:var(--ink)}
+.sheetcontent{max-width:420px;width:100%;text-align:center}
+.bigmoon{display:block;margin:0 auto 8px;filter:drop-shadow(0 16px 34px rgba(35,36,27,.14))}
+:root[data-theme="dark"] .bigmoon{filter:drop-shadow(0 16px 34px rgba(0,0,0,.5))}
+.sheetcontent h2{font-family:var(--display);font-weight:640;font-size:clamp(1.5rem,5vw,1.9rem);margin:12px 0 4px}
+.sheetcontent .lede{color:var(--muted);font-size:.9rem;margin-bottom:20px}
+.urlbox{
+  border:1px solid var(--hairline);border-radius:10px;padding:13px 14px;
+  font-size:.85rem;line-height:1.5;overflow-wrap:anywhere;text-align:left;user-select:all;
+  -webkit-user-select:all;background:var(--pith);
+}
+.sheetbtnrow{margin-top:18px;display:flex;justify-content:center;gap:12px}
+.sheetbtnrow .btn{font-size:.95rem;padding:12px 24px}
+.sheetalt{margin-top:18px}
+
+/* ---------- intro: the lemon opens ---------- */
+#intro{
+  position:fixed;inset:0;z-index:var(--z-intro);
+  display:grid;place-items:center;overflow:hidden;cursor:pointer;
+}
+#intro .door{position:absolute;top:0;bottom:0;width:51vw;background:var(--pith)}
+#intro .door.l{left:0}
+#intro .door.r{right:0}
+.stage{position:relative;display:flex;align-items:center;filter:drop-shadow(0 18px 30px rgba(35,36,27,.12))}
+:root[data-theme="dark"] .stage{filter:drop-shadow(0 18px 30px rgba(0,0,0,.45))}
+.half{width:min(32vmin,190px);height:auto;display:block}
+.half.r{margin-left:-1px}
+.cutline{
+  position:absolute;left:50%;top:8%;bottom:8%;width:2px;margin-left:-1px;
+  background:var(--ink);transform:scaleY(0);transform-origin:top;border-radius:2px;
+}
+.introhint{
+  position:absolute;bottom:6vh;left:0;right:0;text-align:center;
+  color:var(--muted);font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;
+  opacity:0;animation:hintin .5s ease .9s forwards;
+}
+@keyframes hintin{to{opacity:1}}
+#intro .stage{animation:lemonpop .55s cubic-bezier(.16,1,.3,1) both}
+@keyframes lemonpop{
+  0%{transform:scale(.55) rotate(-8deg);opacity:0}
+  70%{transform:scale(1.04) rotate(1deg);opacity:1}
+  100%{transform:scale(1) rotate(0)}
+}
+#intro.cut .cutline{animation:knife .28s cubic-bezier(.7,0,.84,0) both}
+@keyframes knife{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+#intro.open .cutline{opacity:0;transition:opacity .1s}
+#intro.open .face{opacity:1}
+#intro.open .halfwrap.l{transform:translateX(-72vw) rotate(-7deg)}
+#intro.open .halfwrap.r{transform:translateX(72vw) rotate(7deg)}
+#intro.open .door.l{transform:translateX(-102%)}
+#intro.open .door.r{transform:translateX(102%)}
+.halfwrap,.door{transition:transform .85s cubic-bezier(.76,0,.19,1)}
+.face{opacity:0;transition:opacity .25s ease}
+#intro.done{opacity:0;pointer-events:none;transition:opacity .25s ease}
+
+/* spinner lemon */
+.spinlemon{display:inline-block;vertical-align:-3px;animation:spin 1.6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  #intro{display:none}
+}
+@media (max-width:480px){
+  .rowline{gap:10px}
+  .rowline .v{font-size:.98rem}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ INTRO: the lemon opens ============ -->
+<div id="intro" role="presentation" aria-hidden="true">
+  <div class="door l"></div>
+  <div class="door r"></div>
+  <div class="stage">
+    <div class="halfwrap l">
+      <svg class="half l" viewBox="0 0 200 400" aria-hidden="true">
+        <path d="M200 60 C120 60 46 110 24 170 C10 178 2 192 2 200 C2 208 10 222 24 230 C46 290 120 340 200 340 Z" fill="var(--zest)" stroke="var(--ink)" stroke-width="5" stroke-linejoin="round"/>
+        <g transform="translate(160,60) rotate(-42)">
+          <path d="M0,0 Q23.1,-14 68,0 Q23.1,14 0,0 Z" fill="var(--leaf)" stroke="var(--ink)" stroke-width="4.5" stroke-linejoin="round"/>
+          <path d="M7,0 Q30,-1.5 60,0" fill="none" stroke="var(--ink)" stroke-width="1.6" stroke-linecap="round" opacity=".4"/>
+        </g>
+        <g class="face">
+          <rect x="186" y="60" width="14" height="280" fill="#FFFDF4" stroke="var(--ink)" stroke-width="5"/>
+          <rect x="192" y="78" width="8" height="244" fill="var(--flesh)"/>
+        </g>
+      </svg>
+    </div>
+    <div class="halfwrap r">
+      <svg class="half r" viewBox="0 0 200 400" aria-hidden="true">
+        <path d="M0 60 C80 60 154 110 176 170 C190 178 198 192 198 200 C198 208 190 222 176 230 C154 290 80 340 0 340 Z" fill="var(--zest)" stroke="var(--ink)" stroke-width="5" stroke-linejoin="round"/>
+        <g class="face">
+          <rect x="0" y="60" width="14" height="280" fill="#FFFDF4" stroke="var(--ink)" stroke-width="5"/>
+          <rect x="0" y="78" width="8" height="244" fill="var(--flesh)"/>
+          <ellipse cx="7" cy="150" rx="3.5" ry="7" fill="var(--rind)"/>
+          <ellipse cx="7" cy="250" rx="3.5" ry="7" fill="var(--rind)"/>
+        </g>
+      </svg>
+    </div>
+    <div class="cutline"></div>
+  </div>
+  <div class="introhint">tap to skip</div>
+</div>
+
+<!-- ============ APP ============ -->
+<div class="wrap">
+  <header class="site">
+    <div class="headtop">
+      <a class="brand" href="#" id="brandlink">
+        <svg width="26" height="26" viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="44" fill="var(--zest)" stroke="var(--ink)" stroke-width="6"/>
+          <circle cx="50" cy="50" r="31" fill="var(--pith)"/>
+          <g stroke="var(--zest)" stroke-width="7" stroke-linecap="round">
+            <path d="M50 26v48M26 50h48M33 33l34 34M67 33L33 67"/>
+          </g>
+        </svg>
+        <span class="wordmark">LEMONCOORDS<span class="dot">.</span></span>
+      </a>
+      <div class="headctl">
+        <button id="themetoggle" class="themebtn" aria-label="Toggle dark mode" aria-pressed="false"></button>
+      </div>
+    </div>
+  </header>
+
+  <main id="app">
+
+    <!-- ---------- FRONT ---------- -->
+    <section class="locscreen" id="front">
+      <h1>Where are you, Lemons?</h1>
+      <p class="lede">Drop a pin, send one link. Coordinates, address, and a route for whatever maps app they've got.</p>
+
+      <button class="btn" id="hereBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <circle cx="12" cy="10" r="2.6" fill="currentColor"/>
+        </svg>
+        Drop a pin right here
+      </button>
+
+      <div class="quickrow">
+        <button class="linkish" id="quickBtn">quick share — just grab the link</button>
+      </div>
+
+      <span class="or">or</span>
+
+      <div class="searchbox">
+        <input id="searchBox" type="text" autocomplete="off" enterkeyhint="search"
+          placeholder="Search a place, or paste coords / a maps link" aria-label="Search a place">
+        <ul class="results" id="results"></ul>
+      </div>
+      <p class="lochelp">Paste anything — a Google or Apple Maps link, raw coordinates, or a lemoncoords link. It all turns into a pin.</p>
+      <p class="locerror hidden" id="frontError"></p>
+    </section>
+
+    <!-- ---------- PIN ---------- -->
+    <section class="pinscreen hidden" id="pinPage">
+      <div class="coordshero">
+        <div class="bigcoords" id="bigCoords"></div>
+        <p class="quip" id="quip"></p>
+        <button class="btn sharehero" id="shareTopBtn">Share this pin</button>
+      </div>
+
+      <div class="mapwrap">
+        <div id="map"></div>
+        <div class="mapui">
+          <button class="adjustbtn" id="dragBtn" aria-pressed="false">adjust pin</button>
+        </div>
+      </div>
+
+      <div class="farwrap hidden" id="farWrap">
+        <button class="linkish" id="farBtn">how far am I from this pin?</button>
+        <div class="faranswer hidden" id="farAnswer"></div>
+      </div>
+
+      <div class="dropline">
+        <span class="when" id="dropWhen"></span>
+        <span id="dropAgo"></span>
+      </div>
+      <div class="notefield">
+        <input id="noteInput" type="text" maxlength="120"
+          placeholder="Add a note — &ldquo;north entrance, black Fiat&rdquo;" aria-label="Note">
+      </div>
+
+      <div class="section">
+        <h3 class="microhead">The spot</h3>
+        <div class="rows">
+          <div class="rowline">
+            <div>
+              <div class="k">Address</div>
+              <div class="v addr" id="addrVal"><span class="pending">finding the address…</span></div>
+            </div>
+            <button class="linkish" data-copy="addr">copy</button>
+          </div>
+          <div class="rowline">
+            <div>
+              <div class="k">Decimal</div>
+              <div class="v" id="decVal"></div>
+            </div>
+            <button class="linkish" data-copy="dec">copy</button>
+          </div>
+          <div class="rowline">
+            <div>
+              <div class="k">Degrees</div>
+              <div class="v" id="dmsVal"></div>
+            </div>
+            <button class="linkish" data-copy="dms">copy</button>
+          </div>
+          <div class="rowline">
+            <div>
+              <div class="k">Plus code</div>
+              <div class="v" id="plusVal"></div>
+            </div>
+            <button class="linkish" data-copy="plus">copy</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3 class="microhead">Open in</h3>
+        <div class="rows">
+          <div class="approw">
+            <span class="an">Google Maps</span>
+            <a class="minibtn ghost" id="gView" target="_blank" rel="noopener">View</a>
+            <a class="minibtn" id="gRoute" target="_blank" rel="noopener">Route</a>
+          </div>
+          <div class="approw">
+            <span class="an">Apple Maps</span>
+            <a class="minibtn ghost" id="aView" target="_blank" rel="noopener">View</a>
+            <a class="minibtn" id="aRoute" target="_blank" rel="noopener">Route</a>
+          </div>
+          <div class="approw">
+            <span class="an">Waze</span>
+            <a class="minibtn ghost" id="wView" target="_blank" rel="noopener">View</a>
+            <a class="minibtn" id="wRoute" target="_blank" rel="noopener">Route</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="qrsection">
+        <div class="qrframe"><div id="qr"></div></div>
+        <h3 class="microhead">Scan for this pin</h3>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site">
+    <b>How it works:</b> the coordinates, time, and note live inside the link itself — nothing is stored anywhere.
+    Addresses and search by OpenStreetMap Nominatim · basemap © OpenStreetMap &amp; CARTO.
+    Made with 🍋 for people who are lost.
+  </footer>
+</div>
+
+<!-- ============ QUICK SHARE SHEET ============ -->
+<div class="sheet hidden" id="sheet">
+  <button class="modalclose" id="sheetClose" aria-label="Close">×</button>
+  <div class="sheetcontent">
+    <div id="sheetMoon"></div>
+    <h2>Fresh pin, squeezed</h2>
+    <p class="lede">This link is the exact spot — map, address, coordinates, routes. Send it however you like.</p>
+    <div class="urlbox" id="sheetUrl"></div>
+    <div class="sheetbtnrow">
+      <button class="btn" id="sheetShare" aria-label="Send in messages">
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3C6.5 3 2 6.8 2 11.5c0 2.7 1.5 5.1 3.8 6.6-.1 1.1-.6 2.5-1.7 3.9 2-.3 3.7-1.1 4.8-1.9 1 .3 2 .4 3.1.4 5.5 0 10-3.8 10-8.5S17.5 3 12 3Z" fill="currentColor"/>
+        </svg>
+        Send
+      </button>
+      <button class="btn btn-ghost" id="sheetCopy">Copy</button>
+    </div>
+    <div class="sheetalt"><button class="linkish" id="sheetOpen">open the full pin page</button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+"use strict";
+/* =====================================================================
+   LEMONCOORDS. — send someone a pin.
+   Zero backend: the pin lives inside the URL.
+   #L<base62>            lat/lon/time/accuracy in one packed integer
+   #L<base62>.<note>     optional URI-encoded note rides along
+   ===================================================================== */
+
+const $ = s => document.querySelector(s);
+const B62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const EPOCH_2026 = Date.UTC(2026, 0, 1);
+
+/* ---------- packing ---------- */
+function b62encode(n){ if(n === 0n) return "0"; let s = ""; while(n > 0n){ s = B62[Number(n % 62n)] + s; n /= 62n; } return s; }
+function b62decode(s){ let n = 0n; for(const c of s){ const i = B62.indexOf(c); if(i < 0) return null; n = n * 62n + BigInt(i); } return n; }
+
+function packPin(p){
+  const latE5 = BigInt(Math.min(18000000, Math.max(0, Math.round((p.lat + 90) * 1e5))));
+  const lonE5 = BigInt(((Math.round((p.lon + 180) * 1e5) % 36000000) + 36000000) % 36000000);
+  const mins  = BigInt(Math.min(16777215, Math.max(0, Math.round((p.ts - EPOCH_2026) / 60000))));
+  const acc   = BigInt(Math.min(1023, Math.max(0, Math.round(p.acc || 0))));
+  let v = latE5;
+  v = v * 36000000n + lonE5;
+  v = v * 16777216n + mins;
+  v = v * 1024n + acc;
+  let h = "L" + b62encode(v);
+  if(p.note) h += "." + encodeURIComponent(p.note.slice(0, 120));
+  return h;
+}
+function unpackPin(hash){
+  if(!hash || hash[0] !== "L") return null;
+  const dot = hash.indexOf(".");
+  const code = dot === -1 ? hash.slice(1) : hash.slice(1, dot);
+  const note = dot === -1 ? "" : (()=>{ try{ return decodeURIComponent(hash.slice(dot + 1)); }catch{ return ""; } })();
+  let v = b62decode(code);
+  if(v === null || code.length === 0) return null;
+  const acc   = Number(v % 1024n);     v /= 1024n;
+  const mins  = Number(v % 16777216n); v /= 16777216n;
+  const lonE5 = Number(v % 36000000n); v /= 36000000n;
+  const latE5 = Number(v);
+  const lat = latE5 / 1e5 - 90, lon = lonE5 / 1e5 - 180;
+  if(lat < -90 || lat > 90) return null;
+  return { lat, lon, ts: EPOCH_2026 + mins * 60000, acc, note };
+}
+
+/* ---------- formats ---------- */
+function fmtDec(p){ return p.lat.toFixed(5) + ", " + p.lon.toFixed(5); }
+function fmtDMS(p){
+  const one = (v, pos, neg) => {
+    const h = v < 0 ? neg : pos; v = Math.abs(v);
+    const d = Math.floor(v), mF = (v - d) * 60, m = Math.floor(mF), s = (mF - m) * 60;
+    return `${d}°${String(m).padStart(2,"0")}'${s.toFixed(1).padStart(4,"0")}"${h}`;
+  };
+  return one(p.lat, "N", "S") + " " + one(p.lon, "E", "W");
+}
+const OLC = "23456789CFGHJMPQRVWX";
+function fmtPlus(p){
+  let lat = Math.min(90, Math.max(-90, p.lat));
+  let lon = ((p.lon + 180) % 360 + 360) % 360 - 180;
+  if(lat === 90) lat -= 1e-6;
+  let la = lat + 90, lo = lon + 180, place = 20, code = "";
+  for(let i = 0; i < 5; i++){
+    const ld = Math.floor(la / place), od = Math.floor(lo / place);
+    la -= ld * place; lo -= od * place;
+    code += OLC[ld] + OLC[od];
+    if(i === 3) code += "+";
+    place /= 20;
+  }
+  return code;
+}
+
+/* ---------- helpers ---------- */
+function haversine(a, b){
+  const R = 6371000, r = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
+  const h = Math.sin(dLat/2)**2 + Math.cos(a.lat*r) * Math.cos(b.lat*r) * Math.sin(dLon/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function fmtDist(m){
+  const mi = m / 1609.344, km = m / 1000;
+  if(mi < 0.1) return `${(m * 3.28084).toFixed(0)} ft (${m.toFixed(0)} m)`;
+  const miS = mi >= 10 ? mi.toFixed(0) : mi.toFixed(1);
+  const kmS = km >= 10 ? km.toFixed(0) : km.toFixed(1);
+  return `${miS} mi (${kmS} km)`;
+}
+function fmtWhen(ts){
+  const d = new Date(ts), now = new Date();
+  const t = d.toLocaleTimeString([], {hour:"numeric", minute:"2-digit"}).toLowerCase().replace(" ","");
+  const sameDay = d.toDateString() === now.toDateString();
+  const day = sameDay ? "" : " · " + d.toLocaleDateString([], {month:"short", day:"numeric"});
+  return `Dropped ${t}${day}`;
+}
+function fmtAgo(ts){
+  const s = Math.max(0, (Date.now() - ts) / 1000);
+  if(s < 90) return "just now";
+  if(s < 3600) return `${Math.round(s/60)} min ago`;
+  if(s < 86400) return `${Math.round(s/3600)} hr ago`;
+  return `${Math.round(s/86400)} days ago`;
+}
+
+/* ---------- the lemon moon (same moon as the weather) ---------- */
+function moonPhase(){
+  const synodic = 29.530588853;
+  const days = Date.now()/86400000 - Date.UTC(2000,0,6,18,14)/86400000;
+  const age = ((days % synodic) + synodic) % synodic;
+  const frac = (1 - Math.cos(2*Math.PI*age/synodic)) / 2;
+  const waxing = age < synodic/2;
+  const name = frac<0.06 ? 'New moon' : frac<0.35 ? (waxing?'Waxing crescent':'Waning crescent')
+    : frac<0.65 ? (waxing?'First quarter':'Last quarter')
+    : frac<0.94 ? (waxing?'Waxing gibbous':'Waning gibbous') : 'Full moon';
+  return { frac, waxing, name };
+}
+function moonShadowPath(cx, cy, r, frac){
+  if(frac >= 0.99) return '';
+  if(frac <= 0.01) return `M ${cx-r} ${cy} a ${r} ${r} 0 1 0 ${r*2} 0 a ${r} ${r} 0 1 0 ${-r*2} 0 Z`;
+  const rx = (Math.abs(Math.cos(Math.PI*frac)) * r).toFixed(2);
+  const innerSweep = frac < 0.5 ? 0 : 1;
+  return `M ${cx} ${cy-r} A ${r} ${r} 0 0 0 ${cx} ${cy+r} A ${rx} ${r} 0 0 ${innerSweep} ${cx} ${cy-r} Z`;
+}
+function bigMoonLemon(moon, size){
+  const shadow = moonShadowPath(120, 120, 104, moon.frac);
+  const flip = moon.waxing ? '' : ' transform="scale(-1 1) translate(-240 0)"';
+  const seg = a => { const r1=14, r2=88, x=Math.cos(a), y=Math.sin(a);
+    return `M ${120+x*r1} ${120+y*r1} L ${120+x*r2} ${120+y*r2}`; };
+  const segs = [...Array(8)].map((_,i)=>seg(i*Math.PI/4 + Math.PI/8)).join(' ');
+  return `<svg class="bigmoon" viewBox="0 0 240 240" width="${size}" height="${size}" role="img" aria-label="${moon.name}, ${Math.round(moon.frac*100)}% illuminated">
+    <circle cx="120" cy="120" r="104" fill="var(--zest)"/>
+    <circle cx="120" cy="120" r="92" fill="var(--pith)"/>
+    <circle cx="120" cy="120" r="84" fill="var(--flesh)"/>
+    <path d="${segs}" stroke="var(--pith)" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="120" cy="120" r="7" fill="var(--pith)"/>
+    <ellipse cx="88" cy="82" rx="5" ry="9" fill="var(--rind)" transform="rotate(-28 88 82)"/>
+    <ellipse cx="158" cy="140" rx="5" ry="9" fill="var(--rind)" transform="rotate(38 158 140)"/>
+    <ellipse cx="104" cy="164" rx="4.5" ry="8" fill="var(--rind)" transform="rotate(-8 104 164)"/>
+    ${shadow?`<g${flip}><path d="${shadow}" fill="rgba(35,36,27,.85)"/></g>`:''}
+    <circle cx="120" cy="120" r="104" fill="none" stroke="var(--ink)" stroke-width="4"/>
+  </svg>`;
+}
+
+/* ---------- the line above the button ---------- */
+const QUIPS = [
+  "Two numbers. That's the whole trick.",
+  "Nobody has ever been more exactly here.",
+  "Accurate to about a car length. Interpret freely.",
+  "Beats \u201cacross from the old place.\u201d",
+  "Five decimals gets you a parking space.",
+  "The planet is 197 million square miles. This is the good part.",
+  "Sailors died over longitude. You get it in a text.",
+  "Works even when \u201cyou\u2019ll see it\u201d doesn\u2019t.",
+  "Four satellites agreed on this.",
+  "No landmarks, no vibes, just the spot.",
+  "Precise enough to find you. Not precise enough to judge you.",
+  "The map has opinions. The numbers don\u2019t.",
+  "You are the X. Try not to move.",
+  "Harrison spent forty years on a clock so this could take two seconds.",
+  "Fewer words than describing it, and correct.",
+  "Somewhere out there, a satellite did long division for this.",
+  "Congratulations on being somewhere.",
+  "Every place is equally far from everywhere. This one\u2019s just closer.",
+  "A pin has no follow-up questions.",
+  "The Earth measured itself for this. Rude not to use it."
+];
+function pickQuip(p){
+  /* seeded by the pin, so a shared link reads the same for both people */
+  const seed = p.lat.toFixed(4) + p.lon.toFixed(4) + new Date().toISOString().slice(0,10);
+  let h = 0;
+  for(const ch of seed) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  /* scramble, or neighbouring seeds just walk the list in order */
+  h ^= h >>> 16; h = Math.imul(h, 2246822507) >>> 0;
+  h ^= h >>> 13; h = Math.imul(h, 3266489909) >>> 0;
+  h = (h ^ (h >>> 16)) >>> 0;
+  return QUIPS[h % QUIPS.length];
+}
+
+function flash(msg){
+  let t = $("#toast");
+  if(!t){ t = document.createElement("div"); t.id = "toast"; document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(window.__lcToast);
+  window.__lcToast = setTimeout(()=> t.classList.remove("show"), 1800);
+}
+function copyText(t, msg){
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(t).then(()=>flash(msg || "copied, smooth")).catch(()=>window.prompt("Copy this", t));
+  }else{
+    window.prompt("Copy this", t);
+  }
+}
+
+/* ---------- paste parser ---------- */
+function parsePasted(text){
+  if(!text) return null;
+  text = text.trim();
+  const lm = text.match(/#(L[0-9A-Za-z]+(?:\.[^\s]*)?)/);
+  if(lm){ const p = unpackPin(lm[1]); if(p) return p; }
+  const pair = "(-?\\d{1,3}(?:\\.\\d+)?)[,\\s/]+\\s*(-?\\d{1,3}(?:\\.\\d+)?)";
+  const tries = [
+    /!3d(-?\d{1,3}\.\d+)!4d(-?\d{1,3}\.\d+)/,          /* google place pin (exact) */
+    new RegExp("[?&](?:q|ll|query|destination|daddr|center)=" + pair),
+    new RegExp("@" + pair),                             /* viewport center */
+    new RegExp("^" + pair + "$"),                       /* raw "lat, lon" */
+  ];
+  for(const re of tries){
+    const m = text.match(re);
+    if(m){
+      const lat = parseFloat(m[1]), lon = parseFloat(m[2]);
+      if(Math.abs(lat) <= 90 && Math.abs(lon) <= 180 && !(lat === 0 && lon === 0))
+        return { lat, lon, ts: Date.now(), acc: 0, note: "" };
+    }
+  }
+  return null;
+}
+
+/* ---------- nominatim ---------- */
+const NOM = "https://nominatim.openstreetmap.org";
+async function reverseGeocode(p){
+  const r = await fetch(`${NOM}/reverse?format=jsonv2&lat=${p.lat}&lon=${p.lon}&zoom=18`);
+  if(!r.ok) throw new Error("geocode failed");
+  const j = await r.json();
+  const a = j.address || {};
+  const line1 = [a.house_number, a.road].filter(Boolean).join(" ");
+  const city  = a.city || a.town || a.village || a.hamlet || a.county || "";
+  const line2 = [city, a.state, a.postcode].filter(Boolean).join(", ");
+  return [line1, line2].filter(Boolean).join(", ") || j.display_name || null;
+}
+async function searchPlaces(q){
+  const r = await fetch(`${NOM}/search?format=jsonv2&limit=5&q=${encodeURIComponent(q)}`);
+  if(!r.ok) throw new Error("search failed");
+  return r.json();
+}
+
+/* ---------- geolocation ---------- */
+function locate(){
+  return new Promise((res, rej)=>{
+    if(!window.isSecureContext) return rej(new Error("insecure"));
+    if(!navigator.geolocation) return rej(new Error("unsupported"));
+    navigator.geolocation.getCurrentPosition(
+      pos => res({ lat: pos.coords.latitude, lon: pos.coords.longitude,
+                   acc: pos.coords.accuracy || 0, ts: Date.now(), note: "" }),
+      err => rej(err),
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 15000 }
+    );
+  });
+}
+function locateErrorMsg(err){
+  if(err && err.message === "insecure")
+    return "Location needs a secure page (https) — it'll work once this is live on your domain. Search still works below.";
+  if(err && err.message === "unsupported")
+    return "This browser has no location. Search a place instead.";
+  if(err && err.code === 1)
+    return "Location said no. Allow it in your browser settings, or search a place instead.";
+  return "Couldn't get a fix. Try again, or search a place instead.";
+}
+
+/* ---------- state ---------- */
+let pin = null;
+let map = null, marker = null, accCircle = null, youMarker = null, farLine = null;
+let dragging = false, noteTimer = null, addrText = "";
+let isRecipient = false;   /* arrived via someone else's link */
+function pinUrl(){ return location.origin + location.pathname + "#" + packPin(pin); }
+
+/* ---------- theme (same lemon, midnight grove) ---------- */
+const store = {
+  get k(){ return null; },
+  get(k){ try{ return localStorage.getItem(k); }catch{ return null; } },
+  set(k, v){ try{ localStorage.setItem(k, v); }catch{} }
+};
+function themeIcon(dark){
+  return dark
+    ? `<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
+        <g stroke="var(--rind)" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 3.2v2M12 18.8v2M3.2 12h2M18.8 12h2M5.8 5.8l1.4 1.4M16.8 16.8l1.4 1.4M18.2 5.8l-1.4 1.4M7.2 16.8l-1.4 1.4"/></g>
+        <circle cx="12" cy="12" r="4.6" fill="var(--zest)" stroke="var(--ink)" stroke-width="1.6"/></svg>`
+    : `<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
+        <circle cx="12" cy="12" r="7.5" fill="none" stroke="var(--ink)" stroke-width="1.6"/>
+        <path d="M12 4.5 A7.5 7.5 0 0 1 12 19.5 A5 7.5 0 0 0 12 4.5 Z" fill="var(--zest)"/></svg>`;
+}
+function applyTheme(t, save){
+  const dark = t === "dark";
+  document.documentElement.dataset.theme = dark ? "dark" : "";
+  const b = $("#themetoggle");
+  if(b){ b.innerHTML = themeIcon(dark); b.setAttribute("aria-pressed", dark); }
+  document.querySelector('meta[name="theme-color"]').content = dark ? "#15150F" : "#FFFDF4";
+  if(save) store.set("lemoncoords.theme", dark ? "dark" : "light");
+}
+applyTheme(store.get("lemoncoords.theme") || "light");
+$("#themetoggle").addEventListener("click", ()=>{
+  applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark", true);
+});
+
+/* ---------- page switching ---------- */
+function showFront(){
+  $("#front").classList.remove("hidden");
+  $("#pinPage").classList.add("hidden");
+  $("#results").innerHTML = "";
+  $("#searchBox").value = "";
+  $("#frontError").classList.add("hidden");
+}
+function showPinPage(){
+  $("#front").classList.add("hidden");
+  $("#pinPage").classList.remove("hidden");
+}
+$("#brandlink").addEventListener("click", e=>{
+  e.preventDefault();
+  history.pushState(null, "", location.pathname);
+  showFront();
+});
+window.addEventListener("popstate", ()=>{
+  const p = unpackPin(location.hash.slice(1));
+  if(p) openPin(p, { push:false });
+  else showFront();
+});
+
+/* ---------- map ---------- */
+const TILES = {
+  dark:  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+  light: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+};
+let tileLayer = null, tileTheme = null;
+function currentTheme(){ return document.documentElement.dataset.theme === "dark" ? "dark" : "light"; }
+function setTiles(){
+  const t = currentTheme();
+  if(tileTheme === t) return;
+  tileTheme = t;
+  if(tileLayer) tileLayer.remove();
+  tileLayer = L.tileLayer(TILES[t], {
+    maxZoom: 20,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  }).addTo(map);
+}
+new MutationObserver(()=>{ if(map) setTiles(); })
+  .observe(document.documentElement, { attributes:true, attributeFilter:["data-theme"] });
+
+/* the pin is a lemon slice in a teardrop — same slice as the wordmark */
+const lemonIcon = L.divIcon({
+  className: "lemonpinicon",
+  html: `<svg width="44" height="58" viewBox="0 0 44 58" xmlns="http://www.w3.org/2000/svg">
+    <path d="M22 56C22 56 42 35.5 42 21.5C42 10.2 33 1.5 22 1.5C11 1.5 2 10.2 2 21.5C2 35.5 22 56 22 56Z"
+      fill="#F4CE3E" stroke="#23241B" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="22" cy="21.5" r="12.5" fill="#FFFDF4"/>
+    <g stroke="#F4CE3E" stroke-width="3" stroke-linecap="round">
+      <path d="M22 12v19M12.5 21.5h19M15.3 14.8l13.4 13.4M28.7 14.8L15.3 28.2"/>
+    </g>
+  </svg>`,
+  iconSize: [44, 58], iconAnchor: [22, 56]
+});
+const youIcon = L.divIcon({ className: "youdot", iconSize: [15, 15], iconAnchor: [8, 8] });
+
+function initMap(){
+  map = L.map("map", { zoomControl: false });
+  L.control.zoom({ position: "topleft" }).addTo(map);
+  setTiles();
+  marker = L.marker([0, 0], { icon: lemonIcon, draggable: false, keyboard: false }).addTo(map);
+  marker.on("dragend", ()=>{
+    const ll = marker.getLatLng();
+    pin.lat = ll.lat; pin.lon = ll.lng;
+    pin.acc = 0;                     /* hand-placed = exact */
+    pin.ts = Date.now();
+    refreshPin({ recenter: false });
+    flash("pin adjusted");
+  });
+}
+$("#dragBtn").addEventListener("click", ()=>{
+  dragging = !dragging;
+  if(dragging) marker.dragging.enable(); else marker.dragging.disable();
+  $("#dragBtn").textContent = dragging ? "done" : "adjust pin";
+  $("#dragBtn").setAttribute("aria-pressed", dragging);
+});
+
+/* ---------- render ---------- */
+function refreshPin(opts = {}){
+  const { recenter = true } = opts;
+  history.replaceState(null, "", "#" + packPin(pin));
+  marker.setLatLng([pin.lat, pin.lon]);
+  if(accCircle){ accCircle.remove(); accCircle = null; }
+  if(pin.acc > 3){
+    accCircle = L.circle([pin.lat, pin.lon], {
+      radius: pin.acc, color: "#DDB32A", weight: 1.5, opacity: .55,
+      fillColor: "#F4CE3E", fillOpacity: .12
+    }).addTo(map);
+  }
+  if(youMarker){ youMarker.remove(); youMarker = null; }
+  if(farLine){ farLine.remove(); farLine = null; }
+  $("#farAnswer").classList.add("hidden");
+  if(recenter) map.setView([pin.lat, pin.lon], pin.acc > 200 ? 15 : 17);
+
+  $("#dropWhen").textContent = fmtWhen(pin.ts);
+  $("#dropAgo").textContent = fmtAgo(pin.ts);
+  $("#bigCoords").innerHTML = `${pin.lat.toFixed(5)},<br>${pin.lon.toFixed(5)}`;
+  $("#quip").textContent = pickQuip(pin);
+  $("#decVal").textContent = fmtDec(pin);
+  $("#dmsVal").textContent = fmtDMS(pin);
+  $("#plusVal").textContent = fmtPlus(pin);
+  if($("#noteInput").value !== (pin.note || "")) $("#noteInput").value = pin.note || "";
+
+  const ll = `${pin.lat.toFixed(6)},${pin.lon.toFixed(6)}`;
+  $("#gView").href  = `https://www.google.com/maps/search/?api=1&query=${ll}`;
+  $("#gRoute").href = `https://www.google.com/maps/dir/?api=1&destination=${ll}`;
+  $("#aView").href  = `https://maps.apple.com/?ll=${ll}&q=Pin`;
+  $("#aRoute").href = `https://maps.apple.com/?daddr=${ll}`;
+  $("#wView").href  = `https://waze.com/ul?ll=${ll}&zoom=17`;
+  $("#wRoute").href = `https://waze.com/ul?ll=${ll}&navigate=yes`;
+
+  addrText = "";
+  $("#addrVal").innerHTML = '<span class="pending">finding the address…</span>';
+  reverseGeocode(pin).then(a=>{
+    addrText = a || "";
+    $("#addrVal").textContent = a || "No address out here — pure wilderness.";
+  }).catch(()=>{ $("#addrVal").textContent = "Address unavailable right now."; });
+
+  renderQR();
+}
+
+function renderQR(){
+  const el = $("#qr");
+  el.innerHTML = "";
+  new QRCode(el, {
+    text: pinUrl(),
+    width: 512, height: 512,
+    colorDark: "#23241B", colorLight: "#FFFDF4",
+    correctLevel: QRCode.CorrectLevel.M
+  });
+}
+
+function openPin(p, opts = {}){
+  const { push = true } = opts;
+  pin = p;
+  showPinPage();
+  $("#farWrap").classList.toggle("hidden", !isRecipient);
+  if(!map) initMap();
+  if(push) history.pushState(null, "", "#" + packPin(pin));
+  refreshPin();
+  setTimeout(()=> map.invalidateSize(), 60);
+}
+
+/* note → url, debounced */
+$("#noteInput").addEventListener("input", ()=>{
+  clearTimeout(noteTimer);
+  noteTimer = setTimeout(()=>{
+    pin.note = $("#noteInput").value.trim();
+    history.replaceState(null, "", "#" + packPin(pin));
+    renderQR();
+  }, 400);
+});
+
+/* copies */
+document.querySelectorAll("[data-copy]").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    const kind = btn.dataset.copy;
+    const t = kind === "addr" ? (addrText || fmtDec(pin))
+            : kind === "dec"  ? fmtDec(pin)
+            : kind === "dms"  ? fmtDMS(pin)
+            : fmtPlus(pin);
+    copyText(t);
+  });
+});
+/* native share, never forced */
+async function sharePin(){
+  const url = pinUrl();
+  if(navigator.share){
+    try{ await navigator.share({ title: "LEMONCOORDS.", text: "Here's my pin —", url }); }
+    catch{ /* user backed out — that's fine */ }
+  } else copyText(url, "link copied, smooth");
+}
+
+/* ---------- share sheet (the moon screen, but for a pin) ---------- */
+let sheetFrom = "pin";   /* "pin" | "quick" */
+function openSheet(from){
+  sheetFrom = from;
+  $("#sheetMoon").innerHTML = bigMoonLemon(moonPhase(), 210);
+  $("#sheetUrl").textContent = pinUrl();
+  $("#sheetOpen").classList.toggle("hidden", from === "pin");
+  $("#sheet").classList.remove("hidden");
+}
+function closeSheet(){
+  $("#sheet").classList.add("hidden");
+  /* quick share never left the front page — clear the hash on the way out */
+  if(sheetFrom === "quick") history.replaceState(null, "", location.pathname);
+}
+$("#shareTopBtn").addEventListener("click", ()=> openSheet("pin"));
+$("#sheetClose").addEventListener("click", closeSheet);
+document.addEventListener("keydown", e=>{
+  if(e.key === "Escape" && !$("#sheet").classList.contains("hidden")) closeSheet();
+});
+$("#sheetCopy").addEventListener("click", ()=> copyText(pinUrl(), "link copied, smooth"));
+$("#sheetShare").addEventListener("click", sharePin);
+$("#sheetOpen").addEventListener("click", ()=>{
+  sheetFrom = "pin";
+  closeSheet();
+  openPin(pin, { push:false });
+});
+
+/* how far am i */
+$("#farBtn").addEventListener("click", async ()=>{
+  const btn = $("#farBtn");
+  btn.textContent = "getting a fix…";
+  const ans = $("#farAnswer");
+  try{
+    const me = await locate();
+    const d = haversine(me, pin);
+    ans.classList.remove("hidden","softerr");
+    ans.innerHTML = `You're <b></b> from this pin.`;
+    ans.querySelector("b").textContent = fmtDist(d);
+    if(youMarker) youMarker.remove();
+    if(farLine) farLine.remove();
+    youMarker = L.marker([me.lat, me.lon], { icon: youIcon, keyboard: false }).addTo(map);
+    farLine = L.polyline([[me.lat, me.lon], [pin.lat, pin.lon]],
+      { color: "#DDB32A", weight: 2, dashArray: "6 8", opacity: .8 }).addTo(map);
+    map.fitBounds(L.latLngBounds([me.lat, me.lon], [pin.lat, pin.lon]).pad(0.25));
+  }catch(err){
+    ans.classList.remove("hidden");
+    ans.classList.add("softerr");
+    ans.textContent = locateErrorMsg(err);
+  }
+  btn.textContent = "how far am I from this pin?";
+});
+
+/* ---------- front actions ---------- */
+function frontError(msg){
+  const el = $("#frontError");
+  if(!msg){ el.classList.add("hidden"); return; }
+  el.textContent = msg;
+  el.classList.remove("hidden");
+}
+const spinSlice = `<svg class="spinlemon" width="15" height="15" viewBox="0 0 100 100" aria-hidden="true">
+  <circle cx="50" cy="50" r="44" fill="var(--zest)" stroke="currentColor" stroke-width="6"/>
+  <circle cx="50" cy="50" r="31" fill="var(--pith)"/>
+  <g stroke="var(--zest)" stroke-width="7" stroke-linecap="round">
+    <path d="M50 26v48M26 50h48M33 33l34 34M67 33L33 67"/>
+  </g></svg>`;
+
+$("#hereBtn").addEventListener("click", async ()=>{
+  const btn = $("#hereBtn");
+  const old = btn.innerHTML;
+  btn.innerHTML = spinSlice + " Finding your lemons…";
+  frontError("");
+  try{
+    const p = await locate();
+    btn.innerHTML = old;
+    openPin(p);
+  }catch(err){
+    btn.innerHTML = old;
+    frontError(locateErrorMsg(err));
+  }
+});
+
+$("#quickBtn").addEventListener("click", async ()=>{
+  const btn = $("#quickBtn");
+  btn.textContent = "squeezing…";
+  frontError("");
+  try{
+    const p = await locate();
+    btn.textContent = "quick share — just grab the link";
+    pin = p;
+    history.replaceState(null, "", "#" + packPin(pin));
+    openSheet("quick");
+  }catch(err){
+    btn.textContent = "quick share — just grab the link";
+    frontError(locateErrorMsg(err));
+  }
+});
+
+/* search + paste */
+let searching = false;
+async function runSearch(){
+  const q = $("#searchBox").value.trim();
+  if(!q || searching) return;
+  const parsed = parsePasted(q);
+  if(parsed){ openPin(parsed); return; }
+  searching = true;
+  $("#results").innerHTML = "";
+  frontError("");
+  try{
+    const hits = await searchPlaces(q);
+    if(!hits.length){ frontError("No lemons found for that. Try being more specific."); }
+    const box = $("#results");
+    hits.forEach(h=>{
+      const li = document.createElement("li");
+      const b = document.createElement("button");
+      const name = h.name || h.display_name.split(",")[0];
+      const rest = h.display_name.split(",").slice(1, 4).join(",").trim();
+      b.textContent = name + " ";
+      const cc = document.createElement("span");
+      cc.className = "cc"; cc.textContent = rest;
+      b.appendChild(cc);
+      b.addEventListener("click", ()=>{
+        openPin({ lat: parseFloat(h.lat), lon: parseFloat(h.lon), ts: Date.now(), acc: 0, note: "" });
+      });
+      li.appendChild(b);
+      box.appendChild(li);
+    });
+  }catch{
+    frontError("Search hiccup — try again in a second.");
+  }
+  searching = false;
+}
+$("#searchBox").addEventListener("keydown", e=>{ if(e.key === "Enter") runSearch(); });
+$("#searchBox").addEventListener("paste", ()=>{
+  setTimeout(()=>{
+    const parsed = parsePasted($("#searchBox").value);
+    if(parsed) openPin(parsed);
+  }, 50);
+});
+
+/* ---------- intro: the lemon opens ---------- */
+(function intro(){
+  const el = $("#intro");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(reduced){ el.remove(); return; }
+  /* someone opening a shared pin gets the short cut — they came for the pin */
+  const hasPin = !!unpackPin(location.hash.slice(1));
+  const t = hasPin ? [380, 620, 1350] : [700, 1050, 1950];
+  const timers = [
+    setTimeout(()=> el.classList.add("cut"), t[0]),
+    setTimeout(()=> el.classList.add("open"), t[1]),
+    setTimeout(finish, t[2])
+  ];
+  el.addEventListener("click", finish);
+  function finish(){
+    timers.forEach(clearTimeout);
+    el.classList.add("open","done");
+    setTimeout(()=> el.remove(), 300);
+  }
+})();
+
+/* ---------- boot ---------- */
+(function boot(){
+  const p = unpackPin(location.hash.slice(1));
+  if(p){
+    /* the link was already in the URL — this is someone we sent it to */
+    isRecipient = true;
+    openPin(p, { push:false });
+  } else {
+    /* clean slate every visit, same as the weather */
+    history.replaceState(null, "", location.pathname);
+    showFront();
+  }
+})();
+</script>
+</body>
+</html>
