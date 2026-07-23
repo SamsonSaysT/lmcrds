@@ -152,15 +152,20 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 :root[data-theme="dark"] #map{background:#1A1A12}
 .mapui{
   position:absolute;right:10px;bottom:10px;z-index:var(--z-mapui);
+  display:flex;gap:8px;
 }
 .adjustbtn{
-  font-size:.8rem;font-weight:700;color:var(--ink);
-  background:var(--pith);border:1px solid var(--ink);border-radius:999px;padding:7px 14px;
+  font-size:.78rem;font-weight:700;color:var(--ink);
+  background:var(--pith);border:1px solid var(--ink);border-radius:999px;padding:7px 13px;
+  box-shadow:0 2px 8px rgba(35,36,27,.12);
 }
 .adjustbtn[aria-pressed="true"]{background:var(--ink);color:var(--pith)}
-[data-theme] .leaflet-tile{transition:filter .2s ease}
-:root[data-theme="dark"] .leaflet-tile{filter:sepia(.55) hue-rotate(14deg) saturate(1.45) brightness(.88)}
-:root:not([data-theme="dark"]) .leaflet-tile{filter:sepia(.3) hue-rotate(6deg) saturate(1.12)}
+#map.locked{cursor:default}
+/* light: keep the ink labels ink, just warm the fields */
+:root:not([data-theme="dark"]) .leaflet-tile{filter:sepia(.16) saturate(1.18) contrast(1.08) brightness(.99)}
+/* dark: lift it off black so streets and names actually read */
+:root[data-theme="dark"] .leaflet-tile{filter:brightness(1.5) contrast(1.12) sepia(.3) hue-rotate(6deg) saturate(1.25)}
+.leaflet-tile{transition:filter .2s ease}
 .leaflet-container{font-family:var(--body)}
 .leaflet-control-zoom a{display:block;width:30px;height:30px;line-height:30px;text-align:center;text-decoration:none;background:var(--pith);color:var(--ink);border-bottom:1px solid var(--hairline);font-weight:700}
 .leaflet-control-zoom{border:1px solid var(--ink);border-radius:8px;overflow:hidden;background:var(--pith)}
@@ -421,6 +426,7 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
       <div class="mapwrap">
         <div id="map"></div>
         <div class="mapui">
+          <button class="adjustbtn" id="lockBtn" aria-pressed="false">unlock map</button>
           <button class="adjustbtn" id="dragBtn" aria-pressed="false">adjust pin</button>
         </div>
       </div>
@@ -433,6 +439,7 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
       <div class="dropline">
         <span class="when" id="dropWhen"></span>
         <span id="dropAgo"></span>
+        <span id="dropAcc"></span>
       </div>
       <div class="notefield">
         <input id="noteInput" type="text" maxlength="120"
@@ -764,16 +771,34 @@ async function searchPlaces(q){
   return r.json();
 }
 
-/* ---------- geolocation ---------- */
-function locate(){
+/* ---------- geolocation ----------
+   One getCurrentPosition often hands back a coarse network fix. We watch for a
+   few seconds instead and keep the tightest reading, bailing early once the GPS
+   settles under the target. Meaningfully more exact on a phone. */
+function locate(opts = {}){
+  const { target = 12, maxWait = 10000, onProgress = null } = opts;
   return new Promise((res, rej)=>{
     if(!window.isSecureContext) return rej(new Error("insecure"));
     if(!navigator.geolocation) return rej(new Error("unsupported"));
-    navigator.geolocation.getCurrentPosition(
-      pos => res({ lat: pos.coords.latitude, lon: pos.coords.longitude,
-                   acc: pos.coords.accuracy || 0, ts: Date.now(), note: "" }),
-      err => rej(err),
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 15000 }
+    let best = null, watchId = null, settled = false, timer = null;
+    const finish = err =>{
+      if(settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if(watchId !== null) navigator.geolocation.clearWatch(watchId);
+      if(best) res(best); else rej(err || new Error("timeout"));
+    };
+    timer = setTimeout(()=> finish(new Error("timeout")), maxWait);
+    watchId = navigator.geolocation.watchPosition(
+      pos =>{
+        const c = pos.coords;
+        const cand = { lat:c.latitude, lon:c.longitude, acc:c.accuracy || 0, ts:Date.now(), note:"" };
+        if(!best || cand.acc < best.acc) best = cand;
+        if(onProgress) onProgress(best.acc);
+        if(best.acc <= target) finish();
+      },
+      err =>{ if(!best) finish(err); },
+      { enableHighAccuracy: true, timeout: maxWait, maximumAge: 0 }
     );
   });
 }
@@ -848,6 +873,7 @@ window.addEventListener("popstate", ()=>{
 
 /* ---------- map ---------- */
 const TILES = {
+  /* voyager has real street labels; dark_matter keeps them legible when lifted */
   dark:  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
   light: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
 };
@@ -860,6 +886,7 @@ function setTiles(){
   if(tileLayer) tileLayer.remove();
   tileLayer = L.tileLayer(TILES[t], {
     maxZoom: 20,
+    detectRetina: true,   /* @2x tiles — the difference between crisp street names and mush */
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
   }).addTo(map);
 }
@@ -882,7 +909,13 @@ const lemonIcon = L.divIcon({
 const youIcon = L.divIcon({ className: "youdot", iconSize: [15, 15], iconAnchor: [8, 8] });
 
 function initMap(){
-  map = L.map("map", { zoomControl: false });
+  /* locked by default so a thumb-scroll down the page doesn't get eaten by the map */
+  map = L.map("map", {
+    zoomControl: false,
+    dragging: false, scrollWheelZoom: false, touchZoom: false,
+    doubleClickZoom: false, boxZoom: false, keyboard: false
+  });
+  document.getElementById("map").classList.add("locked");
   L.control.zoom({ position: "topleft" }).addTo(map);
   setTiles();
   marker = L.marker([0, 0], { icon: lemonIcon, draggable: false, keyboard: false }).addTo(map);
@@ -895,6 +928,17 @@ function initMap(){
     flash("pin adjusted");
   });
 }
+
+let unlocked = false;
+$("#lockBtn").addEventListener("click", ()=>{
+  unlocked = !unlocked;
+  const on = unlocked ? "enable" : "disable";
+  ["dragging","scrollWheelZoom","touchZoom","doubleClickZoom","boxZoom","keyboard"]
+    .forEach(h => map[h] && map[h][on]());
+  document.getElementById("map").classList.toggle("locked", !unlocked);
+  $("#lockBtn").textContent = unlocked ? "lock map" : "unlock map";
+  $("#lockBtn").setAttribute("aria-pressed", unlocked);
+});
 $("#dragBtn").addEventListener("click", ()=>{
   dragging = !dragging;
   if(dragging) marker.dragging.enable(); else marker.dragging.disable();
@@ -905,7 +949,6 @@ $("#dragBtn").addEventListener("click", ()=>{
 /* ---------- render ---------- */
 function refreshPin(opts = {}){
   const { recenter = true } = opts;
-  history.replaceState(null, "", "#" + packPin(pin));
   marker.setLatLng([pin.lat, pin.lon]);
   if(accCircle){ accCircle.remove(); accCircle = null; }
   if(pin.acc > 3){
@@ -921,6 +964,7 @@ function refreshPin(opts = {}){
 
   $("#dropWhen").textContent = fmtWhen(pin.ts);
   $("#dropAgo").textContent = fmtAgo(pin.ts);
+  $("#dropAcc").textContent = pin.acc > 3 ? `\u00b1 ${Math.round(pin.acc)} m` : "exact";
   $("#bigCoords").innerHTML = `${pin.lat.toFixed(5)},<br>${pin.lon.toFixed(5)}`;
   $("#quip").textContent = pickQuip(pin);
   $("#decVal").textContent = fmtDec(pin);
@@ -963,7 +1007,7 @@ function openPin(p, opts = {}){
   showPinPage();
   $("#farWrap").classList.toggle("hidden", !isRecipient);
   if(!map) initMap();
-  if(push) history.pushState(null, "", "#" + packPin(pin));
+  if(push) history.pushState({ view:"pin" }, "", location.pathname + location.hash);
   refreshPin();
   setTimeout(()=> map.invalidateSize(), 60);
 }
@@ -973,7 +1017,6 @@ $("#noteInput").addEventListener("input", ()=>{
   clearTimeout(noteTimer);
   noteTimer = setTimeout(()=>{
     pin.note = $("#noteInput").value.trim();
-    history.replaceState(null, "", "#" + packPin(pin));
     renderQR();
   }, 400);
 });
@@ -1009,8 +1052,6 @@ function openSheet(from){
 }
 function closeSheet(){
   $("#sheet").classList.add("hidden");
-  /* quick share never left the front page — clear the hash on the way out */
-  if(sheetFrom === "quick") history.replaceState(null, "", location.pathname);
 }
 $("#shareTopBtn").addEventListener("click", ()=> openSheet("pin"));
 $("#sheetClose").addEventListener("click", closeSheet);
@@ -1070,7 +1111,9 @@ $("#hereBtn").addEventListener("click", async ()=>{
   btn.innerHTML = spinSlice + " Finding your lemons…";
   frontError("");
   try{
-    const p = await locate();
+    const p = await locate({
+      onProgress: acc => { btn.innerHTML = spinSlice + ` Tightening… \u00b1${Math.round(acc)} m`; }
+    });
     btn.innerHTML = old;
     openPin(p);
   }catch(err){
@@ -1087,7 +1130,6 @@ $("#quickBtn").addEventListener("click", async ()=>{
     const p = await locate();
     btn.textContent = "quick share — just grab the link";
     pin = p;
-    history.replaceState(null, "", "#" + packPin(pin));
     openSheet("quick");
   }catch(err){
     btn.textContent = "quick share — just grab the link";
