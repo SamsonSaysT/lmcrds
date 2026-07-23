@@ -160,6 +160,9 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
   font-size:.87rem;line-height:1.45;text-wrap:balance;
 }
 .sharehero{margin-top:16px;font-size:1rem;padding:13px 26px}
+.openin{margin-top:14px;color:var(--muted);font-size:.88rem}
+.openin a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--rind)}
+.scrollhint{margin-top:5px;color:var(--muted);font-size:.75rem}
 .btn-ghost{
   background:transparent;color:var(--ink);border:1px solid var(--ink);
 }
@@ -530,6 +533,11 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
         <div class="bigcoords" id="bigCoords"></div>
         <p class="quip" id="quip"></p>
         <button class="btn sharehero" id="shareTopBtn">Share this pin</button>
+        <p class="openin">open in
+          <a id="gViewTop" target="_blank" rel="noopener">google maps</a> or
+          <a id="aViewTop" target="_blank" rel="noopener">apple maps</a>
+        </p>
+        <p class="scrollhint">scroll down for more info</p>
       </div>
 
       <div class="mapwrap">
@@ -1491,8 +1499,10 @@ function refreshPin(opts = {}){
 
   const ll = `${pin.lat.toFixed(6)},${pin.lon.toFixed(6)}`;
   $("#gView").href  = `https://www.google.com/maps/search/?api=1&query=${ll}`;
+  $("#gViewTop").href = $("#gView").href;
   $("#gRoute").href = `https://www.google.com/maps/dir/?api=1&destination=${ll}`;
   $("#aView").href  = `https://maps.apple.com/?ll=${ll}&q=Pin`;
+  $("#aViewTop").href = $("#aView").href;
   $("#aRoute").href = `https://maps.apple.com/?daddr=${ll}`;
   $("#wView").href  = `https://waze.com/ul?ll=${ll}&zoom=17`;
   $("#wRoute").href = `https://waze.com/ul?ll=${ll}&navigate=yes`;
