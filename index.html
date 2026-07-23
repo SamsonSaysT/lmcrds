@@ -914,25 +914,92 @@ function parsePasted(text){
 }
 
 /* ---------- geocoding ----------
-   Photon (komoot) is built for as-you-type: fast, forgiving of typos and half-
-   typed words, and it takes a proximity hint. Nominatim is slower but better on
-   full addresses, so it backs Photon up rather than leading. */
+   Photon (komoot) answers fast and forgives half-typed words. Nominatim is
+   slower but far better at an exact house number. We fire both, show Photon
+   the moment it lands, then re-rank when Nominatim catches up. */
 const NOM = "https://nominatim.openstreetmap.org";
 const PHOTON = "https://photon.komoot.io/api";
 
-/* remember roughly where this person searches so results lead with their town */
-function biasPoint(){
-  if(pin) return { lat: pin.lat, lon: pin.lon };
+/* A rough anchor from the browser's timezone, so the very first search already
+   knows what continent you're on. No permission prompt, no network call. */
+const TZ_ANCHORS = {
+  "America/Detroit":[42.33,-83.05,"us"], "America/New_York":[40.71,-74.01,"us"],
+  "America/Chicago":[41.88,-87.63,"us"], "America/Denver":[39.74,-104.99,"us"],
+  "America/Phoenix":[33.45,-112.07,"us"], "America/Los_Angeles":[34.05,-118.24,"us"],
+  "America/Anchorage":[61.22,-149.90,"us"], "Pacific/Honolulu":[21.31,-157.86,"us"],
+  "America/Indiana/Indianapolis":[39.77,-86.16,"us"], "America/Kentucky/Louisville":[38.25,-85.76,"us"],
+  "America/Boise":[43.62,-116.20,"us"], "America/Toronto":[43.65,-79.38,"ca"],
+  "America/Vancouver":[49.28,-123.12,"ca"], "America/Edmonton":[53.55,-113.49,"ca"],
+  "America/Winnipeg":[49.90,-97.14,"ca"], "America/Halifax":[44.65,-63.58,"ca"],
+  "America/St_Johns":[47.56,-52.71,"ca"], "America/Mexico_City":[19.43,-99.13,"mx"],
+  "Europe/London":[51.51,-0.13,"gb"], "Europe/Dublin":[53.35,-6.26,"ie"],
+  "Europe/Paris":[48.86,2.35,"fr"], "Europe/Berlin":[52.52,13.40,"de"],
+  "Europe/Madrid":[40.42,-3.70,"es"], "Europe/Rome":[41.90,12.50,"it"],
+  "Europe/Amsterdam":[52.37,4.90,"nl"], "Europe/Brussels":[50.85,4.35,"be"],
+  "Europe/Zurich":[47.38,8.54,"ch"], "Europe/Vienna":[48.21,16.37,"at"],
+  "Europe/Stockholm":[59.33,18.07,"se"], "Europe/Oslo":[59.91,10.75,"no"],
+  "Europe/Copenhagen":[55.68,12.57,"dk"], "Europe/Helsinki":[60.17,24.94,"fi"],
+  "Europe/Warsaw":[52.23,21.01,"pl"], "Europe/Prague":[50.08,14.44,"cz"],
+  "Europe/Lisbon":[38.72,-9.14,"pt"], "Europe/Athens":[37.98,23.73,"gr"],
+  "Europe/Moscow":[55.76,37.62,"ru"], "Europe/Istanbul":[41.01,28.98,"tr"],
+  "Asia/Tokyo":[35.68,139.69,"jp"], "Asia/Seoul":[37.57,126.98,"kr"],
+  "Asia/Shanghai":[31.23,121.47,"cn"], "Asia/Hong_Kong":[22.32,114.17,"hk"],
+  "Asia/Singapore":[1.35,103.82,"sg"], "Asia/Bangkok":[13.76,100.50,"th"],
+  "Asia/Jakarta":[-6.21,106.85,"id"], "Asia/Manila":[14.60,120.98,"ph"],
+  "Asia/Kolkata":[19.08,72.88,"in"], "Asia/Dubai":[25.20,55.27,"ae"],
+  "Asia/Jerusalem":[31.77,35.21,"il"], "Australia/Sydney":[-33.87,151.21,"au"],
+  "Australia/Melbourne":[-37.81,144.96,"au"], "Australia/Brisbane":[-27.47,153.03,"au"],
+  "Australia/Perth":[-31.95,115.86,"au"], "Pacific/Auckland":[-36.85,174.76,"nz"],
+  "America/Sao_Paulo":[-23.55,-46.63,"br"], "America/Argentina/Buenos_Aires":[-34.60,-58.38,"ar"],
+  "America/Bogota":[4.71,-74.07,"co"], "America/Lima":[-12.05,-77.04,"pe"],
+  "America/Santiago":[-33.45,-70.67,"cl"], "Africa/Johannesburg":[-26.20,28.05,"za"],
+  "Africa/Lagos":[6.52,3.38,"ng"], "Africa/Cairo":[30.04,31.24,"eg"],
+  "Africa/Nairobi":[-1.29,36.82,"ke"]
+};
+function tzAnchor(){
   try{
-    const raw = localStorage.getItem("lemoncoords.near");
-    if(raw){ const [lat, lon] = raw.split(",").map(Number);
-      if(isFinite(lat) && isFinite(lon)) return { lat, lon }; }
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const a = TZ_ANCHORS[tz];
+    if(a) return { lat:a[0], lon:a[1], cc:a[2] };
   }catch{}
   return null;
 }
-function rememberBias(p){
-  try{ localStorage.setItem("lemoncoords.near", p.lat.toFixed(3) + "," + p.lon.toFixed(3)); }catch{}
+
+/* remember roughly where this person searches so results lead with their town */
+function biasPoint(){
+  if(pin) return { lat: pin.lat, lon: pin.lon, cc: biasCC };
+  try{
+    const raw = localStorage.getItem("lemoncoords.near");
+    if(raw){
+      const [lat, lon, cc] = raw.split(",");
+      if(isFinite(+lat) && isFinite(+lon)) return { lat:+lat, lon:+lon, cc: cc || biasCC };
+    }
+  }catch{}
+  return tzAnchor();
 }
+let biasCC = (tzAnchor() || {}).cc || "";
+function rememberBias(p, cc){
+  if(cc) biasCC = cc;
+  try{ localStorage.setItem("lemoncoords.near",
+    p.lat.toFixed(3) + "," + p.lon.toFixed(3) + "," + (cc || biasCC || "")); }catch{}
+}
+
+const ABBR = {
+  "Alabama":"AL","Alaska":"AK","Arizona":"AZ","Arkansas":"AR","California":"CA","Colorado":"CO",
+  "Connecticut":"CT","Delaware":"DE","Florida":"FL","Georgia":"GA","Hawaii":"HI","Idaho":"ID",
+  "Illinois":"IL","Indiana":"IN","Iowa":"IA","Kansas":"KS","Kentucky":"KY","Louisiana":"LA",
+  "Maine":"ME","Maryland":"MD","Massachusetts":"MA","Michigan":"MI","Minnesota":"MN",
+  "Mississippi":"MS","Missouri":"MO","Montana":"MT","Nebraska":"NE","Nevada":"NV",
+  "New Hampshire":"NH","New Jersey":"NJ","New Mexico":"NM","New York":"NY",
+  "North Carolina":"NC","North Dakota":"ND","Ohio":"OH","Oklahoma":"OK","Oregon":"OR",
+  "Pennsylvania":"PA","Rhode Island":"RI","South Carolina":"SC","South Dakota":"SD",
+  "Tennessee":"TN","Texas":"TX","Utah":"UT","Vermont":"VT","Virginia":"VA","Washington":"WA",
+  "West Virginia":"WV","Wisconsin":"WI","Wyoming":"WY","District of Columbia":"DC",
+  "Ontario":"ON","Quebec":"QC","British Columbia":"BC","Alberta":"AB","Manitoba":"MB",
+  "Saskatchewan":"SK","Nova Scotia":"NS","New Brunswick":"NB","Newfoundland and Labrador":"NL",
+  "Prince Edward Island":"PE"
+};
+const SHORT_COUNTRY = { "United States":"USA", "United Kingdom":"UK" };
 
 const KINDS = {
   house:"address", street:"street", locality:"area", district:"district",
@@ -940,50 +1007,100 @@ const KINDS = {
 };
 function prettyKind(pr){
   const v = (pr.osm_value || "").replace(/_/g, " ");
-  if(v && !["yes","residential","house"].includes(v)) return v;
+  if(v && !["yes","residential","house","detached","apartments"].includes(v)) return v;
+  if(pr.housenumber) return "address";
   return KINDS[pr.type] || "place";
 }
 
-async function geocode(q, signal){
-  const near = biasPoint();
-  const bias = near ? `&lat=${near.lat.toFixed(4)}&lon=${near.lon.toFixed(4)}` : "";
-  try{
-    const r = await fetch(`${PHOTON}/?q=${encodeURIComponent(q)}&limit=6${bias}`, { signal });
-    if(!r.ok) throw new Error("photon");
-    const j = await r.json();
-    const out = (j.features || []).map(f =>{
-      const pr = f.properties || {}, c = f.geometry?.coordinates || [];
-      const street = [pr.housenumber, pr.street].filter(Boolean).join(" ");
-      const name = pr.name || street || pr.city || pr.state || pr.country || "Unnamed";
-      const where = [street && street !== name ? street : null,
-                     pr.city, pr.state, pr.country].filter(Boolean);
-      /* don't repeat the name back inside its own context line */
-      const ctx = where.filter(x => x !== name).join(", ");
-      return { lat: c[1], lon: c[0], name, ctx, kind: prettyKind(pr) };
-    }).filter(x => isFinite(x.lat) && isFinite(x.lon));
-    if(out.length) return dedupe(out);
-    throw new Error("empty");
-  }catch(e){
-    if(e.name === "AbortError") throw e;
-    /* photon down or blank — fall through to nominatim */
-    const r = await fetch(`${NOM}/search?format=jsonv2&limit=6&addressdetails=1&q=${encodeURIComponent(q)}`, { signal });
-    if(!r.ok) throw new Error("search failed");
-    const j = await r.json();
-    return dedupe(j.map(h =>{
-      const parts = h.display_name.split(",").map(s => s.trim());
-      return {
-        lat: parseFloat(h.lat), lon: parseFloat(h.lon),
-        name: h.name || parts[0],
-        ctx: parts.slice(1, 4).join(", "),
-        kind: (h.type || "place").replace(/_/g, " ")
-      };
-    }));
-  }
+/* build the grey line under the name, the way a local would write it */
+function contextLine(o, name){
+  const state = ABBR[o.state] || o.state || "";
+  const bits = [];
+  if(o.street && o.street !== name && !name.includes(o.street)) bits.push(o.street);
+  if(o.city) bits.push(o.city);
+  const tail = [state, o.postcode].filter(Boolean).join(" ");
+  if(tail) bits.push(tail);
+  if(o.country && (!biasCC || o.cc !== biasCC))
+    bits.push(SHORT_COUNTRY[o.country] || o.country);
+  return bits.filter(Boolean).join(", ");
 }
+
+async function fromPhoton(q, near, signal){
+  const bias = near ? `&lat=${near.lat.toFixed(4)}&lon=${near.lon.toFixed(4)}` : "";
+  const r = await fetch(`${PHOTON}/?q=${encodeURIComponent(q)}&limit=8${bias}`, { signal });
+  if(!r.ok) throw new Error("photon");
+  const j = await r.json();
+  return (j.features || []).map((f, i) =>{
+    const pr = f.properties || {}, c = f.geometry?.coordinates || [];
+    const street = [pr.housenumber, pr.street].filter(Boolean).join(" ");
+    const name = pr.name || street || pr.city || pr.state || pr.country || "Unnamed";
+    return {
+      lat: c[1], lon: c[0], name, rank: i, housenumber: pr.housenumber || "",
+      kind: prettyKind(pr), cc: (pr.countrycode || "").toLowerCase(),
+      ctx: contextLine({
+        street: pr.street, city: pr.city || pr.district || pr.county,
+        state: pr.state, postcode: pr.postcode, country: pr.country,
+        cc: (pr.countrycode || "").toLowerCase()
+      }, name)
+    };
+  }).filter(x => isFinite(x.lat) && isFinite(x.lon));
+}
+
+async function fromNominatim(q, near, signal){
+  /* viewbox with bounded=0 nudges toward home without hiding anything else */
+  let box = "";
+  if(near){
+    const d = 1.6;
+    box = `&viewbox=${(near.lon-d).toFixed(3)},${(near.lat+d).toFixed(3)},` +
+          `${(near.lon+d).toFixed(3)},${(near.lat-d).toFixed(3)}&bounded=0`;
+  }
+  const r = await fetch(
+    `${NOM}/search?format=jsonv2&limit=8&addressdetails=1${box}&q=${encodeURIComponent(q)}`,
+    { signal });
+  if(!r.ok) throw new Error("nominatim");
+  const j = await r.json();
+  return j.map((h, i) =>{
+    const a = h.address || {};
+    const city = a.city || a.town || a.village || a.hamlet || a.suburb || a.county || "";
+    const street = [a.house_number, a.road].filter(Boolean).join(" ");
+    const name = h.name || street || city || h.display_name.split(",")[0];
+    const cc = (a.country_code || "").toLowerCase();
+    return {
+      lat: parseFloat(h.lat), lon: parseFloat(h.lon), name, rank: i,
+      housenumber: a.house_number || "",
+      kind: a.house_number ? "address" : (h.type || "place").replace(/_/g, " "),
+      cc,
+      ctx: contextLine({ street: a.road, city, state: a.state,
+                         postcode: a.postcode, country: a.country, cc }, name)
+    };
+  }).filter(x => isFinite(x.lat) && isFinite(x.lon));
+}
+
+/* Rank by how far it is and how well it answers what was typed. Lower wins. */
+function rankHits(list, q, near){
+  const num = (q.match(/^\s*(\d{1,6})\b/) || [])[1] || "";
+  const words = q.toLowerCase().split(/\s+/).filter(w => w.length > 2 && w !== num);
+  return list.map(h =>{
+    let s = h.rank * 2;
+    if(near){
+      const km = haversine(near, h) / 1000;
+      s += Math.log10(1 + km) * 15;      /* same town ~0, next state ~30, overseas ~55 */
+    }
+    if(num){
+      if(h.housenumber === num) s -= 30; /* the exact house beats the street it's on */
+      else if(h.kind === "address") s -= 4;
+      else s += 6;                       /* a bare street when a number was typed */
+    }
+    const hay = (h.name + " " + h.ctx).toLowerCase();
+    if(words.length && words.every(w => hay.includes(w))) s -= 7;
+    return { ...h, score: s };
+  }).sort((a, b) => a.score - b.score);
+}
+
 function dedupe(list){
   const seen = new Set();
   return list.filter(x =>{
-    const k = x.name + "|" + x.lat.toFixed(3) + "," + x.lon.toFixed(3);
+    const k = x.name.toLowerCase() + "|" + x.lat.toFixed(4) + "," + x.lon.toFixed(4);
     if(seen.has(k)) return false;
     seen.add(k); return true;
   });
@@ -1426,7 +1543,7 @@ function renderResults(hits){
 function choose(i){
   const h = currentHits[i];
   if(!h) return;
-  rememberBias(h);
+  rememberBias(h, h.cc);
   openPin({ lat: h.lat, lon: h.lon, ts: Date.now(), acc: 0, note: "" });
 }
 
@@ -1470,24 +1587,43 @@ async function liveSearch(){
   if(searchCache.has(q)){ renderResults(searchCache.get(q)); return; }
 
   $("#searchBox").classList.add("busy");
-  searchTimer = setTimeout(async ()=>{
+  searchTimer = setTimeout(()=>{
     const ac = new AbortController();
     searchAbort = ac;
-    try{
-      const hits = await geocode(q, ac.signal);
-      if(ac.signal.aborted) return;
-      searchCache.set(q, hits);
+    const near = biasPoint();
+    const live = () => searchAbort === ac && !ac.signal.aborted;
+    let photonHits = null, done = 0;
+
+    const settle = ()=>{
+      if(++done === 2 && live()){
+        searchAbort = null;
+        $("#searchBox").classList.remove("busy");
+      }
+    };
+
+    /* whatever arrives first goes on screen; the second pass merges and re-ranks */
+    const show = (hits, final)=>{
+      if(!live()) return;
+      const ranked = rankHits(dedupe(hits), q, near).slice(0, 7);
+      if(final) searchCache.set(q, ranked);
       if(searchCache.size > 40) searchCache.delete(searchCache.keys().next().value);
-      renderResults(hits);
-      if(!hits.length) frontError("Nothing found. Try adding a city, or the street.");
-    }catch(e){
-      if(e.name === "AbortError") return;
-      clearResults();
-      frontError("Search is being slow. Try again in a second.");
-    }finally{
-      if(searchAbort === ac){ searchAbort = null; $("#searchBox").classList.remove("busy"); }
-    }
-  }, 260);
+      renderResults(ranked);
+      if(final && !ranked.length) frontError("Nothing found. Try adding the city or the street.");
+    };
+
+    fromPhoton(q, near, ac.signal)
+      .then(hits =>{ photonHits = hits; show(hits, false); })
+      .catch(()=>{ photonHits = []; })
+      .finally(settle);
+
+    fromNominatim(q, near, ac.signal)
+      .then(nom =>{
+        const merged = (photonHits || []).concat(nom);
+        show(merged.length ? merged : nom, true);
+      })
+      .catch(()=>{ if(photonHits) show(photonHits, true); })
+      .finally(settle);
+  }, 170);
 }
 
 $("#searchBox").addEventListener("input", liveSearch);
