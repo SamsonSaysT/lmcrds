@@ -10,7 +10,13 @@
 <meta name="theme-color" content="#FFFDF4">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Lemoncoords">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="%23F4CE3E"/><circle cx="50" cy="50" r="30" fill="%23FFFDF4"/><g stroke="%23F4CE3E" stroke-width="6" stroke-linecap="round"><path d="M50 28v44M28 50h44M35 35l30 30M65 35L35 65"/></g></svg>'>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -289,6 +295,46 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 .sheetbtnrow{margin-top:18px;display:flex;justify-content:center;gap:12px}
 .sheetbtnrow .btn{font-size:.95rem;padding:12px 24px}
 .sheetalt{margin-top:18px}
+
+/* ---------- keep it on your phone ---------- */
+.installbar{
+  position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));
+  z-index:var(--z-modal);max-width:520px;margin:0 auto;
+  display:flex;align-items:center;gap:12px;
+  background:var(--pith);border:1px solid var(--ink);border-radius:18px;
+  padding:12px 14px;box-shadow:0 14px 40px rgba(35,36,27,.20);
+  animation:installin .4s cubic-bezier(.16,1,.3,1) both;
+}
+:root[data-theme="dark"] .installbar{box-shadow:0 14px 40px rgba(0,0,0,.55)}
+@keyframes installin{from{transform:translateY(26px);opacity:0}to{transform:none;opacity:1}}
+.installicon{display:block;flex:none;border-radius:9px}
+.installtext{flex:1;min-width:0;line-height:1.3}
+.installtext b{display:block;font-family:var(--display);font-weight:640;font-size:.98rem}
+.installtext span{display:block;color:var(--muted);font-size:.78rem;margin-top:1px}
+.installgo{flex:none;font-size:.86rem;padding:9px 18px}
+.installx{
+  flex:none;font-size:1.3rem;line-height:1;color:var(--muted);
+  padding:4px 2px 6px;align-self:flex-start;
+}
+.installx:hover{color:var(--ink)}
+@media (max-width:380px){
+  .installtext span{display:none}
+}
+.iosicon{display:block;margin:0 auto 6px;border-radius:14px}
+.iossteps{
+  list-style:none;counter-reset:s;text-align:left;margin:20px auto 0;max-width:320px;
+}
+.iossteps li{
+  counter-increment:s;position:relative;padding:11px 0 11px 38px;
+  border-top:1px solid var(--hairline);font-size:.92rem;line-height:1.45;
+}
+.iossteps li:last-child{border-bottom:1px solid var(--hairline)}
+.iossteps li::before{
+  content:counter(s);position:absolute;left:0;top:11px;
+  width:24px;height:24px;border-radius:50%;background:var(--zest);color:#23241B;
+  display:grid;place-items:center;font-family:var(--display);font-weight:640;font-size:.8rem;
+}
+.iosglyph{display:inline-flex;vertical-align:-3px;margin-left:3px;color:var(--rind-text)}
 
 /* ---------- squeezing ---------- */
 .squeeze{
@@ -609,6 +655,35 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
     <div class="sqacc" id="sqAcc">looking for satellites</div>
   </div>
   <div class="sqhint" id="sqHint"></div>
+</div>
+
+<!-- ============ KEEP IT ON YOUR PHONE ============ -->
+<div class="installbar hidden" id="installBar">
+  <img class="installicon" src="icons/icon-192.png" alt="" width="38" height="38">
+  <div class="installtext">
+    <b>Keep it on your phone</b>
+    <span>Opens like an app. One tap to drop a pin.</span>
+  </div>
+  <button class="btn installgo" id="installGo">Add</button>
+  <button class="installx" id="installNo" aria-label="No thanks">&times;</button>
+</div>
+
+<div class="sheet hidden" id="iosSheet">
+  <button class="modalclose" id="iosClose" aria-label="Close">&times;</button>
+  <div class="sheetcontent">
+    <img src="icons/icon-192.png" alt="" width="96" height="96" class="iosicon">
+    <h2>Add to your home screen</h2>
+    <p class="lede">Two taps in Safari and it lives on your phone like any other app.</p>
+    <ol class="iossteps">
+      <li>Tap <b>Share</b> at the bottom of Safari <span class="iosglyph" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+          <path d="M12 15V3m0 0L8 7m4-4 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg></span></li>
+      <li>Scroll down and pick <b>Add to Home Screen</b></li>
+      <li>Tap <b>Add</b>. That's it.</li>
+    </ol>
+  </div>
 </div>
 
 <!-- ============ QUICK SHARE SHEET ============ -->
@@ -1498,7 +1573,9 @@ function closeSheet(){
 $("#shareTopBtn").addEventListener("click", ()=> openSheet("pin"));
 $("#sheetClose").addEventListener("click", closeSheet);
 document.addEventListener("keydown", e=>{
-  if(e.key === "Escape" && !$("#sheet").classList.contains("hidden")) closeSheet();
+  if(e.key !== "Escape") return;
+  if(!$("#sheet").classList.contains("hidden")) closeSheet();
+  else if(!$("#iosSheet").classList.contains("hidden")) $("#iosSheet").classList.add("hidden");
 });
 $("#sheetCopy").addEventListener("click", ()=> copyText(pinUrl(), "link copied, smooth"));
 $("#sheetShare").addEventListener("click", sharePin);
@@ -1751,6 +1828,77 @@ $("#searchBox").addEventListener("keydown", e=>{
     setTimeout(()=> el.remove(), 300);
   }
 })();
+
+/* ---------- keep it on your phone ----------
+   Chrome hands us a real install prompt. Safari has no such API, so iOS gets
+   the two-tap instructions instead. Either way we wait until someone has
+   actually used the thing before asking. */
+(function install(){
+  const bar = $("#installBar");
+  const standalone = window.matchMedia("(display-mode: standalone)").matches
+    || window.navigator.standalone === true;
+  if(standalone) return;                       /* already installed */
+  if(store.get("lemoncoords.noinstall")) return;
+
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(ua);
+
+  let deferred = null;
+  let shown = false;
+
+  function show(){
+    if(shown || bar.classList.contains("hidden") === false) return;
+    shown = true;
+    bar.classList.remove("hidden");
+  }
+  function hide(remember){
+    bar.classList.add("hidden");
+    if(remember) store.set("lemoncoords.noinstall", "1");
+  }
+
+  window.addEventListener("beforeinstallprompt", e =>{
+    e.preventDefault();
+    deferred = e;
+    setTimeout(show, 2600);
+  });
+
+  /* iOS never fires that event — offer the manual route once they've landed */
+  if(isIOS && isSafari) setTimeout(show, 4500);
+
+  $("#installGo").addEventListener("click", async ()=>{
+    if(deferred){
+      hide(false);
+      deferred.prompt();
+      const res = await deferred.userChoice.catch(()=>null);
+      deferred = null;
+      if(res && res.outcome === "accepted") store.set("lemoncoords.noinstall", "1");
+      else shown = false;                      /* they backed out — ask again later */
+      return;
+    }
+    hide(false);
+    $("#iosSheet").classList.remove("hidden");
+  });
+  $("#installNo").addEventListener("click", ()=> hide(true));
+  $("#iosClose").addEventListener("click", ()=> $("#iosSheet").classList.add("hidden"));
+  $("#iosSheet").addEventListener("click", e =>{
+    if(e.target === $("#iosSheet")) $("#iosSheet").classList.add("hidden");
+  });
+
+  window.addEventListener("appinstalled", ()=>{
+    hide(true);
+    flash("added to your phone");
+  });
+})();
+
+/* ---------- offline shell ---------- */
+if("serviceWorker" in navigator &&
+   (location.protocol === "https:" || location.hostname === "localhost")){
+  window.addEventListener("load", ()=>{
+    navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+  });
+}
 
 /* ---------- boot ---------- */
 (function boot(){
