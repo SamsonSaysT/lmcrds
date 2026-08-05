@@ -149,6 +149,12 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 /* ---------- pin page ---------- */
 .pinscreen{padding:20px 0 0}
 .coordshero{padding:16px 0 22px;text-align:center}
+.pinnote{
+  display:inline-block;max-width:32ch;margin:0 auto 16px;text-align:left;
+  font-family:var(--display);font-weight:560;font-size:1.04rem;line-height:1.35;
+  padding:2px 0 2px 13px;border-left:3px solid var(--zest);
+  text-wrap:balance;overflow-wrap:anywhere;
+}
 .bigcoords{
   font-family:var(--display);font-weight:560;font-optical-sizing:auto;
   font-size:clamp(1.7rem,7.6vw,2.7rem);line-height:1.12;letter-spacing:-.01em;
@@ -183,11 +189,20 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
   box-shadow:0 2px 8px rgba(35,36,27,.12);
 }
 .adjustbtn[aria-pressed="true"]{background:var(--ink);color:var(--pith)}
+.satbtn{
+  display:block;font-family:var(--body);font-size:.72rem;font-weight:700;
+  color:var(--ink);background:var(--pith);border:1px solid var(--ink);
+  border-radius:9px;padding:6px 9px;margin-top:8px;line-height:1;
+  box-shadow:0 2px 8px rgba(35,36,27,.14);
+}
+.satbtn[aria-pressed="true"]{background:var(--ink);color:var(--pith)}
 #map.locked{cursor:default}
 /* light: leave the basemap alone — it's legible as drawn, a wash only hurts */
 :root:not([data-theme="dark"]) .leaflet-tile{filter:saturate(1.06)}
 /* dark: dark_matter sits near black, so lift the midtones hard or nothing reads */
 :root[data-theme="dark"] .leaflet-tile{filter:brightness(2.15) contrast(1.16) saturate(1.2) sepia(.1)}
+/* photography gets no tint in either mode */
+#map.sat .leaflet-tile{filter:none !important}
 .leaflet-tile{transition:filter .2s ease}
 .leaflet-container{font-family:var(--body)}
 .leaflet-control-zoom a{display:block;width:30px;height:30px;line-height:30px;text-align:center;text-decoration:none;background:var(--pith);color:var(--ink);border-bottom:1px solid var(--hairline);font-weight:700}
@@ -529,6 +544,7 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
     <!-- ---------- PIN ---------- -->
     <section class="pinscreen hidden" id="pinPage">
       <div class="coordshero">
+        <p class="pinnote hidden" id="pinNote"></p>
         <div class="bigcoords" id="bigCoords"></div>
         <p class="quip" id="quip"></p>
         <button class="btn sharehero" id="shareTopBtn">Share this pin</button>
@@ -567,7 +583,7 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
         <div class="rows">
           <div class="rowline">
             <div>
-              <div class="k">Approximate Address</div>
+              <div class="k">Address</div>
               <div class="v addr" id="addrVal"><span class="pending">finding the address…</span></div>
             </div>
             <button class="linkish" data-copy="addr">copy</button>
@@ -1399,21 +1415,61 @@ window.addEventListener("popstate", ()=>{
 const TILES = {
   /* voyager has real street labels; dark_matter keeps them legible when lifted */
   dark:  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-  light: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+  light: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+  /* Esri World Imagery — best free aerial with no key. Its reference layers are
+     drawn specifically to sit on imagery, so roads and names stay readable. */
+  sat:       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  satRoads:  "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
+  satLabels: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
 };
-let tileLayer = null, tileTheme = null;
+let tileLayer = null, satRoads = null, satLabels = null, tileKey = null, satellite = false;
+let satBtn = null;
 function currentTheme(){ return document.documentElement.dataset.theme === "dark" ? "dark" : "light"; }
-function setTiles(){
-  const t = currentTheme();
-  if(tileTheme === t) return;
-  tileTheme = t;
-  if(tileLayer) tileLayer.remove();
-  tileLayer = L.tileLayer(TILES[t], {
-    maxZoom: 20,
-    detectRetina: true,   /* @2x tiles — the difference between crisp street names and mush */
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-  }).addTo(map);
+
+function setTiles(force){
+  const key = satellite ? "sat" : currentTheme();
+  if(tileKey === key && !force) return;
+  tileKey = key;
+  [tileLayer, satRoads, satLabels].forEach(l => l && l.remove());
+  tileLayer = satRoads = satLabels = null;
+
+  if(satellite){
+    /* imagery runs out around z19 in most places — let Leaflet upscale past it
+       rather than requesting tiles that come back as "no data" */
+    const opts = { maxZoom: 20, maxNativeZoom: 19 };
+    tileLayer = L.tileLayer(TILES.sat, { ...opts, zIndex: 1,
+      attribution: 'Imagery &copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics'
+    }).addTo(map);
+    satRoads  = L.tileLayer(TILES.satRoads,  { ...opts, zIndex: 2 }).addTo(map);
+    satLabels = L.tileLayer(TILES.satLabels, { ...opts, zIndex: 3 }).addTo(map);
+  }else{
+    tileLayer = L.tileLayer(TILES[currentTheme()], {
+      maxZoom: 20, zIndex: 1,
+      detectRetina: true,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    }).addTo(map);
+  }
+  /* the lemon tint is for the drawn basemap only — never filter photography */
+  document.getElementById("map").classList.toggle("sat", satellite);
+  if(satBtn){
+    satBtn.textContent = satellite ? "map" : "satellite";
+    satBtn.setAttribute("aria-pressed", satellite);
+  }
 }
+
+const SatToggle = L.Control.extend({
+  onAdd(){
+    const b = L.DomUtil.create("button", "satbtn");
+    b.type = "button";
+    b.textContent = "satellite";
+    b.setAttribute("aria-pressed", "false");
+    b.setAttribute("aria-label", "Toggle satellite imagery");
+    L.DomEvent.disableClickPropagation(b);
+    L.DomEvent.on(b, "click", ()=>{ satellite = !satellite; setTiles(); });
+    satBtn = b;
+    return b;
+  }
+});
 new MutationObserver(()=>{ if(map) setTiles(); })
   .observe(document.documentElement, { attributes:true, attributeFilter:["data-theme"] });
 
@@ -1441,6 +1497,7 @@ function initMap(){
   });
   document.getElementById("map").classList.add("locked");
   L.control.zoom({ position: "topleft" }).addTo(map);
+  map.addControl(new SatToggle({ position: "topleft" }));
   setTiles();
   marker = L.marker([0, 0], { icon: lemonIcon, draggable: false, keyboard: false }).addTo(map);
   marker.on("dragend", ()=>{
@@ -1489,6 +1546,9 @@ function refreshPin(opts = {}){
   $("#dropWhen").textContent = fmtWhen(pin.ts);
   $("#dropAgo").textContent = fmtAgo(pin.ts);
   $("#dropAcc").textContent = pin.acc > 3 ? `\u00b1 ${Math.round(pin.acc)} m` : "exact";
+  const noteEl = $("#pinNote");
+  noteEl.textContent = pin.note || "";
+  noteEl.classList.toggle("hidden", !pin.note);
   $("#bigCoords").innerHTML = `${pin.lat.toFixed(5)},<br>${pin.lon.toFixed(5)}`;
   $("#quip").textContent = pickQuip(pin);
   $("#decVal").textContent = fmtDec(pin);
@@ -1543,6 +1603,9 @@ $("#noteInput").addEventListener("input", ()=>{
   clearTimeout(noteTimer);
   noteTimer = setTimeout(()=>{
     pin.note = $("#noteInput").value.trim();
+    const noteEl = $("#pinNote");
+    noteEl.textContent = pin.note;
+    noteEl.classList.toggle("hidden", !pin.note);
     renderQR();
   }, 400);
 });
