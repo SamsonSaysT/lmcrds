@@ -1428,7 +1428,7 @@ const TILES = {
   satRoads:  "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
   satLabels: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
 };
-let tileLayer = null, satRoads = null, satLabels = null, tileKey = null, satellite = false;
+let tileLayer = null, satRoads = null, satLabels = null, tileKey = null, satellite = true;
 let satBtn = null;
 function currentTheme(){ return document.documentElement.dataset.theme === "dark" ? "dark" : "light"; }
 
@@ -1480,10 +1480,10 @@ const SatToggle = L.Control.extend({
   onAdd(){
     const b = L.DomUtil.create("button", "satbtn");
     b.type = "button";
-    b.innerHTML = SAT_ICON;
-    b.setAttribute("aria-pressed", "false");
-    b.setAttribute("aria-label", "Show satellite imagery");
-    b.title = "Satellite";
+    b.innerHTML = MAP_ICON;
+    b.setAttribute("aria-pressed", "true");
+    b.setAttribute("aria-label", "Show the drawn map");
+    b.title = "Map";
     L.DomEvent.disableClickPropagation(b);
     L.DomEvent.on(b, "click", ()=>{ satellite = !satellite; setTiles(); });
     satBtn = b;
