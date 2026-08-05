@@ -149,11 +149,14 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 /* ---------- pin page ---------- */
 .pinscreen{padding:20px 0 0}
 .coordshero{padding:16px 0 22px;text-align:center}
+.coordswrap{position:relative}
+/* sits in the empty space above the coordinates — out of flow, so the numbers
+   land in exactly the same place whether there's a note or not */
 .pinnote{
-  display:inline-block;max-width:32ch;margin:0 auto 16px;text-align:left;
-  font-family:var(--display);font-weight:560;font-size:1.04rem;line-height:1.35;
-  padding:2px 0 2px 13px;border-left:3px solid var(--zest);
-  text-wrap:balance;overflow-wrap:anywhere;
+  position:absolute;bottom:100%;left:0;right:0;margin-bottom:8px;
+  font-family:var(--display);font-weight:560;font-size:1.02rem;line-height:1.3;
+  color:var(--ink);text-wrap:balance;overflow-wrap:anywhere;
+  padding:0 8px;
 }
 .bigcoords{
   font-family:var(--display);font-weight:560;font-optical-sizing:auto;
@@ -190,17 +193,18 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 }
 .adjustbtn[aria-pressed="true"]{background:var(--ink);color:var(--pith)}
 .satbtn{
-  display:block;font-family:var(--body);font-size:.72rem;font-weight:700;
+  display:grid;place-items:center;width:30px;height:30px;padding:0;
   color:var(--ink);background:var(--pith);border:1px solid var(--ink);
-  border-radius:9px;padding:6px 9px;margin-top:8px;line-height:1;
+  border-radius:8px;margin-top:8px;
   box-shadow:0 2px 8px rgba(35,36,27,.14);
 }
+.satbtn svg{display:block}
 .satbtn[aria-pressed="true"]{background:var(--ink);color:var(--pith)}
 #map.locked{cursor:default}
-/* light: leave the basemap alone — it's legible as drawn, a wash only hurts */
-:root:not([data-theme="dark"]) .leaflet-tile{filter:saturate(1.06)}
-/* dark: dark_matter sits near black, so lift the midtones hard or nothing reads */
-:root[data-theme="dark"] .leaflet-tile{filter:brightness(2.15) contrast(1.16) saturate(1.2) sepia(.1)}
+/* light: settle it down a touch so the paper isn't blown out */
+:root:not([data-theme="dark"]) .leaflet-tile{filter:saturate(1.05) brightness(.965)}
+/* dark: dark_matter sits near black and needs lifting, but not to daylight */
+:root[data-theme="dark"] .leaflet-tile{filter:brightness(1.72) contrast(1.12) saturate(1.15) sepia(.08)}
 /* photography gets no tint in either mode */
 #map.sat .leaflet-tile{filter:none !important}
 .leaflet-tile{transition:filter .2s ease}
@@ -544,8 +548,10 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
     <!-- ---------- PIN ---------- -->
     <section class="pinscreen hidden" id="pinPage">
       <div class="coordshero">
-        <p class="pinnote hidden" id="pinNote"></p>
-        <div class="bigcoords" id="bigCoords"></div>
+        <div class="coordswrap">
+          <p class="pinnote hidden" id="pinNote"></p>
+          <div class="bigcoords" id="bigCoords"></div>
+        </div>
         <p class="quip" id="quip"></p>
         <button class="btn sharehero" id="shareTopBtn">Share this pin</button>
         <p class="openin">open in
@@ -1452,18 +1458,32 @@ function setTiles(force){
   /* the lemon tint is for the drawn basemap only — never filter photography */
   document.getElementById("map").classList.toggle("sat", satellite);
   if(satBtn){
-    satBtn.textContent = satellite ? "map" : "satellite";
+    satBtn.innerHTML = satellite ? MAP_ICON : SAT_ICON;
     satBtn.setAttribute("aria-pressed", satellite);
+    satBtn.setAttribute("aria-label", satellite ? "Show the drawn map" : "Show satellite imagery");
+    satBtn.title = satellite ? "Map" : "Satellite";
   }
 }
+
+const SAT_ICON = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+  <circle cx="12" cy="12" r="8.6" stroke="currentColor" stroke-width="1.8"/>
+  <ellipse cx="12" cy="12" rx="3.7" ry="8.6" stroke="currentColor" stroke-width="1.6"/>
+  <path d="M3.6 9.3h16.8M3.6 14.7h16.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+</svg>`;
+const MAP_ICON = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+  <path d="M9 4.6 3.7 6.8v12.6L9 17.2l6 2.2 5.3-2.2V4.6L15 6.8 9 4.6Z"
+    stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M9 4.6v12.6M15 6.8v12.6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+</svg>`;
 
 const SatToggle = L.Control.extend({
   onAdd(){
     const b = L.DomUtil.create("button", "satbtn");
     b.type = "button";
-    b.textContent = "satellite";
+    b.innerHTML = SAT_ICON;
     b.setAttribute("aria-pressed", "false");
-    b.setAttribute("aria-label", "Toggle satellite imagery");
+    b.setAttribute("aria-label", "Show satellite imagery");
+    b.title = "Satellite";
     L.DomEvent.disableClickPropagation(b);
     L.DomEvent.on(b, "click", ()=>{ satellite = !satellite; setTiles(); });
     satBtn = b;
