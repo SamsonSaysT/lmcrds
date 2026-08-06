@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lemoncoords-v13-kobe-edit';
+const CACHE_NAME = 'lemoncoords-v14-clean-shared-ui';
 const APP_SHELL = [
   './',
   './index.html',

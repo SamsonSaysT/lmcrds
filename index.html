@@ -78,6 +78,13 @@ header.site{padding:22px 0 10px;border-bottom:1px solid var(--ink)}
 }
 .themebtn:hover{transform:translateY(-1px)}
 .themebtn svg{display:block}
+.sharedlockbtn{position:relative}
+.sharedlockbtn.unlocked{background:var(--ink);color:var(--pith)}
+.sharedlockbtn.loading{opacity:.55}
+.sharedlockbtn.dirty::after{
+  content:"";position:absolute;right:-2px;top:-2px;width:9px;height:9px;border-radius:50%;
+  background:var(--zest);border:2px solid var(--pith);box-shadow:0 0 0 1px var(--ink);
+}
 
 footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--muted);font-size:.78rem;line-height:1.7;margin-top:44px}
 
@@ -318,14 +325,24 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 .sheetbtnrow{margin-top:18px;display:flex;justify-content:center;gap:12px}
 .sheetbtnrow .btn{font-size:.95rem;padding:12px 24px}
 .sheetalt{margin-top:18px}
+.sharelabel{
+  margin:0 0 7px;text-align:left;font-size:.67rem;text-transform:uppercase;
+  letter-spacing:.13em;color:var(--muted);font-weight:650;
+}
+.originalshare{margin-bottom:18px}
+.originalurl{font-family:var(--display);font-weight:620;border-color:var(--ink)}
+.sheetbtnrow.compact{margin-top:11px}
+.sheetbtnrow.compact .btn{font-size:.82rem;padding:9px 15px}
+.fullrule{margin:20px 0 14px}
 
 /* ---------- stepper between stops ---------- */
-.coordsrow{display:flex;align-items:center;justify-content:center;gap:4px}
+.coordsrow{display:flex;align-items:center;justify-content:center;gap:clamp(18px,6vw,42px)}
 .steparrow{
-  flex:none;color:var(--muted);padding:8px 2px;
-  transition:color .15s ease,transform .15s cubic-bezier(.16,1,.3,1);
+  flex:none;color:var(--muted);padding:9px;min-width:42px;min-height:42px;
+  display:grid;place-items:center;border-radius:999px;
+  transition:color .15s ease,transform .15s cubic-bezier(.16,1,.3,1),background .15s ease;
 }
-.steparrow:hover{color:var(--ink)}
+.steparrow:hover{color:var(--ink);background:var(--flesh)}
 .steparrow:active{transform:scale(.86)}
 .steparrow svg{display:block}
 .stepcount{
@@ -436,12 +453,20 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 }
 .passinput:focus{outline:2px solid var(--zest);outline-offset:1px}
 .passhint{color:var(--muted);font-size:.72rem;line-height:1.45;margin-top:8px}
-.sharedpanel{
-  max-width:720px;margin:-22px auto 30px;padding:17px 18px;border:1px solid var(--hairline);
-  border-radius:18px;background:var(--flesh);box-shadow:0 10px 30px rgba(35,36,27,.08);
+.sharedsheet{
+  position:fixed;inset:0;z-index:var(--z-modal);display:grid;place-items:start center;
+  padding:82px 18px 24px;background:rgba(35,36,27,.28);backdrop-filter:blur(4px);
+  overflow-y:auto;animation:sheetin .18s ease both;
 }
-:root[data-theme="dark"] .sharedpanel{box-shadow:0 10px 30px rgba(0,0,0,.28)}
-.sharedhead{display:flex;align-items:flex-start;justify-content:space-between;gap:15px}
+:root[data-theme="dark"] .sharedsheet{background:rgba(0,0,0,.52)}
+.sharedcard{
+  position:relative;width:min(390px,100%);padding:20px;border:1px solid var(--ink);
+  border-radius:18px;background:var(--pith);box-shadow:0 24px 60px rgba(35,36,27,.26);
+}
+:root[data-theme="dark"] .sharedcard{box-shadow:0 24px 60px rgba(0,0,0,.64)}
+.sharedclose{position:absolute;right:11px;top:8px;font-size:1.6rem;color:var(--muted);padding:4px 8px}
+.sharedclose:hover{color:var(--ink)}
+.sharedhead{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;padding-right:30px}
 .sharedk{font-size:.64rem;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:600}
 .sharedtitle{font-family:var(--display);font-weight:640;font-size:1.06rem;margin-top:2px;overflow-wrap:anywhere}
 .sharedrev{font-size:.68rem;color:var(--muted);white-space:nowrap;margin-top:2px}
@@ -455,6 +480,7 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 .sharedmsg.bad{color:#a8482a;font-weight:600}
 :root[data-theme="dark"] .sharedmsg.bad{color:#E58A66}
 .sharedmsg.good{color:var(--leaf);font-weight:600}
+.sharedfine{margin-top:13px;padding-top:12px;border-top:1px solid var(--hairline);color:var(--muted);font-size:.7rem;line-height:1.45}
 body.sharedlocked #noteInput,body.sharedlocked #dragBtn,body.sharedlocked #addStopBtn,
 body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-allowed}
 .tripitem.triplocked .triphandle,.tripitem.triplocked .tripskip,.tripitem.triplocked .tripdel{opacity:.3}
@@ -803,6 +829,13 @@ body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-
         <span class="wordmark">LEMONCOORDS<span class="dot">.</span></span>
       </a>
       <div class="headctl">
+        <button id="sharedLockBtn" class="themebtn sharedlockbtn hidden" aria-label="Shared trip locked" title="Shared trip">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+            <rect x="5.5" y="10" width="13" height="10" rx="2.4" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M8.5 10V7.7a3.5 3.5 0 0 1 7 0V10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="12" cy="15" r="1.2" fill="currentColor"/>
+          </svg>
+        </button>
         <button id="tripBtn" class="themebtn" aria-label="Trip stops" title="Trip">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
             <circle cx="6" cy="6" r="2.4" stroke="currentColor" stroke-width="1.8"/>
@@ -879,28 +912,6 @@ body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-
         <p class="scrollhint">scroll down for more info</p>
       </div>
 
-      <div class="sharedpanel hidden" id="sharedPanel" aria-live="polite">
-        <div class="sharedhead">
-          <div>
-            <div class="sharedk">Shared link</div>
-            <div class="sharedtitle" id="sharedTitle">Protected trip</div>
-          </div>
-          <div class="sharedrev" id="sharedRev"></div>
-        </div>
-        <p class="sharedstatus" id="sharedStatus">Checking this link's edit settings…</p>
-        <div class="sharedactions">
-          <button class="btn btn-ghost hidden" id="sharedAction">Unlock editing</button>
-          <button class="btn hidden" id="sharedSave">Update shared trip</button>
-          <button class="btn btn-ghost hidden" id="sharedReload">Reload latest</button>
-        </div>
-        <div class="sharedauth hidden" id="sharedAuth">
-          <input class="passinput" id="sharedPassword" type="password" maxlength="128"
-            autocomplete="current-password" placeholder="Edit password" aria-label="Edit password">
-          <button class="btn" id="sharedUnlockGo">Unlock</button>
-        </div>
-        <div class="sharedmsg" id="sharedMsg"></div>
-      </div>
-
       <div class="mapwrap">
         <div id="map"></div>
         <div class="mapui">
@@ -929,7 +940,7 @@ body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-
         <div class="rows">
           <div class="rowline">
             <div>
-              <div class="k">Address</div>
+              <div class="k">Approximate Address</div>
               <div class="v addr" id="addrVal"><span class="pending">finding the address…</span></div>
             </div>
             <button class="linkish" data-copy="addr">copy</button>
@@ -1090,6 +1101,18 @@ body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-
     <div id="sheetMoon"></div>
     <h2>Fresh pin, squeezed</h2>
     <p class="lede">This link is the exact spot — map, address, coordinates, routes. Send it however you like.</p>
+
+    <div class="originalshare hidden" id="originalShare">
+      <div class="sharelabel">Original custom link</div>
+      <div class="urlbox originalurl" id="originalShortUrl"></div>
+      <div class="sheetbtnrow compact">
+        <button class="btn" id="originalShortShare">Send custom</button>
+        <button class="btn btn-ghost" id="originalShortCopy">Copy custom</button>
+      </div>
+      <div class="shortrule fullrule"><span>full link</span></div>
+    </div>
+
+    <div class="sharelabel hidden" id="fullLinkLabel">Full link</div>
     <div class="urlbox" id="sheetUrl"></div>
     <div class="sheetbtnrow">
       <button class="btn" id="sheetShare" aria-label="Send in messages">
@@ -1151,6 +1174,33 @@ body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-
   </div>
 </div>
 
+
+<!-- ============ SHARED TRIP LOCK SHEET ============ -->
+<div class="sharedsheet hidden" id="sharedSheet" role="dialog" aria-modal="true" aria-labelledby="sharedTitle">
+  <div class="sharedcard" id="sharedPanel" aria-live="polite">
+    <button class="sharedclose" id="sharedClose" aria-label="Close shared trip controls">×</button>
+    <div class="sharedhead">
+      <div>
+        <div class="sharedk">Shared trip</div>
+        <div class="sharedtitle" id="sharedTitle">Protected trip</div>
+      </div>
+      <div class="sharedrev" id="sharedRev"></div>
+    </div>
+    <p class="sharedstatus" id="sharedStatus">Checking this link's edit settings…</p>
+    <div class="sharedactions">
+      <button class="btn btn-ghost hidden" id="sharedAction">Unlock editing</button>
+      <button class="btn hidden" id="sharedSave">Update shared trip</button>
+      <button class="btn btn-ghost hidden" id="sharedReload">Reload latest</button>
+    </div>
+    <div class="sharedauth hidden" id="sharedAuth">
+      <input class="passinput" id="sharedPassword" type="password" maxlength="128"
+        autocomplete="current-password" placeholder="Edit password" aria-label="Edit password">
+      <button class="btn" id="sharedUnlockGo">Unlock</button>
+    </div>
+    <div class="sharedmsg" id="sharedMsg"></div>
+    <p class="sharedfine">The custom address and expiration can never be changed. The password only unlocks the trip plan.</p>
+  </div>
+</div>
 
 <!-- ============ EDIT UNLOCK CELEBRATION ============ -->
 <div class="unlockcelebration" id="unlockCelebration" role="status" aria-live="assertive" aria-label="Kobe! Editing unlocked for 24 minutes.">
@@ -2256,6 +2306,7 @@ function initMap(){
   L.control.zoom({ position: "topleft" }).addTo(map);
   map.addControl(new ShowAll({ position: "topleft" }));
   map.addControl(new SatToggle({ position: "topleft" }));
+  map.on("moveend zoomend", updateAllButton);
   setTiles();
 }
 
@@ -2316,16 +2367,47 @@ function drawStops(recenter){
 }
 
 /* move to another stop without redrawing the world */
+function focusActiveStop(){
+  map.flyTo([pin.lat, pin.lon], Math.max(map.getZoom(), 16), { duration: .55 });
+}
+
 function setActive(i){
   active = Math.max(0, Math.min(i, stops.length - 1));
   pin = stops[active];
   refreshPin({ recenter: false });
-  /* stepping through stops takes you in close; "show all" is how you get back out */
-  map.flyTo([pin.lat, pin.lon], Math.max(map.getZoom(), 16), { duration: .55 });
+  /* stepping through stops takes you in close; the overview button toggles back out */
+  focusActiveStop();
+}
+
+function isWholeTripView(){
+  if(!map || stops.length < 2) return false;
+  const bounds = L.latLngBounds(stops.map(s => [s.lat, s.lon]));
+  if(!map.getBounds().contains(bounds)) return false;
+  const fitZoom = map.getBoundsZoom(bounds, false, L.point(52, 52));
+  return map.getZoom() <= fitZoom + .45;
+}
+
+function updateAllButton(){
+  if(!allBtn || stops.length < 2) return;
+  const overview = isWholeTripView();
+  allBtn.title = overview ? "Focus the current stop" : "Show every stop";
+  allBtn.setAttribute("aria-label", allBtn.title);
+  allBtn.innerHTML = overview
+    ? `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+         <circle cx="12" cy="12" r="5.2" stroke="currentColor" stroke-width="1.8"/>
+         <circle cx="12" cy="12" r="1.8" fill="currentColor"/>
+         <path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+       </svg>`
+    : `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+         <path d="M9 4.2H4.2V9M15 4.2h4.8V9M9 19.8H4.2V15M15 19.8h4.8V15"
+           stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+         <circle cx="12" cy="12" r="2.4" fill="currentColor"/>
+       </svg>`;
 }
 
 function showWholeTrip(){
-  if(stops.length < 2){ map.setView([pin.lat, pin.lon], 17); return; }
+  if(stops.length < 2){ focusActiveStop(); return; }
+  if(isWholeTripView()){ focusActiveStop(); return; }
   map.flyToBounds(L.latLngBounds(stops.map(s => [s.lat, s.lon])).pad(0.22), { duration: .6 });
 }
 
@@ -2361,7 +2443,10 @@ function refreshPin(opts = {}){
   $("#stepNext").classList.toggle("hidden", !multi);
   $("#stepCount").classList.toggle("hidden", !multi);
   $("#stepCount").textContent = `${active + 1} / ${stops.length}`;
-  if(allBtn) allBtn.classList.toggle("hidden", !multi);
+  if(allBtn){
+    allBtn.classList.toggle("hidden", !multi);
+    updateAllButton();
+  }
   $("#tripBtn").classList.toggle("on", multi);
 
   $("#dropWhen").textContent = fmtWhen(pin.ts);
@@ -2466,12 +2551,27 @@ async function sharePin(){
 
 /* ---------- share sheet (the moon screen, but for a pin) ---------- */
 let sheetFrom = "pin";   /* "pin" | "quick" */
+function originalSharedUrl(){
+  return sharedTrip?.slug ? `${SHORTENER}/${encodeURIComponent(sharedTrip.slug)}` : "";
+}
+
 function openSheet(from){
   sheetFrom = from;
   $("#sheetMoon").innerHTML = bigMoonLemon(moonPhase(), 210);
   $("#sheetUrl").textContent = pinUrl();
   $("#sheetOpen").classList.toggle("hidden", from === "pin");
-  if(SHORTENER){ $("#shortWrap").classList.remove("hidden"); shortReset(); }
+
+  const original = originalSharedUrl();
+  $("#originalShare").classList.toggle("hidden", !original);
+  $("#fullLinkLabel").classList.toggle("hidden", !original);
+  if(original){
+    $("#originalShortUrl").textContent = original;
+    $("#originalShortUrl").dataset.url = original;
+    $("#shortWrap").classList.add("hidden");
+  }else if(SHORTENER){
+    $("#shortWrap").classList.remove("hidden");
+    shortReset();
+  }
   $("#sheet").classList.remove("hidden");
 }
 function closeSheet(){
@@ -2481,11 +2581,20 @@ $("#shareTopBtn").addEventListener("click", ()=> openSheet("pin"));
 $("#sheetClose").addEventListener("click", closeSheet);
 document.addEventListener("keydown", e=>{
   if(e.key !== "Escape") return;
-  if(!$("#sheet").classList.contains("hidden")) closeSheet();
+  if(!$("#sharedSheet").classList.contains("hidden")) closeSharedSheet();
+  else if(!$("#sheet").classList.contains("hidden")) closeSheet();
   else if(!$("#iosSheet").classList.contains("hidden")) $("#iosSheet").classList.add("hidden");
 });
 $("#sheetCopy").addEventListener("click", ()=> copyText(pinUrl(), "link copied, smooth"));
 $("#sheetShare").addEventListener("click", sharePin);
+$("#originalShortCopy").addEventListener("click", ()=> copyText($("#originalShortUrl").dataset.url, "custom link copied"));
+$("#originalShortShare").addEventListener("click", async ()=>{
+  const url = $("#originalShortUrl").dataset.url;
+  if(!url) return;
+  if(navigator.share){
+    try{ await navigator.share({ title: "LEMONCOORDS.", text: "Here's the plan —", url }); }catch{}
+  }else copyText(url, "custom link copied");
+});
 $("#sheetOpen").addEventListener("click", ()=>{
   sheetFrom = "pin";
   closeSheet();
@@ -2781,17 +2890,18 @@ function renderTrip(){
     body.className = "tripbody";
     const where = document.createElement("div");
     where.className = "tripwhere";
-    where.textContent = stopLabel(s);
+    where.textContent = s.note || stopLabel(s);
     body.appendChild(where);
     const co = document.createElement("div");
     co.className = "tripcoords";
     co.textContent = s.lat.toFixed(5) + ", " + s.lon.toFixed(5);
     body.appendChild(co);
+    let addressLine = null;
     if(s.note){
-      const nt = document.createElement("div");
-      nt.className = "tripnote";
-      nt.textContent = s.note;
-      body.appendChild(nt);
+      addressLine = document.createElement("div");
+      addressLine.className = "tripnote";
+      addressLine.textContent = stopLabel(s);
+      body.appendChild(addressLine);
     }
     body.addEventListener("click", ()=>{
       if(justDragged) return;
@@ -2846,7 +2956,7 @@ function renderTrip(){
     });
 
     li.append(num, body, skip, handle, del);
-    if(!s.addr) fillAddr(s, where);
+    if(!s.addr) fillAddr(s, addressLine || where);
     if(!tripLocked) startDragOn(li, handle, body);
     list.appendChild(li);
   });
@@ -3212,11 +3322,39 @@ function sharedStateFromLocation(){
   };
 }
 
+function closeSharedSheet(){
+  $("#sharedSheet")?.classList.add("hidden");
+}
+
+function openSharedSheet(showPassword = false){
+  if(!sharedTrip) return;
+  $("#sharedSheet").classList.remove("hidden");
+  if(showPassword && sharedTrip.editable && !sharedTrip.unlocked){
+    $("#sharedAuth").classList.remove("hidden");
+    setTimeout(()=>$("#sharedPassword").focus(), 30);
+  }
+}
+
+function sharedLockSvg(isUnlocked){
+  return isUnlocked
+    ? `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+         <rect x="5.5" y="10" width="13" height="10" rx="2.4" stroke="currentColor" stroke-width="1.8"/>
+         <path d="M15.5 10V7.7a3.5 3.5 0 0 0-6.7-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+         <circle cx="12" cy="15" r="1.2" fill="currentColor"/>
+       </svg>`
+    : `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+         <rect x="5.5" y="10" width="13" height="10" rx="2.4" stroke="currentColor" stroke-width="1.8"/>
+         <path d="M8.5 10V7.7a3.5 3.5 0 0 1 7 0V10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+         <circle cx="12" cy="15" r="1.2" fill="currentColor"/>
+       </svg>`;
+}
+
 function clearSharedTripContext(){
   if(sharedTrip?.unlockTimer) clearTimeout(sharedTrip.unlockTimer);
   sharedTrip = null;
   document.body.classList.remove("sharedlocked");
-  $("#sharedPanel")?.classList.add("hidden");
+  $("#sharedLockBtn")?.classList.add("hidden");
+  closeSharedSheet();
   $("#sharedAuth")?.classList.add("hidden");
   $("#sharedReload")?.classList.add("hidden");
   if($("#sharedMsg")) sharedMessage("");
@@ -3241,9 +3379,8 @@ function sharedMessage(text, kind = ""){
 
 function blockSharedChange(){
   if(canChangeTrip()) return false;
+  openSharedSheet(!!sharedTrip?.editable);
   if(sharedTrip?.editable){
-    $("#sharedAuth").classList.remove("hidden");
-    $("#sharedPassword").focus();
     sharedMessage("Enter the edit password before changing this shared trip.", "bad");
   }else{
     sharedMessage("This shared trip was created permanently read-only.", "bad");
@@ -3251,10 +3388,29 @@ function blockSharedChange(){
   return true;
 }
 
+function updateSharedLockButton(){
+  if(!sharedTrip) return;
+  const lockButton = $("#sharedLockBtn");
+  lockButton.classList.remove("hidden");
+  lockButton.classList.toggle("unlocked", !!sharedTrip.unlocked);
+  lockButton.classList.toggle("loading", !!sharedTrip.loading);
+  lockButton.classList.toggle("dirty", !!sharedTrip.unlocked && !!sharedTrip.dirty);
+  lockButton.innerHTML = sharedLockSvg(!!sharedTrip.unlocked);
+  const lockLabel = sharedTrip.loading
+    ? "Checking shared trip"
+    : sharedTrip.unlocked
+      ? sharedTrip.dirty ? "Shared trip has unpublished changes" : "Shared trip editing unlocked"
+      : sharedTrip.editable ? "Unlock shared trip editing" : "Shared trip permanently locked";
+  lockButton.setAttribute("aria-label", lockLabel);
+  lockButton.title = lockLabel;
+}
+
 function setSharedControlState(){
   const locked = !!sharedTrip && !sharedTrip.unlocked;
   document.body.classList.toggle("sharedlocked", locked);
   if(!sharedTrip) return;
+
+  updateSharedLockButton();
 
   $("#noteInput").disabled = locked;
   $("#dragBtn").disabled = locked;
@@ -3297,6 +3453,7 @@ function setSharedControlState(){
 function syncSharedDirty(){
   if(!sharedTrip || !sharedTrip.baseline || !stops.length) return;
   sharedTrip.dirty = tripHash() !== sharedTrip.baseline;
+  updateSharedLockButton();
   if(sharedTrip.unlocked){
     $("#sharedSave").disabled = !sharedTrip.dirty;
     $("#sharedStatus").textContent = sharedTrip.dirty
@@ -3315,7 +3472,7 @@ function putSharedRevisionInUrl(){
 
 async function initSharedTrip(){
   if(!sharedTrip) return;
-  $("#sharedPanel").classList.remove("hidden");
+  $("#sharedLockBtn").classList.remove("hidden");
   sharedTrip.loading = true;
   sharedTrip.baseline = tripHash();
   sharedTrip.dirty = false;
@@ -3419,6 +3576,7 @@ async function unlockSharedTrip(){
     $("#sharedAuth").classList.add("hidden");
     sharedMessage("Kobe! Editing is unlocked for 24 minutes. Make your changes, then press Update shared trip.", "good");
     setSharedControlState();
+    closeSharedSheet();
     showUnlockCelebration();
     flash("Kobe! editing unlocked");
   }catch{
@@ -3488,6 +3646,9 @@ async function saveSharedTrip(){
   }
 }
 
+$("#sharedLockBtn").addEventListener("click", ()=> openSharedSheet(false));
+$("#sharedClose").addEventListener("click", closeSharedSheet);
+$("#sharedSheet").addEventListener("click", e=>{ if(e.target === $("#sharedSheet")) closeSharedSheet(); });
 $("#sharedAction").addEventListener("click", ()=>{
   $("#sharedAuth").classList.toggle("hidden");
   sharedMessage("");
