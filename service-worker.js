@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lemoncoords-v15-1-private-editable';
+const CACHE_NAME = 'lemoncoords-v15-2-outdoors-overlay';
 const APP_SHELL = [
   './',
   './index.html',

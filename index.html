@@ -209,13 +209,27 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 .satbtn svg{display:block}
 .satbtn[aria-pressed="true"]{background:var(--ink);color:var(--pith)}
 #map.locked{cursor:default}
-/* light: settle it down a touch so the paper isn't blown out */
-:root:not([data-theme="dark"]) .leaflet-tile{filter:saturate(1.05) brightness(.965)}
-/* dark: dark_matter sits near black and needs lifting, but not to daylight */
-:root[data-theme="dark"] .leaflet-tile{filter:brightness(1.72) contrast(1.12) saturate(1.15) sepia(.08)}
-/* photography gets no tint in either mode */
-#map.sat .leaflet-tile{filter:none !important}
+/* The drawn map gets a little more punch so roads and paths do not wash
+   into the cream background. Photography itself is still left untouched. */
+:root:not([data-theme="dark"]) #map:not(.sat) .leaflet-tile-pane .leaflet-tile{
+  filter:saturate(1.14) contrast(1.13) brightness(.94)
+}
+:root[data-theme="dark"] #map:not(.sat) .leaflet-tile-pane .leaflet-tile{
+  filter:brightness(1.72) contrast(1.18) saturate(1.2) sepia(.08)
+}
+#map.sat .leaflet-tile-pane .leaflet-tile{filter:none !important}
+/* Esri's transparent transportation overlay gets its own stronger treatment.
+   This is above either base map, so the new toggle works in map and satellite. */
+#map .outdoors-road-tile{
+  filter:contrast(1.48) saturate(1.3) brightness(.9)
+    drop-shadow(0 0 1px rgba(255,255,244,.95)) !important;
+}
+:root[data-theme="dark"] #map .outdoors-road-tile{
+  filter:contrast(1.6) saturate(1.4) brightness(1.18)
+    drop-shadow(0 0 1px rgba(0,0,0,.8)) !important;
+}
 .leaflet-tile{transition:filter .2s ease}
+.outdoors-trail-pane canvas,.outdoors-trail-pane svg{pointer-events:none}
 .leaflet-container{font-family:var(--body)}
 .leaflet-control-zoom a{display:block;width:30px;height:30px;line-height:30px;text-align:center;text-decoration:none;background:var(--pith);color:var(--ink);border-bottom:1px solid var(--hairline);font-weight:700}
 .leaflet-control-zoom{border:1px solid var(--ink);border-radius:8px;overflow:hidden;background:var(--pith)}
@@ -1340,6 +1354,7 @@ body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 "use strict";
@@ -2403,15 +2418,85 @@ const TILES = {
   /* voyager has real street labels; dark_matter keeps them legible when lifted */
   dark:  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
   light: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-  /* Esri World Imagery — best free aerial with no key. Its reference layers are
-     drawn specifically to sit on imagery, so roads and names stay readable. */
+  /* Keep the exact satellite source already used by LemonCoords. */
   sat:       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
   satRoads:  "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
-  satLabels: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+  satLabels: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+  /* Detailed OSM trail vectors: foot paths, tracks, ATV/vehicle access,
+     surfaces, informal/restricted status and related trail attributes. */
+  trails:    "https://tiles.openstreetmap.us/vector/trails/{z}/{x}/{y}.mvt"
 };
 let tileLayer = null, satRoads = null, satLabels = null, tileKey = null, satellite = true;
-let satBtn = null;
+let outdoorsRoads = null, outdoorsTrails = null;
+let outdoorsOn = store.get("lemoncoords.outdoors") === "on";
+let satBtn = null, outdoorsBtn = null;
 function currentTheme(){ return document.documentElement.dataset.theme === "dark" ? "dark" : "light"; }
+
+function trailAllowed(v){
+  return v && !["no","private","customers"].includes(String(v).toLowerCase());
+}
+function trailRestricted(p){
+  return [p.access,p.foot,p.motor_vehicle,p.vehicle,p.atv]
+    .some(v => ["no","private"].includes(String(v || "").toLowerCase()));
+}
+function trailVectorStyle(p, zoom){
+  const highway = String(p.highway || "").toLowerCase();
+  const motorized = trailAllowed(p.atv) || trailAllowed(p.motor_vehicle) ||
+    trailAllowed(p.vehicle) || trailAllowed(p.snowmobile) ||
+    (highway === "track" && !["no","private"].includes(String(p.motor_vehicle || "").toLowerCase()));
+  const restricted = trailRestricted(p);
+  const informal = String(p.informal || "").toLowerCase() === "yes";
+  const weight = zoom >= 15 ? 4.2 : zoom >= 13 ? 3.5 : zoom >= 10 ? 2.8 : 2.1;
+
+  if(restricted){
+    return { color:"#9B9077", weight:Math.max(1.7, weight - .6), opacity:.82,
+      dashArray:"3,5", lineCap:"round", lineJoin:"round", fill:false };
+  }
+  if(motorized){
+    return { color:satellite ? "#FF9A3D" : "#B94F24", weight, opacity:.98,
+      dashArray:informal ? "6,5" : null, lineCap:"round", lineJoin:"round", fill:false };
+  }
+  return { color:satellite ? "#85F36F" : "#256D3B", weight, opacity:.98,
+    dashArray:informal ? "5,5" : null, lineCap:"round", lineJoin:"round", fill:false };
+}
+function removeOutdoorsOverlay(){
+  [outdoorsRoads, outdoorsTrails].forEach(l => l && l.remove());
+  outdoorsRoads = outdoorsTrails = null;
+}
+function updateOutdoorsButton(){
+  if(!outdoorsBtn) return;
+  outdoorsBtn.setAttribute("aria-pressed", String(outdoorsOn));
+  outdoorsBtn.setAttribute("aria-label", outdoorsOn ? "Hide roads and trails" : "Show roads and trails");
+  outdoorsBtn.title = outdoorsOn ? "Hide roads & trails" : "Roads & trails";
+}
+function setOutdoorsOverlay(force){
+  if(!map) return;
+  if(force) removeOutdoorsOverlay();
+  if(!outdoorsOn){ removeOutdoorsOverlay(); updateOutdoorsButton(); return; }
+
+  if(!outdoorsRoads){
+    outdoorsRoads = L.tileLayer(TILES.satRoads, {
+      pane:"outdoorsRoadsPane", className:"outdoors-road-tile",
+      maxZoom:20, maxNativeZoom:19, opacity:satellite ? .98 : .9,
+      attribution:'Transportation &copy; <a href="https://www.esri.com/">Esri</a>'
+    }).addTo(map);
+  }
+  if(!outdoorsTrails && L.vectorGrid && L.vectorGrid.protobuf){
+    outdoorsTrails = L.vectorGrid.protobuf(TILES.trails, {
+      pane:"outdoorsTrailsPane", rendererFactory:L.canvas.tile,
+      interactive:false, maxNativeZoom:14, maxZoom:20,
+      vectorTileLayerStyles:{ trail:trailVectorStyle },
+      attribution:'Tiles by <a href="https://tiles.openstreetmap.us/">OSM US</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+  }
+  updateOutdoorsButton();
+}
+function toggleOutdoors(){
+  outdoorsOn = !outdoorsOn;
+  store.set("lemoncoords.outdoors", outdoorsOn ? "on" : "off");
+  setOutdoorsOverlay(true);
+  flash(outdoorsOn ? "roads + trails on" : "roads + trails off");
+}
 
 function setTiles(force){
   const key = satellite ? "sat" : currentTheme();
@@ -2444,6 +2529,9 @@ function setTiles(force){
     satBtn.setAttribute("aria-label", satellite ? "Show the drawn map" : "Show satellite imagery");
     satBtn.title = satellite ? "Map" : "Satellite";
   }
+  /* Recreate the optional overlay so trail colors and road opacity stay tuned
+     for whichever base is currently underneath it. */
+  setOutdoorsOverlay(true);
 }
 
 const SAT_ICON = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
@@ -2455,6 +2543,12 @@ const MAP_ICON = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" ar
   <path d="M9 4.6 3.7 6.8v12.6L9 17.2l6 2.2 5.3-2.2V4.6L15 6.8 9 4.6Z"
     stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
   <path d="M9 4.6v12.6M15 6.8v12.6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+</svg>`;
+const TRAILS_ICON = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+  <path d="M3.5 18.8 9.2 8.5l3.2 5.1 2-2.8 6.1 8H3.5Z"
+    stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+  <path d="M5.4 20.2c2.7-2.4 4.7-2.7 6.5-1.2 1.6 1.3 3.5 1.1 6.7-1.6"
+    stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="2.5 2.5"/>
 </svg>`;
 
 /* zoom back out to the whole trip — only worth showing when there is one */
@@ -2488,6 +2582,18 @@ const SatToggle = L.Control.extend({
     L.DomEvent.disableClickPropagation(b);
     L.DomEvent.on(b, "click", ()=>{ satellite = !satellite; setTiles(); });
     satBtn = b;
+    return b;
+  }
+});
+const OutdoorsToggle = L.Control.extend({
+  onAdd(){
+    const b = L.DomUtil.create("button", "satbtn outdoorsbtn");
+    b.type = "button";
+    b.innerHTML = TRAILS_ICON;
+    L.DomEvent.disableClickPropagation(b);
+    L.DomEvent.on(b, "click", toggleOutdoors);
+    outdoorsBtn = b;
+    updateOutdoorsButton();
     return b;
   }
 });
@@ -2584,9 +2690,18 @@ function initMap(){
     doubleClickZoom: false, boxZoom: false, keyboard: false
   });
   document.getElementById("map").classList.add("locked");
+  map.createPane("outdoorsRoadsPane");
+  map.getPane("outdoorsRoadsPane").style.zIndex = 430;
+  map.getPane("outdoorsRoadsPane").style.pointerEvents = "none";
+  map.createPane("outdoorsTrailsPane");
+  map.getPane("outdoorsTrailsPane").classList.add("outdoors-trail-pane");
+  map.getPane("outdoorsTrailsPane").style.zIndex = 440;
+  map.getPane("outdoorsTrailsPane").style.pointerEvents = "none";
   L.control.zoom({ position: "topleft" }).addTo(map);
   map.addControl(new ShowAll({ position: "topleft" }));
   map.addControl(new SatToggle({ position: "topleft" }));
+  /* Kept directly below the map/satellite button as a separate overlay. */
+  map.addControl(new OutdoorsToggle({ position: "topleft" }));
   map.on("moveend zoomend", updateAllButton);
   setTiles();
 }
