@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lemoncoords-v15-3-fullscreen-refined-trails';
+const CACHE_NAME = 'lemoncoords-v15-4-1-map-polish';
 const APP_SHELL = [
   './',
   './index.html',

@@ -191,17 +191,23 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 }
 :root[data-theme="dark"] #map{background:#1A1A12}
 .mapui{
-  position:absolute;right:10px;bottom:10px;z-index:var(--z-mapui);
-  display:flex;gap:8px;
+  position:absolute;right:10px;top:10px;bottom:auto;z-index:var(--z-mapui);
+  display:flex;flex-direction:column;align-items:flex-end;gap:7px;
 }
 .adjustbtn{
-  font-size:.78rem;font-weight:700;color:var(--ink);
-  background:var(--pith);border:1px solid var(--ink);border-radius:999px;padding:7px 13px;
-  box-shadow:0 2px 8px rgba(35,36,27,.12);
+  min-height:38px;font-size:.76rem;font-weight:700;color:var(--ink);
+  background:color-mix(in srgb,var(--pith) 94%,transparent);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border:1px solid var(--ink);border-radius:999px;padding:7px 13px;
+  box-shadow:0 3px 12px rgba(35,36,27,.12);
+  transition:transform .16s cubic-bezier(.16,1,.3,1),background .16s ease,color .16s ease,opacity .16s ease;
 }
+.adjustbtn:hover{transform:translateY(-1px)}
+.adjustbtn:active{transform:scale(.96)}
+.adjustbtn:disabled{opacity:.38;cursor:not-allowed;transform:none}
 .adjustbtn[aria-pressed="true"]{background:var(--ink);color:var(--pith)}
 .satbtn{
-  display:grid;place-items:center;width:30px;height:30px;padding:0;
+  display:grid;place-items:center;width:38px;height:38px;padding:0;
   color:var(--ink);background:var(--pith);border:1px solid var(--ink);
   border-radius:8px;margin-top:8px;
   box-shadow:0 2px 8px rgba(35,36,27,.14);
@@ -230,10 +236,14 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
     drop-shadow(0 0 1px rgba(255,253,244,.78)) !important;
 }
 #map .outdoors-hike-tile{
-  filter:brightness(0) saturate(100%) invert(35%) sepia(25%) saturate(1030%)
-    hue-rotate(87deg) brightness(92%) contrast(88%)
-    drop-shadow(0 0 1px rgba(255,253,244,.96)) !important;
+  /* Lemon-route ink: vivid enough to read on imagery, with a fine dark edge
+     and a restrained warm bloom so it feels drawn rather than pasted on. */
+  filter:brightness(0) saturate(100%) invert(88%) sepia(92%) saturate(1260%)
+    hue-rotate(344deg) brightness(105%) contrast(98%)
+    drop-shadow(0 0 1px rgba(35,36,27,.96))
+    drop-shadow(0 0 3px rgba(244,206,62,.48)) !important;
 }
+#map:not(.sat) .outdoors-hike-tile{mix-blend-mode:multiply}
 #map .outdoors-overland-tile{
   filter:brightness(0) saturate(100%) invert(49%) sepia(46%) saturate(620%)
     hue-rotate(337deg) brightness(94%) contrast(86%)
@@ -244,9 +254,10 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
     drop-shadow(0 0 1px rgba(0,0,0,.82)) !important;
 }
 :root[data-theme="dark"] #map .outdoors-hike-tile{
-  filter:brightness(0) saturate(100%) invert(72%) sepia(28%) saturate(675%)
-    hue-rotate(86deg) brightness(98%) contrast(91%)
-    drop-shadow(0 0 1px rgba(0,0,0,.9)) !important;
+  filter:brightness(0) saturate(100%) invert(91%) sepia(88%) saturate(1210%)
+    hue-rotate(344deg) brightness(110%) contrast(99%)
+    drop-shadow(0 0 1px rgba(0,0,0,.97))
+    drop-shadow(0 0 4px rgba(244,206,62,.48)) !important;
 }
 :root[data-theme="dark"] #map .outdoors-overland-tile{
   filter:brightness(0) saturate(100%) invert(70%) sepia(34%) saturate(720%)
@@ -258,7 +269,7 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .mapselection{
   position:absolute;left:50%;top:10px;z-index:calc(var(--z-mapui) + 1);
-  max-width:min(72%,560px);transform:translate(-50%,-7px);opacity:0;
+  max-width:min(calc(100% - 168px),560px);transform:translate(-50%,-7px);opacity:0;
   pointer-events:none;padding:8px 14px;border-radius:999px;
   color:var(--ink);background:color-mix(in srgb,var(--pith) 91%,transparent);
   backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
@@ -278,7 +289,8 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .mapwrap.is-fullscreen .mapselection{display:none}
 .mapwrap.is-fullscreen .mapui{
   right:max(12px,env(safe-area-inset-right));
-  bottom:max(12px,env(safe-area-inset-bottom));
+  top:calc(max(12px,env(safe-area-inset-top)) + 52px);
+  bottom:auto;
 }
 .mapwrap:fullscreen{background:var(--pith)}
 .mapwrap:fullscreen #map{height:100vh}
@@ -315,7 +327,7 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 :root[data-theme="dark"] .fsroutebtn{box-shadow:0 22px 62px rgba(0,0,0,.5)}
 .fsroutepanel.open{opacity:1;transform:none;pointer-events:auto}
 .fssearch{
-  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:13px 13px 10px;
+  display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;padding:13px 13px 10px;
 }
 .fssearchfield{position:relative;min-width:0}
 .fssearch input{
@@ -331,6 +343,19 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 }
 .fsadd:active{transform:scale(.96)}
 .fsadd:disabled{opacity:.32;pointer-events:none}
+.fseditlock{
+  position:relative;width:42px;height:42px;display:grid;place-items:center;border-radius:12px;
+  color:var(--ink);background:var(--flesh);transition:transform .16s cubic-bezier(.16,1,.3,1),
+    background .16s ease,color .16s ease,opacity .16s ease;
+}
+.fseditlock:hover{background:var(--pith)}
+.fseditlock:active{transform:scale(.95)}
+.fseditlock.unlocked{background:var(--ink);color:var(--pith)}
+.fseditlock.loading{opacity:.5}
+.fseditlock.dirty::after{
+  content:"";position:absolute;right:5px;top:5px;width:7px;height:7px;border-radius:50%;
+  background:var(--zest);box-shadow:0 0 0 2px var(--ink);
+}
 .fsresults{
   position:absolute;left:0;right:0;top:47px;z-index:5;list-style:none;
   background:var(--pith);border-radius:12px;box-shadow:0 16px 38px rgba(35,36,27,.2);
@@ -350,15 +375,40 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 }
 .fsroutelist{list-style:none;overflow-y:auto;padding:0 8px 10px;overscroll-behavior:contain}
 .fsroutelist{display:grid;gap:4px}
-.fsrouteitem{border:0}
-.fsrouteitem button{
-  width:100%;display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:center;
+.fsrouteitem{
+  display:grid;grid-template-columns:minmax(0,1fr) 40px 40px;gap:4px;align-items:center;
+  border-radius:12px;transition:background .16s ease;
+}
+.fsrouteitem.current{background:var(--flesh)}
+.fsroutefocus{
+  min-width:0;width:100%;display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:center;
   padding:11px 7px;text-align:left;color:var(--ink);border-radius:11px;
   transition:background .16s ease,transform .16s cubic-bezier(.16,1,.3,1);
 }
-.fsrouteitem button:hover{background:var(--flesh)}
-.fsrouteitem button:active{transform:scale(.985)}
-.fsrouteitem.current button{background:var(--flesh)}
+.fsroutefocus:hover{background:color-mix(in srgb,var(--flesh) 72%,transparent)}
+.fsroutefocus:active{transform:scale(.985)}
+.fsrouteaction{
+  width:40px;height:40px;display:grid;place-items:center;border-radius:11px;color:var(--muted);
+  transition:background .15s ease,color .15s ease,transform .15s cubic-bezier(.16,1,.3,1);
+}
+.fsrouteaction:hover{background:var(--pith);color:var(--ink)}
+.fsrouteaction:active{transform:scale(.94)}
+.fsrouteaction:disabled{opacity:.35;cursor:not-allowed}
+.fsrouteedit{
+  grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;
+  padding:3px 6px 8px 42px;animation:fseditin .22s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes fseditin{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+.fsrouteedit input{
+  min-width:0;height:38px;padding:0 4px;border:0;border-bottom:1px solid var(--hairline);
+  color:var(--ink);background:transparent;font:520 .86rem var(--body);outline:none;
+  transition:border-color .16s ease;
+}
+.fsrouteedit input:focus{border-color:var(--ink)}
+.fsrouteedit button{
+  height:38px;padding:0 12px;border-radius:10px;background:var(--ink);color:var(--pith);
+  font-size:.72rem;font-weight:720;
+}
 .fsrouteindex{
   width:25px;height:25px;border-radius:50%;display:grid;place-items:center;
   background:var(--zest);color:#23241B;font-family:var(--display);font-size:.74rem;font-weight:700;
@@ -376,8 +426,11 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 @media(max-width:600px){
   .fsroutepanel{left:10px;right:10px;width:auto;top:calc(max(10px,env(safe-area-inset-top)) + 48px);max-height:62dvh}
   .fsroutebtn{right:10px;top:max(10px,env(safe-area-inset-top))}
-  .fssearch{grid-template-columns:minmax(0,1fr) auto;padding:11px 11px 9px}
-  .fsadd{padding:0 12px}
+  .fssearch{grid-template-columns:42px minmax(0,1fr);padding:11px 11px 9px}
+  .fssearchfield{grid-column:1/-1}
+  .fseditlock{grid-column:1}
+  .fsadd{grid-column:2;width:100%;padding:0 12px}
+  .fseditlock.hidden + .fsadd{grid-column:1/-1}
 }
 .leaflet-container{font-family:var(--body)}
 .leaflet-control-zoom a{display:block;width:30px;height:30px;line-height:30px;text-align:center;text-decoration:none;background:var(--pith);color:var(--ink);border-bottom:1px solid var(--hairline);font-weight:700}
@@ -548,7 +601,8 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 
 /* ---------- icon picker ---------- */
 .iconpop{
-  position:absolute;z-index:40;width:min(272px,86vw);
+  position:fixed;z-index:calc(var(--z-modal) + 30);width:min(272px,calc(100vw - 20px));
+  max-height:min(410px,calc(100dvh - 20px));overflow:auto;overscroll-behavior:contain;
   background:var(--pith);border:1px solid var(--ink);border-radius:16px;
   padding:12px;box-shadow:0 18px 40px rgba(35,36,27,.22);
   animation:popin .16s cubic-bezier(.16,1,.3,1) both;
@@ -559,6 +613,7 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
   font-size:.66rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);
   font-weight:600;margin-bottom:9px;text-align:left;
 }
+.iconhead span{color:var(--rind-text);font-weight:500;letter-spacing:.08em}
 .icongrid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
 .iconcell{
   display:grid;place-items:center;aspect-ratio:1;border-radius:9px;color:var(--ink);
@@ -680,6 +735,7 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .lockmsg{min-height:1.1em;margin-top:12px;font-size:.84rem;color:var(--muted)}
 .lockmsg.bad{color:#c0522d;font-weight:600}
 :root[data-theme="dark"] .lockmsg.bad{color:#E58A66}
+.lockremember{margin:10px auto 0;max-width:330px;color:var(--muted);font-size:.68rem;line-height:1.45}
 .lockshake{animation:lockshake .4s ease}
 @keyframes lockshake{
   0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)}
@@ -1168,6 +1224,7 @@ body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-
                   placeholder="Search to add a point" aria-label="Search for a point to add">
                 <ul class="fsresults" id="fsResults"></ul>
               </div>
+              <button class="fseditlock hidden" id="fsEditLock" type="button" aria-label="Shared trip editing" title="Shared trip editing"></button>
               <button class="fsadd" id="fsAddPoint" type="button" disabled>Add point</button>
             </div>
             <p class="fsroutehint" id="fsRouteHint"></p>
@@ -1289,7 +1346,7 @@ body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-
     </div>
     <ul class="triplist" id="tripList"></ul>
     <div class="iconpop hidden" id="iconPop" role="dialog" aria-label="Pick an icon">
-      <div class="iconhead">what's here?</div>
+      <div class="iconhead">what's here? <span aria-hidden="true">· 42 marks</span></div>
       <div class="icongrid" id="iconGrid"></div>
     </div>
     <button class="btn btn-ghost addstop" id="addStopBtn">Add a stop</button>
@@ -1482,6 +1539,7 @@ body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-
       aria-label="Lemon password" maxlength="512">
     <button class="btn locksubmit" id="lockGo">Open it</button>
     <div class="lockmsg" id="lockMsg"></div>
+    <p class="lockremember">A correct lemon password stays remembered on this browser for two weeks.</p>
   </div>
 </div>
 
@@ -2470,10 +2528,90 @@ async function decryptTrip(hash, password){
 }
 
 /* recipient side: hold the private hash, show the field, and only open the
-   trip once the password actually decrypts it */
+   trip once the password actually decrypts it.  After a successful open, the
+   lemon password is encrypted with a browser-local device key and kept for
+   fourteen days. It is never sent to the Worker; clearing this site's browser
+   data forgets it immediately. */
 let privateHash = null;
-let privateViewPassword = "";  /* memory only; never stored, logged, or sent */
-function openPrivateGate(hash){
+let privateViewPassword = "";
+const PRIVATE_REMEMBER_MS = 14 * 24 * 60 * 60 * 1000;
+const PRIVATE_DEVICE_KEY = "lemoncoords.private.device-key.v1";
+function privateRememberId(hash = privateHash){
+  if(sharedTrip?.slug) return `slug:${sharedTrip.slug}`;
+  let h = 2166136261;
+  for(let i=0;i<(hash || "").length;i++){
+    h ^= hash.charCodeAt(i); h = Math.imul(h, 16777619);
+  }
+  return `payload:${(h >>> 0).toString(36)}`;
+}
+function privateRememberStoreKey(hash = privateHash){
+  return `lemoncoords.private.remember.v1.${privateRememberId(hash)}`;
+}
+async function privateDeviceCryptoKey(){
+  let rawText = store.get(PRIVATE_DEVICE_KEY);
+  if(!rawText){
+    rawText = b64u.enc(crypto.getRandomValues(new Uint8Array(32)));
+    store.set(PRIVATE_DEVICE_KEY, rawText);
+  }
+  return crypto.subtle.importKey("raw", b64u.dec(rawText), { name:"AES-GCM" }, false, ["encrypt","decrypt"]);
+}
+async function rememberPrivatePassword(hash, password){
+  try{
+    const key = await privateDeviceCryptoKey();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt(
+      { name:"AES-GCM", iv }, key, new TextEncoder().encode(password)));
+    store.set(privateRememberStoreKey(hash), JSON.stringify({
+      iv:b64u.enc(iv), ct:b64u.enc(ct), expiresAt:Date.now() + PRIVATE_REMEMBER_MS
+    }));
+  }catch{}
+}
+async function readRememberedPrivatePassword(hash){
+  try{
+    const storageKey = privateRememberStoreKey(hash);
+    const raw = store.get(storageKey);
+    if(!raw) return "";
+    const saved = JSON.parse(raw);
+    if(!saved?.expiresAt || saved.expiresAt <= Date.now()){
+      localStorage.removeItem(storageKey); return "";
+    }
+    const key = await privateDeviceCryptoKey();
+    const plain = await crypto.subtle.decrypt(
+      { name:"AES-GCM", iv:b64u.dec(saved.iv) }, key, b64u.dec(saved.ct));
+    return new TextDecoder().decode(plain);
+  }catch{return "";}
+}
+function forgetRememberedPrivatePassword(hash){
+  try{ localStorage.removeItem(privateRememberStoreKey(hash)); }catch{}
+}
+async function finishPrivateUnlock(password, { quiet = false, remember = true } = {}){
+  try{
+    const inner = await decryptTrip(privateHash, password);
+    const single = unpackPin(inner);
+    const decoded = decodeTrip(inner) || (single ? { stops:[single], ordered:true } : null);
+    if(!decoded || !decoded.stops.length) throw new Error("empty");
+    ordered = decoded.ordered;
+    privateViewPassword = password;
+    if(remember) rememberPrivatePassword(privateHash, password);
+    $("#lockPassword").value = "";
+    $("#lockMsg").textContent = "";
+    $("#lockMsg").classList.remove("bad");
+    $("#lockScreen").classList.add("hidden");
+    openPin(decoded.stops, { push:false });
+    if(sharedTrip) initSharedTrip();
+    return true;
+  }catch{
+    if(quiet) return false;
+    const msg = $("#lockMsg");
+    msg.textContent = "that's not it \u2014 give it another squeeze";
+    msg.classList.add("bad");
+    const panel = document.querySelector(".lockpanel");
+    panel.classList.remove("lockshake"); void panel.offsetWidth; panel.classList.add("lockshake");
+    $("#lockPassword").select();
+    return false;
+  }
+}
+async function openPrivateGate(hash){
   privateHash = hash;
   if(sharedTrip){
     sharedTrip.isPrivate = true;
@@ -2481,33 +2619,24 @@ function openPrivateGate(hash){
   }
   paintLockSky(null);        /* no pin yet — key the sky to the reader's clock */
   $("#lockScreen").classList.remove("hidden");
-  setTimeout(()=> $("#lockPassword").focus(), 300);
+  const remembered = await readRememberedPrivatePassword(hash);
+  if(remembered){
+    const msg = $("#lockMsg");
+    msg.textContent = "opening with the lemon password remembered on this browser…";
+    msg.classList.remove("bad");
+    if(await finishPrivateUnlock(remembered, { quiet:true, remember:false })) return;
+    forgetRememberedPrivatePassword(hash);
+    msg.textContent = "";
+  }
+  setTimeout(()=> $("#lockPassword").focus(), 120);
 }
 async function tryPrivateUnlock(){
   const pw = $("#lockPassword").value;
   if(!pw) return;
   const btn = $("#lockGo");
   btn.disabled = true; btn.textContent = "squeezing\u2026";
-  try{
-    const inner = await decryptTrip(privateHash, pw);
-    const decoded = decodeTrip(inner) || (unpackPin(inner) ? { stops:[unpackPin(inner)], ordered:true } : null);
-    if(!decoded || !decoded.stops.length) throw new Error("empty");
-    ordered = decoded.ordered;
-    privateViewPassword = pw;
-    $("#lockPassword").value = "";
-    $("#lockScreen").classList.add("hidden");
-    openPin(decoded.stops, { push:false });
-    if(sharedTrip) initSharedTrip();
-  }catch{
-    const msg = $("#lockMsg");
-    msg.textContent = "that's not it \u2014 give it another squeeze";
-    msg.classList.add("bad");
-    const panel = document.querySelector(".lockpanel");
-    panel.classList.remove("lockshake"); void panel.offsetWidth; panel.classList.add("lockshake");
-    $("#lockPassword").select();
-  }finally{
-    btn.disabled = false; btn.textContent = "Open it";
-  }
+  try{ await finishPrivateUnlock(pw); }
+  finally{ btn.disabled = false; btn.textContent = "Open it"; }
 }
 function pinUrl(){
   const hash = sharedTrip?.isPrivate
@@ -2659,9 +2788,9 @@ function updateOutdoorsDensity(){
   if(!outdoorsOn) return;
   /* Marked routes arrive gradually as the user gets close enough to use them.
      This avoids the regional spiderweb that made the previous layer unreadable. */
-  const routeBase = z >= 16 ? 1 : z >= 14 ? .74 : z >= 12 ? .42 : .20;
-  outdoorsHiking?.setOpacity((satellite ? .58 : .46) * routeBase);
-  outdoorsOverland?.setOpacity((satellite ? .5 : .4) * routeBase);
+  const routeBase = z >= 16 ? 1 : z >= 14 ? .88 : z >= 12 ? .64 : .32;
+  outdoorsHiking?.setOpacity((satellite ? .84 : .76) * routeBase);
+  outdoorsOverland?.setOpacity((satellite ? .52 : .42) * routeBase);
 }
 function setOutdoorsOverlay(force){
   if(!map) return;
@@ -2822,7 +2951,7 @@ new MutationObserver(()=>{ if(map) setTiles(); })
   .observe(document.documentElement, { attributes:true, attributeFilter:["data-theme"] });
 
 /* ---------- stop icons ----------
-   Thirty-six covers most of what a stop actually is without turning the picker
+   Forty-two covers most of what a stop actually is without turning the picker
    into a chore. Index 0 is the plain pin, which is what every stop starts as
    and therefore costs nothing to store. */
 const ICONS = [
@@ -2862,6 +2991,12 @@ const ICONS = [
   { k:"gift", d:'<path d="M4 10h16v10H4Z"/><path d="M12 10v10"/><path d="M4 10V7.5h16V10"/><path d="M12 7.5c-3.5 0-4.5-.8-4.5-2s2.5-1.6 4.5 2c2-2.8 4.5-2.4 4.5-1.2s-1 2-4.5 2Z"/>' },
   { k:"phone", d:'<path d="M7.5 3.5h9v17h-9Z"/><path d="M10.5 17.8h3"/>' },
   { k:"paw", d:'<path d="M8 11.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M16 11.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M5.5 17a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z"/><path d="M18.5 17a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z"/><path d="M12 20.5c2.6 0 4.4-1.5 4.4-3.4S14.6 13 12 13s-4.4 2.2-4.4 4.1S9.4 20.5 12 20.5Z"/>' },
+  { k:"boat", d:'<path d="M4 13.5h16l-2.6 5H7Z"/><path d="M8 13.5V8h7l2 5.5"/><path d="M3.5 21c1.5-1.3 3-1.3 4.5 0s3 1.3 4.5 0 3-1.3 4.5 0 3 1.3 4.5 0"/>' },
+  { k:"sailboat", d:'<path d="M12 3.5v12"/><path d="M11.5 5 5 14h6.5ZM13 6l5 8h-5Z"/><path d="M4 16h16l-2.2 3.5H6.2Z"/><path d="M5 22c1.4-1.1 2.8-1.1 4.2 0s2.8 1.1 4.2 0 2.8-1.1 4.2 0"/>' },
+  { k:"canoe", d:'<path d="M3.5 14.5c4.4 3.8 12.6 3.8 17 0-1.8 5.2-15.2 5.2-17 0Z"/><path d="m7 7 10 10M14.8 5.2l2.8 2.8M4.2 13.2 7 16"/>' },
+  { k:"anchor", d:'<path d="M12 5v14"/><circle cx="12" cy="4.5" r="2.2"/><path d="M5 11H3.5M19 11h1.5"/><path d="M5 13c0 4 3 7 7 7s7-3 7-7"/><path d="m5 13-2 2M19 13l2 2"/>' },
+  { k:"police", d:'<path d="M12 3.5 19 6v5.5c0 4.3-2.8 7.2-7 9-4.2-1.8-7-4.7-7-9V6Z"/><path d="m12 8 1.1 2.2 2.4.4-1.7 1.7.4 2.4-2.2-1.1-2.2 1.1.4-2.4-1.7-1.7 2.4-.4Z"/>' },
+  { k:"sand dunes", d:'<circle cx="18" cy="6" r="2.5"/><path d="M2.5 18.5c3.8-5.5 7.2-5.5 10.2 0"/><path d="M9 18.5c4.4-7 8.2-7 12.5 0"/><path d="M3 21h18"/>' },
 ];
 function iconSvg(idx, size, stroke){
   const ic = ICONS[idx] || ICONS[0];
@@ -3042,7 +3177,8 @@ function setMapUnlocked(value){
     .forEach(h => map[h] && map[h][on]());
   document.getElementById("map").classList.toggle("locked", !unlocked);
   $("#lockBtn").textContent = unlocked ? "lock map" : "unlock map";
-  $("#lockBtn").setAttribute("aria-pressed", unlocked);
+  $("#lockBtn").setAttribute("aria-pressed", String(unlocked));
+  $("#lockBtn").title = unlocked ? "Lock map movement" : "Unlock map movement";
 }
 $("#lockBtn").addEventListener("click", ()=> setMapUnlocked(!unlocked));
 
@@ -3103,6 +3239,7 @@ function setMapFullscreen(on, fromNative = false){
   }else{
     setFsRouteOpen(false);
     removeFsCandidate();
+    closeIconPicker();
     setMapUnlocked(fullscreenWasUnlocked);
     if(!fromNative && document.fullscreenElement) document.exitFullscreen?.().catch(()=>{});
   }
@@ -3118,13 +3255,22 @@ window.addEventListener("keydown", e=>{
   else if(mapFullscreen && !document.fullscreenElement) setMapFullscreen(false, true);
 });
 $("#fsRouteBtn")?.addEventListener("click", ()=> setFsRouteOpen(!fsRouteOpen));
+$("#fsEditLock")?.addEventListener("click", ()=>{
+  if(!sharedTrip) return;
+  openSharedSheet(!!sharedTrip.editable && !sharedTrip.unlocked);
+  if(sharedTrip.editable && !sharedTrip.unlocked){
+    sharedMessage("Enter the edit password to adjust pins, notes, icons, or route points.");
+  }
+});
 
 $("#dragBtn").addEventListener("click", ()=>{
   if(blockSharedChange()) return;
   dragging = !dragging;
-  markers.forEach(m => dragging ? m.dragging.enable() : m.dragging.disable());
+  markers.forEach(m => dragging ? m.dragging?.enable() : m.dragging?.disable());
   $("#dragBtn").textContent = dragging ? "done" : "adjust pin";
-  $("#dragBtn").setAttribute("aria-pressed", dragging);
+  $("#dragBtn").setAttribute("aria-pressed", String(dragging));
+  $("#dragBtn").title = dragging ? "Finish adjusting pins" : "Drag any pin to adjust it";
+  if(dragging) flash("drag any pin to adjust it");
 });
 
 /* ---------- render ---------- */
@@ -3674,22 +3820,73 @@ function addFullscreenCandidate(){
   renderQR();
   syncSharedDirty();
 }
+function commitFullscreenNote(i, input){
+  if(blockSharedChange()) return;
+  const value = input.value.trim();
+  stops[i].note = value || null;
+  if(i === active) pin = stops[i];
+  refreshPin({ recenter:false });
+  renderFullscreenRoute();
+  if(!$("#tripSheet").classList.contains("hidden")) renderTrip();
+  renderQR();
+  syncSharedDirty();
+  flash(value ? "note updated" : "note cleared");
+}
+function openFullscreenNoteEditor(i, li){
+  if(blockSharedChange()) return;
+  const already = li.querySelector(".fsrouteedit");
+  document.querySelectorAll(".fsrouteedit").forEach(x => x.remove());
+  if(already) return;
+  const edit = document.createElement("div");
+  edit.className = "fsrouteedit";
+  const input = document.createElement("input");
+  input.type = "text"; input.maxLength = 120;
+  input.value = stops[i].note || "";
+  input.placeholder = "Add a note for this point";
+  input.setAttribute("aria-label", `Note for stop ${i + 1}`);
+  const done = document.createElement("button");
+  done.type = "button"; done.textContent = "done";
+  const save = ()=> commitFullscreenNote(i, input);
+  done.addEventListener("click", save);
+  input.addEventListener("keydown", e=>{
+    if(e.key === "Enter"){ e.preventDefault(); save(); }
+    else if(e.key === "Escape"){ edit.remove(); }
+  });
+  edit.append(input, done); li.appendChild(edit);
+  setTimeout(()=>{ input.focus(); input.select(); }, 30);
+}
+function updateFullscreenEditLock(){
+  const b = $("#fsEditLock");
+  if(!b) return;
+  b.classList.toggle("hidden", !sharedTrip);
+  if(!sharedTrip) return;
+  b.classList.toggle("unlocked", !!sharedTrip.unlocked);
+  b.classList.toggle("loading", !!sharedTrip.loading);
+  b.classList.toggle("dirty", !!sharedTrip.unlocked && !!sharedTrip.dirty);
+  b.innerHTML = sharedLockSvg(!!sharedTrip.unlocked);
+  b.title = sharedTrip.unlocked
+    ? (sharedTrip.dirty ? "Shared trip has unpublished changes" : "Shared editing is unlocked")
+    : (sharedTrip.editable ? "Unlock shared trip editing" : "This shared trip is read-only");
+  b.setAttribute("aria-label", b.title);
+}
 function renderFullscreenRoute(){
   const count = $("#fsRouteCount");
   if(count) count.textContent = stops.length || 0;
   const mode = $("#fsRouteMode");
   if(mode) mode.textContent = ordered ? "in order" : "loose list";
+  updateFullscreenEditLock();
   const list = $("#fsRouteList");
   if(!list) return;
   list.innerHTML = "";
   stops.forEach((s, i)=>{
     const li = document.createElement("li");
     li.className = "fsrouteitem" + (i === mapSelected ? " current" : "");
-    const b = document.createElement("button");
-    b.type = "button";
+
+    const focus = document.createElement("button");
+    focus.type = "button"; focus.className = "fsroutefocus";
     const n = document.createElement("span");
     n.className = "fsrouteindex";
-    n.textContent = i + 1;
+    n.innerHTML = s.icon ? iconSvg(s.icon, 14) : String(i + 1);
     const text = document.createElement("span");
     const title = document.createElement("span");
     title.className = "fsroutetitle";
@@ -3697,8 +3894,37 @@ function renderFullscreenRoute(){
     const sub = document.createElement("span");
     sub.className = "fsroutesub";
     sub.textContent = s.addr || `${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}`;
-    text.append(title, sub); b.append(n, text); li.appendChild(b); list.appendChild(li);
-    b.addEventListener("click", ()=>{
+    text.append(title, sub); focus.append(n, text);
+
+    const iconButton = document.createElement("button");
+    iconButton.type = "button";
+    iconButton.className = "fsrouteaction icon-trigger";
+    iconButton.innerHTML = iconSvg(s.icon || 0, 17);
+    iconButton.title = "Choose icon";
+    iconButton.setAttribute("aria-label", `Choose icon for stop ${i + 1}`);
+    iconButton.disabled = !canChangeTrip();
+    iconButton.addEventListener("click", e=>{
+      e.stopPropagation();
+      if(blockSharedChange()) return;
+      openIconPicker(i, iconButton);
+    });
+
+    const noteButton = document.createElement("button");
+    noteButton.type = "button"; noteButton.className = "fsrouteaction";
+    noteButton.title = "Edit note";
+    noteButton.setAttribute("aria-label", `Edit note for stop ${i + 1}`);
+    noteButton.disabled = !canChangeTrip();
+    noteButton.innerHTML = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+      <path d="m5 16.5-.7 3.2 3.2-.7L18.6 7.9a2.2 2.2 0 0 0-3.1-3.1Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="m13.8 6.5 3.1 3.1" stroke="currentColor" stroke-width="1.8"/>
+    </svg>`;
+    noteButton.addEventListener("click", e=>{
+      e.stopPropagation();
+      openFullscreenNoteEditor(i, li);
+    });
+
+    li.append(focus, iconButton, noteButton); list.appendChild(li);
+    focus.addEventListener("click", ()=>{
       mapSelected = i;
       setActive(i);
       renderFullscreenRoute();
@@ -3717,7 +3943,11 @@ function renderFullscreenRoute(){
   if($("#fsSearchBox")) $("#fsSearchBox").disabled = !editable;
   if(!editable){
     $("#fsAddPoint").disabled = true;
-    fsSetHint("unlock editing to add a point");
+    fsSetHint(sharedTrip?.editable ? "use the lock to unlock editing" : "this shared trip is read-only");
+  }else if(!fsCandidate){
+    $("#fsAddPoint").disabled = true;
+    const hint = $("#fsRouteHint");
+    if(hint && /unlock editing|read-only/.test(hint.textContent)) fsSetHint("");
   }
 }
 $("#fsSearchBox")?.addEventListener("input", fullscreenLiveSearch);
@@ -3780,7 +4010,7 @@ function renderTrip(){
     li.dataset.i = i;
 
     const num = document.createElement("button");
-    num.className = "tripnum";
+    num.className = "tripnum icon-trigger";
     num.type = "button";
     num.setAttribute("aria-label", "Change this stop's icon");
     if(s.icon) num.innerHTML = iconSvg(s.icon, 15);
@@ -4108,7 +4338,7 @@ function startDragOn(li, handle, body){
 }
 
 /* ---------- the icon picker ----------
-   A little popover anchored to the mark you tapped. Thirty-six in a grid, the
+   A little popover anchored to the mark you tapped. Forty-two in a grid, the
    plain pin first so clearing back to default is one tap. */
 let pickerFor = -1;
 
@@ -4135,27 +4365,36 @@ function openIconPicker(i, anchorEl){
     b.addEventListener("click", ()=>{
       stops[i].icon = idx;
       closeIconPicker();
-      refreshPin({ recenter: false });
-      renderTrip();
+      refreshPin({ recenter:false });
+      if(!$("#tripSheet").classList.contains("hidden")) renderTrip();
+      renderFullscreenRoute();
+      renderQR();
+      syncSharedDirty();
     });
     grid.appendChild(b);
   });
 
-  /* sit it under the mark, nudged back inside the sheet if it would overhang */
+  /* Portal the picker into the active fullscreen element.  Outside fullscreen
+     it lives on body, which avoids the trip sheet's scroll clipping. */
+  const portal = document.fullscreenElement || (mapFullscreen ? $("#mapWrap") : document.body);
+  if(el.parentElement !== portal) portal.appendChild(el);
   el.classList.remove("hidden");
-  const host = $("#tripSheet").getBoundingClientRect();
+  el.style.left = "10px"; el.style.top = "10px";
   const at = anchorEl.getBoundingClientRect();
-  const w = el.offsetWidth;
-  let left = at.left - host.left - 6;
-  left = Math.max(10, Math.min(left, host.width - w - 10));
-  el.style.left = left + "px";
-  el.style.top = (at.bottom - host.top + 8) + "px";
+  const box = el.getBoundingClientRect();
+  const gap = 8, edge = 10;
+  let left = at.left;
+  let top = at.bottom + gap;
+  left = Math.max(edge, Math.min(left, innerWidth - box.width - edge));
+  if(top + box.height > innerHeight - edge) top = at.top - box.height - gap;
+  top = Math.max(edge, Math.min(top, innerHeight - box.height - edge));
+  el.style.left = `${left}px`; el.style.top = `${top}px`;
 }
 
 document.addEventListener("click", e =>{
   const el = $("#iconPop");
   if(el.classList.contains("hidden")) return;
-  if(!el.contains(e.target) && !e.target.closest(".tripnum")) closeIconPicker();
+  if(!el.contains(e.target) && !e.target.closest(".icon-trigger")) closeIconPicker();
 });
 
 $("#modeRoute").addEventListener("click", ()=> setMode(true));
@@ -4272,6 +4511,7 @@ function clearSharedTripContext(){
   privateViewPassword = "";
   document.body.classList.remove("sharedlocked");
   $("#sharedLockBtn")?.classList.add("hidden");
+  $("#fsEditLock")?.classList.add("hidden");
   closeSharedSheet();
   $("#sharedAuth")?.classList.add("hidden");
   $("#sharedReload")?.classList.add("hidden");
@@ -4321,6 +4561,7 @@ function updateSharedLockButton(){
       : sharedTrip.editable ? "Unlock shared trip editing" : "Shared trip permanently locked";
   lockButton.setAttribute("aria-label", lockLabel);
   lockButton.title = lockLabel;
+  updateFullscreenEditLock();
 }
 
 function setSharedControlState(){
@@ -4332,6 +4573,9 @@ function setSharedControlState(){
 
   $("#noteInput").disabled = locked;
   $("#dragBtn").disabled = locked;
+  $("#dragBtn").title = locked
+    ? (sharedTrip.editable ? "Unlock shared editing to adjust pins" : "This shared trip is read-only")
+    : (dragging ? "Finish adjusting pins" : "Drag any pin to adjust it");
   $("#addStopBtn").disabled = locked;
   $("#modeRoute").disabled = locked;
   $("#modeList").disabled = locked;
