@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lemoncoords-v14-clean-shared-ui';
+const CACHE_NAME = 'lemoncoords-v15';
 const APP_SHELL = [
   './',
   './index.html',
