@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>LEMONCOORDS.</title>
-<!-- v15.5 trail shields + fullscreen controls fix -->
+<!-- v15.6 fullscreen route polish + safe pin deletion -->
 <meta name="description" content="Drop a pin. Send it. Every way to find you, in one link.">
 <meta property="og:title" content="LEMONCOORDS.">
 <meta property="og:description" content="Someone sent you a pin. Open it.">
@@ -192,15 +192,15 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 }
 :root[data-theme="dark"] #map{background:#1A1A12}
 .mapui{
-  position:absolute;right:10px;top:10px;bottom:auto;z-index:var(--z-mapui);
-  display:flex;flex-direction:column;align-items:flex-end;gap:7px;
+  position:absolute;right:9px;top:auto;bottom:24px;z-index:var(--z-mapui);
+  display:flex;flex-direction:column;align-items:flex-end;gap:4px;
 }
 .adjustbtn{
-  min-height:38px;font-size:.76rem;font-weight:700;color:var(--ink);
+  min-height:27px;height:27px;font-size:.66rem;line-height:1;font-weight:700;color:var(--ink);
   background:color-mix(in srgb,var(--pith) 94%,transparent);
   backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  border:1px solid var(--ink);border-radius:999px;padding:7px 13px;
-  box-shadow:0 3px 12px rgba(35,36,27,.12);
+  border:1px solid color-mix(in srgb,var(--ink) 74%,transparent);border-radius:999px;padding:3px 9px;
+  box-shadow:0 2px 8px rgba(35,36,27,.1);
   transition:transform .16s cubic-bezier(.16,1,.3,1),background .16s ease,color .16s ease,opacity .16s ease;
 }
 .adjustbtn:hover{transform:translateY(-1px)}
@@ -275,8 +275,12 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .mapwrap.is-fullscreen .mapselection{display:none}
 .mapwrap.is-fullscreen .mapui{
   right:max(12px,env(safe-area-inset-right));
-  top:calc(max(12px,env(safe-area-inset-top)) + 52px);
-  bottom:auto;
+  top:max(12px,env(safe-area-inset-top));bottom:auto;
+  z-index:calc(var(--z-mapui) + 4);flex-direction:row;align-items:center;gap:5px;
+}
+.mapwrap.is-fullscreen .adjustbtn{
+  min-height:36px;height:36px;padding:0 8px;font-size:.63rem;
+  border-color:transparent;box-shadow:0 8px 24px rgba(35,36,27,.13);
 }
 .mapwrap:fullscreen{background:var(--pith)}
 .mapwrap:fullscreen #map{height:100vh}
@@ -287,8 +291,8 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 }
 .mapwrap.is-fullscreen > .unlockcelebration{z-index:calc(var(--z-modal) + 90)}
 .fsroutebtn{
-  position:absolute;right:max(12px,env(safe-area-inset-right));
-  top:max(12px,env(safe-area-inset-top));z-index:calc(var(--z-mapui) + 3);
+  position:absolute;right:calc(max(12px,env(safe-area-inset-right)) + 148px);
+  top:max(12px,env(safe-area-inset-top));z-index:calc(var(--z-mapui) + 5);
   display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:999px;
   color:var(--ink);background:color-mix(in srgb,var(--pith) 92%,transparent);
   backdrop-filter:blur(13px);-webkit-backdrop-filter:blur(13px);
@@ -366,7 +370,7 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .fsroutelist{list-style:none;overflow-y:auto;padding:0 8px 10px;overscroll-behavior:contain}
 .fsroutelist{display:grid;gap:4px}
 .fsrouteitem{
-  display:grid;grid-template-columns:minmax(0,1fr) 40px 40px;gap:4px;align-items:center;
+  display:grid;grid-template-columns:minmax(0,1fr) 38px 38px 38px;gap:3px;align-items:center;
   border-radius:12px;transition:background .16s ease;
 }
 .fsrouteitem.current{background:var(--flesh)}
@@ -378,12 +382,13 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .fsroutefocus:hover{background:color-mix(in srgb,var(--flesh) 72%,transparent)}
 .fsroutefocus:active{transform:scale(.985)}
 .fsrouteaction{
-  width:40px;height:40px;display:grid;place-items:center;border-radius:11px;color:var(--muted);
+  width:38px;height:38px;display:grid;place-items:center;border-radius:50%;color:var(--muted);
   transition:background .15s ease,color .15s ease,transform .15s cubic-bezier(.16,1,.3,1);
 }
 .fsrouteaction:hover{background:var(--pith);color:var(--ink)}
 .fsrouteaction:active{transform:scale(.94)}
 .fsrouteaction:disabled{opacity:.35;cursor:not-allowed}
+.fsroutedelete:hover{background:color-mix(in srgb,#c0522d 11%,var(--pith));color:#a74225}
 .fsrouteedit{
   grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;
   padding:3px 6px 8px 42px;animation:fseditin .22s cubic-bezier(.16,1,.3,1) both;
@@ -414,14 +419,45 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .map-note-tooltip.leaflet-tooltip::before{display:none}
 .fscandidate{filter:drop-shadow(0 7px 12px rgba(35,36,27,.24));opacity:.82}
 @media(max-width:600px){
-  .fsroutepanel{left:10px;right:10px;width:auto;top:calc(max(10px,env(safe-area-inset-top)) + 48px);max-height:62dvh}
-  .fsroutebtn{right:10px;top:max(10px,env(safe-area-inset-top))}
+  .fsroutepanel{left:10px;right:10px;width:auto;top:calc(max(10px,env(safe-area-inset-top)) + 46px);max-height:62dvh}
+  .fsroutebtn{right:145px;top:max(10px,env(safe-area-inset-top));padding:8px 10px;gap:6px}
+  .mapwrap.is-fullscreen .mapui{right:8px;top:max(10px,env(safe-area-inset-top));gap:4px}
+  .mapwrap.is-fullscreen .adjustbtn{height:34px;min-height:34px;padding:0 7px;font-size:.59rem}
   .fssearch{grid-template-columns:42px minmax(0,1fr);padding:11px 11px 9px}
   .fssearchfield{grid-column:1/-1}
   .fseditlock{grid-column:1}
   .fsadd{grid-column:2;width:100%;padding:0 12px}
   .fseditlock.hidden + .fsadd{grid-column:1/-1}
 }
+/* ---------- safe point deletion ---------- */
+.pointdelete{
+  position:fixed;inset:0;z-index:calc(var(--z-modal) + 110);display:grid;place-items:center;
+  padding:20px;background:color-mix(in srgb,var(--ink) 28%,transparent);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  opacity:1;transition:opacity .18s ease;
+}
+.pointdelete.hidden{display:none}
+.pointdeletecard{
+  width:min(360px,calc(100vw - 32px));padding:24px 22px 20px;border-radius:22px;
+  color:var(--ink);background:var(--pith);box-shadow:0 24px 70px rgba(35,36,27,.28);
+  text-align:center;animation:pointDeleteIn .26s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes pointDeleteIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+.pointdeletelemon{
+  width:48px;height:48px;margin:0 auto 13px;border-radius:50%;display:grid;place-items:center;
+  color:#23241B;background:var(--zest);box-shadow:inset 0 0 0 2px #23241B;
+  transition:transform .34s cubic-bezier(.16,1,.3,1);
+}
+.pointdelete[data-step="2"] .pointdeletelemon{transform:rotate(-12deg) scale(1.06)}
+.pointdeletetitle{font-family:var(--display);font-size:1.22rem;font-weight:650;line-height:1.2;text-wrap:balance}
+.pointdeletecopy{margin:8px auto 0;max-width:31ch;color:var(--muted);font-size:.82rem;line-height:1.45;text-wrap:balance}
+.pointdeletename{color:var(--ink);font-weight:680}
+.pointdeleteactions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:20px}
+.pointdeleteactions button{height:40px;border-radius:999px;font-size:.76rem;font-weight:720}
+.pointdeletekeep{color:var(--ink);background:var(--flesh)}
+.pointdeletego{color:var(--pith);background:var(--ink)}
+.pointdelete[data-step="2"] .pointdeletego{background:#a84427;color:#fffaf0}
+:root[data-theme="dark"] .pointdeletecard{box-shadow:0 28px 80px rgba(0,0,0,.62)}
 .leaflet-container{font-family:var(--body)}
 .leaflet-control-zoom a{display:block;width:30px;height:30px;line-height:30px;text-align:center;text-decoration:none;background:var(--pith);color:var(--ink);border-bottom:1px solid var(--hairline);font-weight:700}
 .leaflet-control-zoom{border:1px solid var(--ink);border-radius:8px;overflow:hidden;background:var(--pith)}
@@ -569,11 +605,15 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 }
 .modebtn.on{background:var(--ink);color:var(--pith)}
 /* an unordered list gets a plain mark — no number implying a sequence */
-.tripitem.loose .tripnum{
+.tripitem.loose .tripnum:not(.hasicon){
   background:transparent;border:2px solid var(--zest);color:transparent;
   width:14px;height:14px;margin-top:7px;margin-left:6px;
 }
-.tripitem.loose.current .tripnum{background:var(--ink);border-color:var(--ink)}
+.tripitem.loose.current .tripnum:not(.hasicon){background:var(--ink);border-color:var(--ink)}
+.tripitem.loose .tripnum.hasicon{
+  width:28px;height:28px;margin-top:0;margin-left:0;border:0;background:var(--zest);color:#23241B;
+}
+.tripitem.loose.current .tripnum.hasicon{background:var(--ink);color:var(--pith)}
 
 /* a stop taken off the route: still on the map, just not in the count */
 .tripitem.offroute{border-style:dashed}
@@ -604,12 +644,13 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
   font-weight:600;margin-bottom:9px;text-align:left;
 }
 .iconhead span{color:var(--rind-text);font-weight:500;letter-spacing:.08em}
-.icongrid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.icongrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
 .iconcell{
-  display:grid;place-items:center;aspect-ratio:1;border-radius:9px;color:var(--ink);
-  transition:background .13s ease,color .13s ease;
+  display:grid;place-items:center;width:34px;height:34px;justify-self:center;border-radius:50%;
+  color:var(--ink);background:color-mix(in srgb,var(--flesh) 72%,transparent);
+  transition:background .13s ease,color .13s ease,transform .16s cubic-bezier(.16,1,.3,1);
 }
-.iconcell:hover{background:var(--flesh)}
+.iconcell:hover{background:var(--flesh);transform:translateY(-1px)}
 .iconcell.on{background:var(--ink);color:var(--pith)}
 /* an off-route pin reads as provisional on the map too */
 .lemonpinicon.loose{opacity:.88}
@@ -1225,6 +1266,22 @@ body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-
         <div class="mapui">
           <button class="adjustbtn" id="lockBtn" aria-pressed="false">unlock map</button>
           <button class="adjustbtn" id="dragBtn" aria-pressed="false">adjust pin</button>
+        </div>
+        <div class="pointdelete hidden" id="pointDelete" data-step="1" role="dialog" aria-modal="true" aria-labelledby="pointDeleteTitle">
+          <section class="pointdeletecard">
+            <div class="pointdeletelemon" aria-hidden="true">
+              <svg viewBox="0 0 48 48" width="31" height="31" fill="none">
+                <circle cx="24" cy="24" r="17" stroke="currentColor" stroke-width="2.4"/>
+                <path d="M24 8v32M8 24h32M12.7 12.7l22.6 22.6M35.3 12.7 12.7 35.3" stroke="currentColor" stroke-width="1.8" opacity=".42"/>
+              </svg>
+            </div>
+            <h2 class="pointdeletetitle" id="pointDeleteTitle">Remove this point?</h2>
+            <p class="pointdeletecopy" id="pointDeleteCopy"></p>
+            <div class="pointdeleteactions">
+              <button class="pointdeletekeep" id="pointDeleteKeep" type="button">keep it</button>
+              <button class="pointdeletego" id="pointDeleteGo" type="button">continue</button>
+            </div>
+          </section>
         </div>
       </div>
 
@@ -3245,9 +3302,9 @@ function setFsRouteOpen(open){
   fsRouteOpen = !!open;
   $("#fsRoutePanel")?.classList.toggle("open", fsRouteOpen);
   $("#fsRouteBtn")?.setAttribute("aria-expanded", String(fsRouteOpen));
+  $("#fsSearchBox")?.blur();
   if(fsRouteOpen){
     renderFullscreenRoute();
-    setTimeout(()=> $("#fsSearchBox")?.focus({ preventScroll:true }), 120);
   }else{
     clearFullscreenSearch(false);
   }
@@ -3922,6 +3979,111 @@ function openFullscreenNoteEditor(i, li){
   edit.append(input, done); li.appendChild(edit);
   setTimeout(()=>{ input.focus(); input.select(); }, 30);
 }
+let pointDeleteIndex = -1;
+let pointDeleteStep = 1;
+let pointDeleteReturnFocus = null;
+
+function pointDeleteName(i){
+  const s = stops[i];
+  if(!s) return "this point";
+  return s.note || s.addr || `${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}`;
+}
+
+function paintPointDelete(){
+  const modal = $("#pointDelete");
+  const title = $("#pointDeleteTitle");
+  const copy = $("#pointDeleteCopy");
+  const keep = $("#pointDeleteKeep");
+  const go = $("#pointDeleteGo");
+  if(!modal || pointDeleteIndex < 0) return;
+  modal.dataset.step = String(pointDeleteStep);
+  copy.textContent = "";
+  const name = document.createElement("span");
+  name.className = "pointdeletename";
+  name.textContent = pointDeleteName(pointDeleteIndex);
+  if(pointDeleteStep === 1){
+    title.textContent = "Remove this point?";
+    copy.append(name, document.createTextNode(" will leave this trip. There is one more check before anything is deleted."));
+    keep.textContent = "keep it";
+    go.textContent = "continue";
+  }else{
+    title.textContent = "Last lemon check.";
+    copy.append(document.createTextNode("Delete "), name, document.createTextNode(" for real? This cannot be undone after the shared trip is updated."));
+    keep.textContent = "go back";
+    go.textContent = "delete point";
+  }
+}
+
+function openPointDelete(i, returnFocus){
+  if(blockSharedChange()) return;
+  if(stops.length <= 1){ flash("a trip needs at least one stop"); return; }
+  pointDeleteIndex = i;
+  pointDeleteStep = 1;
+  pointDeleteReturnFocus = returnFocus || null;
+  paintPointDelete();
+  $("#pointDelete")?.classList.remove("hidden");
+  requestAnimationFrame(()=> $("#pointDeleteKeep")?.focus({ preventScroll:true }));
+}
+
+function closePointDelete(){
+  $("#pointDelete")?.classList.add("hidden");
+  pointDeleteIndex = -1;
+  pointDeleteStep = 1;
+  const back = pointDeleteReturnFocus;
+  pointDeleteReturnFocus = null;
+  back?.focus?.({ preventScroll:true });
+}
+
+function removeStopAt(i, recenter = false){
+  if(i < 0 || i >= stops.length || stops.length <= 1) return false;
+  closeIconPicker();
+  document.querySelectorAll(".fsrouteedit").forEach(x => x.remove());
+  stops.splice(i, 1);
+
+  if(i < active) active--;
+  else if(i === active) active = Math.min(i, stops.length - 1);
+  active = Math.max(0, Math.min(active, stops.length - 1));
+
+  if(i < mapSelected) mapSelected--;
+  else if(i === mapSelected) mapSelected = active;
+  mapSelected = Math.max(-1, Math.min(mapSelected, stops.length - 1));
+
+  pin = stops[active];
+  refreshPin({ recenter });
+  if(!$("#tripSheet").classList.contains("hidden")) renderTrip();
+  renderFullscreenRoute();
+  renderQR();
+  syncSharedDirty();
+  flash("point removed");
+  return true;
+}
+
+$("#pointDeleteKeep")?.addEventListener("click", ()=>{
+  if(pointDeleteStep === 2){ pointDeleteStep = 1; paintPointDelete(); }
+  else closePointDelete();
+});
+$("#pointDeleteGo")?.addEventListener("click", ()=>{
+  if(pointDeleteStep === 1){
+    pointDeleteStep = 2;
+    paintPointDelete();
+    requestAnimationFrame(()=> $("#pointDeleteGo")?.focus({ preventScroll:true }));
+    return;
+  }
+  const i = pointDeleteIndex;
+  closePointDelete();
+  removeStopAt(i, false);
+});
+$("#pointDelete")?.addEventListener("click", e=>{
+  if(e.target === $("#pointDelete")) closePointDelete();
+});
+window.addEventListener("keydown", e=>{
+  if(e.key === "Escape" && !$("#pointDelete")?.classList.contains("hidden")){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    closePointDelete();
+  }
+}, true);
+
 function updateFullscreenEditLock(){
   const b = $("#fsEditLock");
   if(!b) return;
@@ -3990,7 +4152,21 @@ function renderFullscreenRoute(){
       openFullscreenNoteEditor(i, li);
     });
 
-    li.append(focus, iconButton, noteButton); list.appendChild(li);
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "fsrouteaction fsroutedelete";
+    deleteButton.title = "Delete point";
+    deleteButton.setAttribute("aria-label", `Delete stop ${i + 1}`);
+    deleteButton.disabled = !canChangeTrip() || stops.length <= 1;
+    deleteButton.innerHTML = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+      <path d="M5.5 7.5h13M9 7.5V5h6v2.5M8 10.5l.6 8h6.8l.6-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+    deleteButton.addEventListener("click", e=>{
+      e.stopPropagation();
+      openPointDelete(i, deleteButton);
+    });
+
+    li.append(focus, iconButton, noteButton, deleteButton); list.appendChild(li);
     focus.addEventListener("click", ()=>{
       mapSelected = i;
       setActive(i);
@@ -4076,9 +4252,10 @@ function renderTrip(){
     li.dataset.i = i;
 
     const num = document.createElement("button");
-    num.className = "tripnum icon-trigger";
+    num.className = "tripnum icon-trigger" + (s.icon ? " hasicon" : "");
     num.type = "button";
     num.setAttribute("aria-label", "Change this stop's icon");
+    num.title = "Choose icon";
     if(s.icon) num.innerHTML = iconSvg(s.icon, 15);
     else num.textContent = (ordered && !s.off) ? seqOf[i] : "";
     num.addEventListener("pointerdown", e => e.stopPropagation());
@@ -4093,19 +4270,13 @@ function renderTrip(){
     body.className = "tripbody";
     const where = document.createElement("div");
     where.className = "tripwhere";
-    where.textContent = s.note || stopLabel(s);
+    const coordinateText = s.lat.toFixed(5) + ", " + s.lon.toFixed(5);
+    where.textContent = s.note || coordinateText;
     body.appendChild(where);
     const co = document.createElement("div");
     co.className = "tripcoords";
-    co.textContent = s.lat.toFixed(5) + ", " + s.lon.toFixed(5);
+    co.textContent = coordinateText;
     body.appendChild(co);
-    let addressLine = null;
-    if(s.note){
-      addressLine = document.createElement("div");
-      addressLine.className = "tripnote";
-      addressLine.textContent = stopLabel(s);
-      body.appendChild(addressLine);
-    }
     body.addEventListener("click", ()=>{
       if(justDragged) return;
       setActive(i);
@@ -4149,19 +4320,11 @@ function renderTrip(){
       if(blockSharedChange()) return;
       if(stops.length <= 1){ flash("a trip needs at least one stop"); return; }
       li.classList.add("gone");
-      setTimeout(()=>{
-        stops.splice(i, 1);
-        if(active >= stops.length) active = stops.length - 1;
-        if(mapSelected === i) mapSelected = active;
-        else if(mapSelected > i) mapSelected--;
-        pin = stops[active];
-        refreshPin({ recenter: true });
-        renderTrip();
-      }, 190);
+      setTimeout(()=> removeStopAt(i, true), 190);
     });
 
     li.append(num, body, skip, handle, del);
-    if(!s.addr) fillAddr(s, addressLine || where);
+    if(!s.addr) fillAddr(s, null);
     if(!tripLocked) startDragOn(li, handle, body);
     list.appendChild(li);
   });
@@ -4198,7 +4361,7 @@ function setMode(isOrdered){
 function fillAddr(s, el){
   reverseGeocode(s).then(a =>{
     s.addr = a || "";
-    if(el.isConnected && a) el.textContent = a;
+    if(el?.isConnected && a) el.textContent = a;
   }).catch(()=>{});
 }
 
