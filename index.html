@@ -47,7 +47,6 @@
   --muted:#9E9C82;
   --hairline:rgba(240,236,218,.16);
 }
-  
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{
@@ -1237,7 +1236,7 @@ body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-
           <input id="privateToggle" type="checkbox">
           <span>
             <b>Make this trip private</b>
-            <small>Locks the stops behind a lemon password. Whoever opens the link has to know it to see anything — not all squeezes are meant to be public.</small>
+            <small>Locks the stops behind a lemon password. Whoever opens the link has to know it to see anything. This can also be combined with the edit password below.</small>
           </span>
         </label>
         <div class="editfields hidden" id="privateFields">
@@ -1254,7 +1253,7 @@ body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-
           <input id="editToggle" type="checkbox">
           <span>
             <b>Let this shared trip be updated later</b>
-            <small>The password changes the trip for everyone using this same short link. It can never change the link name or expiry.</small>
+            <small>The edit password changes the trip for everyone using this same short link. For private trips, updates are re-encrypted in your browser with the lemon password.</small>
           </span>
         </label>
         <div class="editfields hidden" id="editFields">
@@ -2283,8 +2282,13 @@ async function decryptTrip(hash, password){
 /* recipient side: hold the private hash, show the field, and only open the
    trip once the password actually decrypts it */
 let privateHash = null;
+let privateViewPassword = "";  /* memory only; never stored, logged, or sent */
 function openPrivateGate(hash){
   privateHash = hash;
+  if(sharedTrip){
+    sharedTrip.isPrivate = true;
+    sharedTrip.encryptedPayload = hash;
+  }
   paintLockSky(null);        /* no pin yet — key the sky to the reader's clock */
   $("#lockScreen").classList.remove("hidden");
   setTimeout(()=> $("#lockPassword").focus(), 300);
@@ -2299,8 +2303,11 @@ async function tryPrivateUnlock(){
     const decoded = decodeTrip(inner) || (unpackPin(inner) ? { stops:[unpackPin(inner)], ordered:true } : null);
     if(!decoded || !decoded.stops.length) throw new Error("empty");
     ordered = decoded.ordered;
+    privateViewPassword = pw;
+    $("#lockPassword").value = "";
     $("#lockScreen").classList.add("hidden");
     openPin(decoded.stops, { push:false });
+    if(sharedTrip) initSharedTrip();
   }catch{
     const msg = $("#lockMsg");
     msg.textContent = "that's not it \u2014 give it another squeeze";
@@ -2313,7 +2320,12 @@ async function tryPrivateUnlock(){
   }
 }
 function pinUrl(){
-  return location.origin + location.pathname + "#" + tripHash();
+  const hash = sharedTrip?.isPrivate
+    ? (sharedTrip.encryptedPayload || privateHash || location.hash.slice(1))
+    : privateHash
+      ? privateHash
+      : tripHash();
+  return location.origin + location.pathname + "#" + hash;
 }
 
 /* ---------- theme (same lemon, midnight grove) ---------- */
@@ -2365,6 +2377,14 @@ $("#brandlink").addEventListener("click", e=>{
   showFront();
 });
 window.addEventListener("popstate", ()=>{
+  const rawHash = location.hash.slice(1);
+  if(rawHash.startsWith("P")){
+    clearSharedTripContext();
+    isRecipient = true;
+    sharedTrip = sharedStateFromLocation();
+    openPrivateGate(rawHash);
+    return;
+  }
   const got = readHash();
   if(got){
     clearSharedTripContext();
@@ -3584,16 +3604,19 @@ function sharedStateFromLocation(){
   const query = new URLSearchParams(location.search);
   const slug = normalizeSlug(query.get("shared"));
   if(!slug || !SLUG_OK.test(slug)) return null;
+  const hash = location.hash.slice(1);
   return {
     slug,
     revision: Math.max(1, parseInt(query.get("rev") || "1", 10) || 1),
     editable: false,
+    isPrivate: hash.startsWith("P"),
+    encryptedPayload: hash.startsWith("P") ? hash : "",
     unlocked: false,
     token: null,
     sessionExpiresAt: 0,
     unlockTimer: null,
     loading: true,
-    baseline: location.hash.slice(1),
+    baseline: hash,
     dirty: false
   };
 }
@@ -3628,6 +3651,8 @@ function sharedLockSvg(isUnlocked){
 function clearSharedTripContext(){
   if(sharedTrip?.unlockTimer) clearTimeout(sharedTrip.unlockTimer);
   sharedTrip = null;
+  privateHash = null;
+  privateViewPassword = "";
   document.body.classList.remove("sharedlocked");
   $("#sharedLockBtn")?.classList.add("hidden");
   closeSharedSheet();
@@ -3738,12 +3763,15 @@ function syncSharedDirty(){
   }
 }
 
-function putSharedRevisionInUrl(){
+function putSharedRevisionInUrl(payloadOverride = ""){
   if(!sharedTrip) return;
   const q = new URLSearchParams(location.search);
   q.set("shared", sharedTrip.slug);
   q.set("rev", String(sharedTrip.revision));
-  history.replaceState({ view:"pin" }, "", `${location.pathname}?${q.toString()}#${tripHash()}`);
+  const hash = sharedTrip.isPrivate
+    ? (payloadOverride || sharedTrip.encryptedPayload || privateHash || location.hash.slice(1))
+    : tripHash();
+  history.replaceState({ view:"pin" }, "", `${location.pathname}?${q.toString()}#${hash}`);
 }
 
 async function initSharedTrip(){
@@ -3759,6 +3787,10 @@ async function initSharedTrip(){
     const j = await r.json();
     if(!r.ok) throw new Error(j.error || "meta_failed");
     sharedTrip.editable = !!j.editable;
+    sharedTrip.isPrivate = !!j.isPrivate;
+    if(sharedTrip.isPrivate && !sharedTrip.encryptedPayload){
+      sharedTrip.encryptedPayload = privateHash || location.hash.slice(1);
+    }
     sharedTrip.revision = Number(j.revision || sharedTrip.revision || 1);
     sharedTrip.loading = false;
     putSharedRevisionInUrl();
@@ -3872,8 +3904,15 @@ async function saveSharedTrip(){
   btn.disabled = true;
   btn.textContent = "updating…";
   sharedMessage("");
-  const payload = tripHash();
+  const plainPayload = tripHash();
   try{
+    if(sharedTrip.isPrivate && !privateViewPassword){
+      sharedMessage("Reopen the private link and enter its lemon password before updating it.", "bad");
+      return;
+    }
+    const payload = sharedTrip.isPrivate
+      ? await encryptTrip(privateViewPassword)
+      : plainPayload;
     const r = await fetch(`${SHORTENER}/api/links/${encodeURIComponent(sharedTrip.slug)}/trip`, {
       method: "PUT",
       headers: {
@@ -3902,14 +3941,19 @@ async function saveSharedTrip(){
       sharedMessage({
         expired: "This short link expired and can no longer be updated.",
         permanently_locked: "This trip is permanently read-only.",
-        payload_too_large: "This trip is too large to save as a short link."
+        payload_too_large: "This trip is too large to save as a short link.",
+        privacy_mode_locked: "This link's private/public setting is permanently locked. Reload the original link and try again."
       }[j.error] || "Couldn't update the shared trip.", "bad");
       return;
     }
     sharedTrip.revision = Number(j.revision);
-    sharedTrip.baseline = payload;
+    sharedTrip.baseline = plainPayload;
     sharedTrip.dirty = false;
-    putSharedRevisionInUrl();
+    if(sharedTrip.isPrivate){
+      sharedTrip.encryptedPayload = payload;
+      privateHash = payload;
+    }
+    putSharedRevisionInUrl(payload);
     sharedMessage("Updated. Everyone opening the same short link will now get this version.", "good");
     setSharedControlState();
     renderQR();
@@ -4018,11 +4062,6 @@ async function makeShortLink(){
     const again = $("#viewPasswordAgain").value;
     if(!viewPassword){ slugSays("type a lemon password, or uncheck private", "bad"); return; }
     if(viewPassword !== again){ slugSays("those lemon passwords don't match", "bad"); return; }
-    /* a private trip is encrypted at rest, so later edits can't re-encrypt it
-       server-side — the two features don't combine */
-    if($("#editToggle").checked){
-      slugSays("private trips can't also be editable later \u2014 pick one", "bad"); return;
-    }
   }
   if($("#editToggle").checked){
     editPassword = $("#editPassword").value;
@@ -4056,6 +4095,7 @@ async function makeShortLink(){
         payload_too_large: "that trip is too big to shorten",
         rate_limited: "easy there \u2014 give it a minute",
         invalid_payload: "something's off with this pin",
+        privacy_payload_mismatch: "the private-trip encryption did not match the selected privacy setting",
         password_length: "that password is too long"
       }[j.error] || "couldn't make the link just now", "bad");
       return;
@@ -4065,11 +4105,13 @@ async function makeShortLink(){
     const expiryText = j.expiresAt
       ? `Gone ${new Date(j.expiresAt * 1000).toLocaleDateString([], {month:"long", day:"numeric"})}.`
       : "It never expires.";
-    $("#shortMeta").textContent = isPrivate
-      ? `Locked with your lemon password. ${expiryText} Whoever opens it has to know the password.`
-      : j.editable
-        ? `Name and expiry are set in stone. ${expiryText} The trip can be updated with its edit password.`
-        : `Name, expiry, and trip are permanently set in stone. ${expiryText}`;
+    $("#shortMeta").textContent = isPrivate && j.editable
+      ? `Private and editable. ${expiryText} The lemon password opens it; the edit password publishes encrypted updates to this same link.`
+      : isPrivate
+        ? `Locked with your lemon password. ${expiryText} Whoever opens it has to know the password.`
+        : j.editable
+          ? `Name and expiry are set in stone. ${expiryText} The trip can be updated with its edit password.`
+          : `Name, expiry, and trip are permanently set in stone. ${expiryText}`;
     $("#shortForm").classList.add("hidden");
     $("#shortDone").classList.remove("hidden");
     flash("short link made");
@@ -4221,6 +4263,7 @@ function readHash(){
      anything else. Nothing about the trip is readable until it decrypts. */
   if(rawHash[0] === "P"){
     isRecipient = true;
+    sharedTrip = sharedStateFromLocation();
     openPrivateGate(rawHash);
     return;
   }

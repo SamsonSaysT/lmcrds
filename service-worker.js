@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lemoncoords-v15';
+const CACHE_NAME = 'lemoncoords-v15-1-private-editable';
 const APP_SHELL = [
   './',
   './index.html',
