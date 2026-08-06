@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lemoncoords-v7';
+const CACHE_NAME = 'lemoncoords-v6';
 const APP_SHELL = [
   './',
   './index.html',
