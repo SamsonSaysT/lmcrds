@@ -335,7 +335,100 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 #tripBtn.on{background:var(--ink);color:var(--pith)}
 
 /* ---------- trip sheet ---------- */
-.tripcontent{max-width:440px}
+.tripcontent{max-width:440px;position:relative}
+.modeswitch{
+  display:inline-flex;margin-top:16px;border:1px solid var(--ink);border-radius:999px;
+  overflow:hidden;background:var(--pith);
+}
+.modebtn{
+  font-size:.8rem;font-weight:600;padding:8px 16px;color:var(--ink);
+  transition:background .18s ease,color .18s ease;
+}
+.modebtn.on{background:var(--ink);color:var(--pith)}
+/* an unordered list gets a plain mark — no number implying a sequence */
+.tripitem.loose .tripnum{
+  background:transparent;border:2px solid var(--zest);color:transparent;
+  width:14px;height:14px;margin-top:7px;margin-left:6px;
+}
+.tripitem.loose.current .tripnum{background:var(--ink);border-color:var(--ink)}
+
+/* a stop taken off the route: still on the map, just not in the count */
+.tripitem.offroute{border-style:dashed}
+.tripitem.offroute .tripwhere{color:var(--muted)}
+.tripitem.offroute .tripnum{background:transparent;border:2px dashed var(--rind);color:var(--muted)}
+.tripskip{
+  flex:none;color:var(--muted);padding:5px 3px;align-self:center;
+  transition:color .15s ease;
+}
+.tripskip:hover{color:var(--ink)}
+.tripskip.isoff{color:var(--rind-text)}
+.tripskip svg{display:block}
+.tripnum svg{display:block}
+.tripnum{cursor:pointer;border:none;padding:0}
+
+/* ---------- icon picker ---------- */
+.iconpop{
+  position:absolute;z-index:40;width:min(272px,86vw);
+  background:var(--pith);border:1px solid var(--ink);border-radius:16px;
+  padding:12px;box-shadow:0 18px 40px rgba(35,36,27,.22);
+  animation:popin .16s cubic-bezier(.16,1,.3,1) both;
+}
+:root[data-theme="dark"] .iconpop{box-shadow:0 18px 40px rgba(0,0,0,.6)}
+@keyframes popin{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:none}}
+.iconhead{
+  font-size:.66rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);
+  font-weight:600;margin-bottom:9px;text-align:left;
+}
+.icongrid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.iconcell{
+  display:grid;place-items:center;aspect-ratio:1;border-radius:9px;color:var(--ink);
+  transition:background .13s ease,color .13s ease;
+}
+.iconcell:hover{background:var(--flesh)}
+.iconcell.on{background:var(--ink);color:var(--pith)}
+/* an off-route pin reads as provisional on the map too */
+.lemonpinicon.loose{opacity:.88}
+
+/* ---------- short links ---------- */
+.shortwrap{margin-top:28px;text-align:left}
+.shortrule{
+  display:flex;align-items:center;gap:12px;color:var(--muted);
+  font-size:.72rem;text-transform:uppercase;letter-spacing:.14em;margin-bottom:18px;
+}
+.shortrule::before,.shortrule::after{content:"";flex:1;height:1px;background:var(--hairline)}
+.shortlabel{
+  display:block;font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--muted);font-weight:600;margin:14px 0 6px;
+}
+.slugline{display:flex;align-items:baseline;gap:1px;border-bottom:1px solid var(--ink);padding-bottom:6px}
+.slughost{color:var(--muted);font-size:.9rem;white-space:nowrap}
+.sluginput{
+  flex:1;min-width:0;background:transparent;border:none;color:var(--ink);
+  font-family:var(--body);font-size:1rem;font-weight:600;padding:0;
+}
+.sluginput::placeholder{color:var(--muted);font-weight:400}
+.sluginput:focus{outline:none}
+.slugstate{margin-top:7px;font-size:.78rem;color:var(--muted);min-height:1.1em}
+.slugstate.good{color:var(--leaf);font-weight:600}
+.slugstate.bad{color:#a8482a;font-weight:600}
+:root[data-theme="dark"] .slugstate.bad{color:#E58A66}
+.expiryrow{display:flex;flex-wrap:wrap;gap:7px}
+.expbtn{
+  font-size:.8rem;font-weight:600;padding:7px 14px;border-radius:999px;
+  border:1px solid var(--hairline);color:var(--ink);
+  transition:background .15s ease,border-color .15s ease,color .15s ease;
+}
+.expbtn.on{background:var(--ink);color:var(--pith);border-color:var(--ink)}
+.shortgo{margin-top:20px;width:100%;justify-content:center}
+.shortgo[disabled]{opacity:.45;pointer-events:none}
+.shortwarn{margin-top:12px;color:var(--muted);font-size:.75rem;line-height:1.5}
+.shorturl{
+  font-family:var(--display);font-weight:640;font-size:1.15rem;
+  border-bottom:2px solid var(--zest);padding-bottom:4px;
+  overflow-wrap:anywhere;text-align:center;
+}
+.shortbtns{display:flex;gap:10px;justify-content:center;margin-top:16px}
+.shortbtns .btn{font-size:.9rem;padding:11px 20px}
 .triplist{list-style:none;margin:22px 0 0;padding:0;position:relative;text-align:left}
 .tripitem{
   position:relative;display:flex;align-items:flex-start;gap:12px;
@@ -754,9 +847,18 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 <div class="sheet hidden" id="tripSheet">
   <button class="modalclose" id="tripClose" aria-label="Close">&times;</button>
   <div class="sheetcontent tripcontent">
+    <div id="tripMoon"></div>
     <h2>Your trip</h2>
     <p class="lede" id="tripLede">One stop. Add another and they'll all ride in the same link.</p>
+    <div class="modeswitch hidden" id="modeSwitch" role="group" aria-label="Trip style">
+      <button class="modebtn on" id="modeRoute" aria-pressed="true">In order</button>
+      <button class="modebtn" id="modeList" aria-pressed="false">Just a list</button>
+    </div>
     <ul class="triplist" id="tripList"></ul>
+    <div class="iconpop hidden" id="iconPop" role="dialog" aria-label="Pick an icon">
+      <div class="iconhead">what's here?</div>
+      <div class="icongrid" id="iconGrid"></div>
+    </div>
     <button class="btn btn-ghost addstop" id="addStopBtn">Add a stop</button>
     <div class="tripfoot">
       <span id="tripSize"></span>
@@ -843,6 +945,37 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
       <button class="btn btn-ghost" id="sheetCopy">Copy</button>
     </div>
     <div class="sheetalt"><button class="linkish" id="sheetOpen">open the full pin page</button></div>
+
+    <div class="shortwrap hidden" id="shortWrap">
+      <div class="shortrule"><span>or squeeze it smaller</span></div>
+      <div class="shortform" id="shortForm">
+        <label class="shortlabel" for="slugInput">Pick a name for it</label>
+        <div class="slugline">
+          <span class="slughost" id="slugHost"></span>
+          <input id="slugInput" class="sluginput" type="text" autocomplete="off"
+            autocapitalize="off" autocorrect="off" spellcheck="false"
+            maxlength="40" placeholder="up-north-weekend" aria-label="Short link name">
+        </div>
+        <div class="slugstate" id="slugState">leave it blank and we'll make one up</div>
+        <label class="shortlabel">How long should it last</label>
+        <div class="expiryrow" id="expiryRow">
+          <button class="expbtn on" data-exp="0">forever</button>
+          <button class="expbtn" data-exp="1">a day</button>
+          <button class="expbtn" data-exp="7">a week</button>
+          <button class="expbtn" data-exp="30">a month</button>
+        </div>
+        <button class="btn shortgo" id="shortGo">Make the short link</button>
+        <p class="shortwarn">Once it's made, the name and the expiry are set in stone. The trip inside can't be edited either — send a new link if plans move.</p>
+      </div>
+      <div class="shortdone hidden" id="shortDone">
+        <div class="shorturl" id="shortUrl"></div>
+        <div class="shortbtns">
+          <button class="btn" id="shortShare">Send it</button>
+          <button class="btn btn-ghost" id="shortCopy">Copy</button>
+        </div>
+        <p class="shortwarn" id="shortMeta"></p>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -990,17 +1123,28 @@ function unpackNote(count, bytes){
   return out;
 }
 
-function encodeTrip(list, ts){
+function encodeTrip(list, ts, ordered){
   const n = Math.min(32, list.length);
   const acc = Math.min(1023, Math.max(0, Math.round(list[0].acc || 0)));
   const hasAcc = acc > 3 ? 1 : 0;
+  /* bit 6 marks an unordered list. Links made before this have it clear, so
+     they still decode as a route — which is exactly what they were. A spare
+     bit we already had, so it costs no extra characters. */
+  const loose = ordered === false ? 1 : 0;
+  /* bit 7: any stop carrying a custom icon or sitting off the route. Trips
+     that use neither pay nothing for the feature existing. */
+  let extras = 0;
+  for(let i = 0; i < n; i++) if(list[i].icon || list[i].off) extras = 1;
   const bytes = [];
-  bytes.push((n - 1) | (hasAcc << 5));
+  bytes.push((n - 1) | (hasAcc << 5) | (loose << 6) | (extras << 7));
   putVarint(bytes, Math.max(0, Math.round((ts - EPOCH_2026) / 60000)));
   if(hasAcc) putVarint(bytes, acc);
   let mask = 0;
   for(let i = 0; i < n; i++) if(list[i].note) mask += Math.pow(2, i);
   putVarint(bytes, mask);
+  /* one byte a stop: icon in the high seven bits, off-route in the low one */
+  if(extras) for(let i = 0; i < n; i++)
+    bytes.push((((list[i].icon || 0) & 63) << 1) | (list[i].off ? 1 : 0));
   let pLat = 0, pLon = 0;
   for(let i = 0; i < n; i++){
     const latE5 = Math.round((list[i].lat + 90) * 1e5);
@@ -1032,12 +1176,18 @@ function decodeTrip(hash){
   try{
     const r = Reader(bytes);
     const head = r.byte();
-    if(head >> 6 !== 0) return null;
     const n = (head & 31) + 1;
     const hasAcc = (head >> 5) & 1;
+    const isOrdered = ((head >> 6) & 1) === 0;
+    const hasExtras = (head >> 7) & 1;
     const ts = EPOCH_2026 + r.varint() * 60000;
     const acc = hasAcc ? r.varint() : 0;
     const mask = r.varint();
+    const extras = [];
+    if(hasExtras) for(let i = 0; i < n; i++){
+      const b = r.byte();
+      extras.push({ icon: (b >> 1) & 63, off: (b & 1) === 1 });
+    }
     const list = [];
     let pLat = 0, pLon = 0;
     for(let i = 0; i < n; i++){
@@ -1047,7 +1197,9 @@ function decodeTrip(hash){
       pLat = latE5; pLon = lonE5;
       const lat = latE5 / 1e5 - 90, lon = lonE5 / 1e5 - 180;
       if(!(lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180)) return null;
-      list.push({ lat, lon, ts, acc: i === 0 ? acc : 0, note: "" });
+      list.push({ lat, lon, ts, acc: i === 0 ? acc : 0, note: "",
+        icon: extras[i] ? extras[i].icon : 0,
+        off:  extras[i] ? extras[i].off  : false });
     }
     for(let i = 0; i < n; i++){
       if(!(Math.floor(mask / Math.pow(2, i)) % 2)) continue;
@@ -1058,7 +1210,7 @@ function decodeTrip(hash){
         ? unpackNote(nn, r.take(Math.ceil(nn * 6 / 8)))
         : new TextDecoder().decode(r.take(nn));
     }
-    return list;
+    return { stops: list, ordered: isOrdered };
   }catch{
     return null;
   }
@@ -1648,16 +1800,19 @@ let map = null, accCircle = null, youMarker = null, farLine = null;
 let dragging = false, noteTimer = null, addrText = "";
 let isRecipient = false;   /* arrived via someone else's link */
 let pickMode = false;      /* picking a stop to add rather than opening a pin */
+let ordered = true;        /* a route in order, or just a set of places */
 
 function setStops(list, idx){
   stops = list;
   active = Math.max(0, Math.min(idx || 0, stops.length - 1));
   pin = stops[active];
 }
-function pinUrl(){
+function tripHash(){
   /* a lone pin keeps the older, shorter L form — links already sent still work */
-  const hash = stops.length > 1 ? encodeTrip(stops, stops[0].ts) : packPin(pin);
-  return location.origin + location.pathname + "#" + hash;
+  return stops.length > 1 ? encodeTrip(stops, stops[0].ts, ordered) : packPin(pin);
+}
+function pinUrl(){
+  return location.origin + location.pathname + "#" + tripHash();
 }
 
 /* ---------- theme (same lemon, midnight grove) ---------- */
@@ -1708,8 +1863,8 @@ $("#brandlink").addEventListener("click", e=>{
   showFront();
 });
 window.addEventListener("popstate", ()=>{
-  const list = readHash();
-  if(list) openPin(list, { push:false });
+  const got = readHash();
+  if(got){ ordered = got.ordered; openPin(got.stops, { push:false }); }
   else showFront();
 });
 
@@ -1772,6 +1927,26 @@ const MAP_ICON = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" ar
   <path d="M9 4.6v12.6M15 6.8v12.6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
 </svg>`;
 
+/* zoom back out to the whole trip — only worth showing when there is one */
+let allBtn = null;
+const ShowAll = L.Control.extend({
+  onAdd(){
+    const b = L.DomUtil.create("button", "satbtn allbtn hidden");
+    b.type = "button";
+    b.title = "Show every stop";
+    b.setAttribute("aria-label", "Show every stop");
+    b.innerHTML = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+      <path d="M9 4.2H4.2V9M15 4.2h4.8V9M9 19.8H4.2V15M15 19.8h4.8V15"
+        stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="12" r="2.4" fill="currentColor"/>
+    </svg>`;
+    L.DomEvent.disableClickPropagation(b);
+    L.DomEvent.on(b, "click", showWholeTrip);
+    allBtn = b;
+    return b;
+  }
+});
+
 const SatToggle = L.Control.extend({
   onAdd(){
     const b = L.DomUtil.create("button", "satbtn");
@@ -1789,25 +1964,84 @@ const SatToggle = L.Control.extend({
 new MutationObserver(()=>{ if(map) setTiles(); })
   .observe(document.documentElement, { attributes:true, attributeFilter:["data-theme"] });
 
+/* ---------- stop icons ----------
+   Thirty-six covers most of what a stop actually is without turning the picker
+   into a chore. Index 0 is the plain pin, which is what every stop starts as
+   and therefore costs nothing to store. */
+const ICONS = [
+  { k:"pin", d:'<path d="M12 3.6a5.6 5.6 0 0 1 5.6 5.6c0 4-5.6 10.4-5.6 10.4S6.4 13.2 6.4 9.2A5.6 5.6 0 0 1 12 3.6Z"/><path d="M12 6.6v5.2M9.4 9.2h5.2"/>' },
+  { k:"home", d:'<path d="M4 11 12 4.5 20 11"/><path d="M6.2 9.6V19h11.6V9.6"/><path d="M10 19v-4.6h4V19"/>' },
+  { k:"star", d:'<path d="M12 4.2 14.3 9l5.3.7-3.9 3.7 1 5.2-4.7-2.5-4.7 2.5 1-5.2L4.4 9.7 9.7 9Z"/>' },
+  { k:"heart", d:'<path d="M12 19.2S4.6 14.5 4.6 9.7A3.9 3.9 0 0 1 12 7.8a3.9 3.9 0 0 1 7.4 1.9c0 4.8-7.4 9.5-7.4 9.5Z"/>' },
+  { k:"food", d:'<path d="M7 4v7a2 2 0 0 0 2 2 2 2 0 0 0 2-2V4"/><path d="M9 13v7"/><path d="M16.5 4c-1.4 1-2 2.6-2 4.5s.7 3 2 3.4V20"/>' },
+  { k:"coffee", d:'<path d="M5.5 8h11v5.5a4.5 4.5 0 0 1-4.5 4.5H10a4.5 4.5 0 0 1-4.5-4.5Z"/><path d="M16.5 9.5h1.6a2 2 0 0 1 0 4h-1.6"/><path d="M8.5 3v2M12 3v2"/>' },
+  { k:"beer", d:'<path d="M7 7h8v12H7Z"/><path d="M15 9.5h2.2a1.8 1.8 0 0 1 0 3.6H15"/><path d="M7 7c0-2 1.6-3 4-3s4 1 4 3"/>' },
+  { k:"pizza", d:'<path d="M12 4 4.5 19a24 24 0 0 0 15 0Z"/><path d="M10 11h.01M13.6 13.6h.01M11.8 16.8h.01"/>' },
+  { k:"icecream", d:'<path d="M8 10a4 4 0 0 1 8 0"/><path d="M8 10h8l-4 9Z"/>' },
+  { k:"cart", d:'<path d="M4 5h2l2.2 9.2h8.6L19 8H7"/><path d="M9.5 18.5h.01M16 18.5h.01"/>' },
+  { k:"store", d:'<path d="M4.5 9.5 6 4.5h12l1.5 5"/><path d="M4.5 9.5a2.4 2.4 0 0 0 4.8 0 2.4 2.4 0 0 0 4.8 0 2.4 2.4 0 0 0 4.8 0"/><path d="M6 11.6V19.5h12V11.6"/>' },
+  { k:"gas", d:'<path d="M6 20V5.5A1.5 1.5 0 0 1 7.5 4h5A1.5 1.5 0 0 1 14 5.5V20"/><path d="M4.5 20h11"/><path d="M7.8 9.2h4.4"/><path d="M14 9h2.5a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 0 1.5 1.5"/>' },
+  { k:"bed", d:'<path d="M3.5 18v-9"/><path d="M3.5 12.5h17V18"/><path d="M20.5 18v-2"/><path d="M6.8 12.5V9.5h11a3 3 0 0 1 3 3"/><path d="M8.5 9.5h4"/>' },
+  { k:"tent", d:'<path d="M12 4.5 3.5 19h17Z"/><path d="M12 4.5V19"/><path d="M8.4 19l3.6-6 3.6 6"/>' },
+  { k:"fire", d:'<path d="M12 3.5c3 3.4 5.5 5.6 5.5 9.2a5.5 5.5 0 0 1-11 0c0-1.7.7-3 1.8-4.3.4 1.2 1.2 2 2.2 2.2-.6-2.6-.2-5 1.5-7.1Z"/>' },
+  { k:"car", d:'<path d="M4.5 16v-3.3L6.3 8h11.4l1.8 4.7V16"/><path d="M4.5 16h15"/><path d="M6.2 16v2h2v-2"/><path d="M15.8 16v2h2v-2"/><path d="M5.5 12.7h13"/>' },
+  { k:"parking", d:'<path d="M5 4.5h14v15H5Z"/><path d="M10 16V8.5h3.2a2.6 2.6 0 0 1 0 5.2H10"/>' },
+  { k:"plane", d:'<path d="M2.5 13.5 21 6.5l-4 9-4.5-1.3-3 4.3-1-3.6Z"/><path d="M12.5 14.2 21 6.5"/>' },
+  { k:"train", d:'<path d="M6.5 4.5h11v10h-11Z"/><path d="M6.5 9.5h11"/><path d="M8.5 19l1.6-3M15.5 19l-1.6-3"/><path d="M6 17h12"/><path d="M9.5 12h.01M14.5 12h.01"/>' },
+  { k:"bus", d:'<path d="M4.5 5.5h15v10h-15Z"/><path d="M4.5 10.5h15"/><path d="M6.5 15.5v2.5h2v-2.5M15.5 15.5v2.5h2v-2.5"/><path d="M7.5 13h.01M16.5 13h.01"/>' },
+  { k:"bike", d:'<path d="M6.5 18a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"/><path d="M17.5 18a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"/><path d="M6.5 14.8 10 7h3.5l3 7.8"/><path d="M9 7h3"/>' },
+  { k:"tree", d:'<path d="M12 3.5 6.5 12h11Z"/><path d="M12 8 8.5 15.5h7Z"/><path d="M12 15.5V20"/><path d="M9.5 20h5"/>' },
+  { k:"mountain", d:'<path d="M2.5 18.5 9 7l4 6.5 2.2-3L21.5 18.5Z"/><path d="M9 7l2.4 4.2"/>' },
+  { k:"wave", d:'<path d="M3 15c1.8-2 3.6-2 5.4 0s3.6 2 5.4 0 3.6-2 5.4 0"/><path d="M3 19c1.8-2 3.6-2 5.4 0s3.6 2 5.4 0 3.6-2 5.4 0"/><path d="M15.5 9.5a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2Z"/>' },
+  { k:"hike", d:'<path d="M13.5 6.2a1.7 1.7 0 1 0 0-3.4 1.7 1.7 0 0 0 0 3.4Z"/><path d="M12.5 20l1-5.5-2.5-2.5.8-4 3.2 2 2.5 1"/><path d="M11.8 12 8.5 14l-1.5 6"/><path d="M6 4.5V20"/>' },
+  { k:"music", d:'<path d="M9.5 17.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/><path d="M12 15V5l7-1.5v10"/><path d="M19 13.5a2.5 2.5 0 1 0 0-5"/>' },
+  { k:"camera", d:'<path d="M4 8h3.5l1.5-2.5h6L16.5 8H20v11H4Z"/><path d="M12 16.6a3.4 3.4 0 1 0 0-6.8 3.4 3.4 0 0 0 0 6.8Z"/>' },
+  { k:"ball", d:'<path d="M12 20.2a8.2 8.2 0 1 0 0-16.4 8.2 8.2 0 0 0 0 16.4Z"/><path d="M12 3.8v16.4"/><path d="M4.4 8.5c4 2.4 11.2 2.4 15.2 0"/><path d="M4.4 15.5c4-2.4 11.2-2.4 15.2 0"/>' },
+  { k:"gym", d:'<path d="M4 9v6M7 7v10M17 7v10M20 9v6"/><path d="M7 12h10"/>' },
+  { k:"cross", d:'<path d="M9.5 3.5h5v6h6v5h-6v6h-5v-6h-6v-5h6Z"/>' },
+  { k:"bank", d:'<path d="M3.5 9.5 12 4.5l8.5 5"/><path d="M5.5 9.5V17M10 9.5V17M14 9.5V17M18.5 9.5V17"/><path d="M3.5 19.5h17"/>' },
+  { k:"flag", d:'<path d="M6 20V4"/><path d="M6 5h11l-2 3.5L17 12H6"/>' },
+  { k:"key", d:'<path d="M15.5 10.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M13 9.5 5 17.5V20h2.5v-2H10v-2.2h2.2"/>' },
+  { k:"gift", d:'<path d="M4 10h16v10H4Z"/><path d="M12 10v10"/><path d="M4 10V7.5h16V10"/><path d="M12 7.5c-3.5 0-4.5-.8-4.5-2s2.5-1.6 4.5 2c2-2.8 4.5-2.4 4.5-1.2s-1 2-4.5 2Z"/>' },
+  { k:"phone", d:'<path d="M7.5 3.5h9v17h-9Z"/><path d="M10.5 17.8h3"/>' },
+  { k:"paw", d:'<path d="M8 11.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M16 11.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M5.5 17a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z"/><path d="M18.5 17a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6Z"/><path d="M12 20.5c2.6 0 4.4-1.5 4.4-3.4S14.6 13 12 13s-4.4 2.2-4.4 4.1S9.4 20.5 12 20.5Z"/>' },
+];
+function iconSvg(idx, size, stroke){
+  const ic = ICONS[idx] || ICONS[0];
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none"
+    stroke="${stroke || "currentColor"}" stroke-width="1.9" stroke-linecap="round"
+    stroke-linejoin="round" aria-hidden="true">${ic.d}</svg>`;
+}
+
 /* the pin is a lemon slice in a teardrop — same slice as the wordmark.
    In a trip each one carries its stop number where the slice sits. */
-function lemonIcon(num, isActive){
-  const face = num == null
-    ? `<circle cx="22" cy="21.5" r="12.5" fill="#FFFDF4"/>
-       <g stroke="#F4CE3E" stroke-width="3" stroke-linecap="round">
-         <path d="M22 12v19M12.5 21.5h19M15.3 14.8l13.4 13.4M28.7 14.8L15.3 28.2"/>
-       </g>`
-    : `<circle cx="22" cy="21.5" r="12.5" fill="#FFFDF4"/>
-       <text x="22" y="27.5" text-anchor="middle" font-family="Fraunces,Georgia,serif"
-             font-size="16" font-weight="640" fill="#23241B">${num}</text>`;
+function lemonIcon(num, isActive, iconIdx, off){
+  const face = iconIdx
+    ? `<g transform="translate(11.6,11) scale(0.86)" stroke="#23241B" stroke-width="2.1"
+         fill="none" stroke-linecap="round" stroke-linejoin="round">${ICONS[iconIdx].d}</g>`
+    : num != null
+      ? `<text x="22" y="27.5" text-anchor="middle" font-family="Fraunces,Georgia,serif"
+               font-size="16" font-weight="640" fill="#23241B">${num}</text>`
+      : `<g stroke="#F4CE3E" stroke-width="3" stroke-linecap="round">
+           <path d="M22 12v19M12.5 21.5h19M15.3 14.8l13.4 13.4M28.7 14.8L15.3 28.2"/>
+         </g>`;
+  /* when a pin shows an icon we still owe you its position in the route,
+     so the number moves to a little badge rather than disappearing */
+  const badge = (iconIdx && num != null)
+    ? `<circle cx="36" cy="9" r="8" fill="#23241B"/>
+       <text x="36" y="13.4" text-anchor="middle" font-family="Fraunces,Georgia,serif"
+             font-size="11" font-weight="640" fill="#FFFDF4">${num}</text>`
+    : "";
   return L.divIcon({
-    className: "lemonpinicon" + (isActive ? " on" : " off"),
-    html: `<svg width="44" height="58" viewBox="0 0 44 58" xmlns="http://www.w3.org/2000/svg">
+    className: "lemonpinicon" + (isActive ? " on" : " off") + (off ? " loose" : ""),
+    html: `<svg width="46" height="58" viewBox="-1 0 46 58" xmlns="http://www.w3.org/2000/svg">
       <path d="M22 56C22 56 42 35.5 42 21.5C42 10.2 33 1.5 22 1.5C11 1.5 2 10.2 2 21.5C2 35.5 22 56 22 56Z"
-        fill="#F4CE3E" stroke="#23241B" stroke-width="3" stroke-linejoin="round"/>
-      ${face}
+        fill="#F4CE3E" stroke="#23241B" stroke-width="3" stroke-linejoin="round"
+        ${off ? 'stroke-dasharray="5 4"' : ''}/>
+      <circle cx="22" cy="21.5" r="12.5" fill="#FFFDF4"/>
+      ${face}${badge}
     </svg>`,
-    iconSize: [44, 58], iconAnchor: [22, 56]
+    iconSize: [46, 58], iconAnchor: [23, 56]
   });
 }
 const youIcon = L.divIcon({ className: "youdot", iconSize: [15, 15], iconAnchor: [8, 8] });
@@ -1821,6 +2055,7 @@ function initMap(){
   });
   document.getElementById("map").classList.add("locked");
   L.control.zoom({ position: "topleft" }).addTo(map);
+  map.addControl(new ShowAll({ position: "topleft" }));
   map.addControl(new SatToggle({ position: "topleft" }));
   setTiles();
 }
@@ -1832,9 +2067,14 @@ function drawStops(recenter){
   if(tripLine){ tripLine.remove(); tripLine = null; }
   const multi = stops.length > 1;
 
+  /* off-route stops are skipped when counting, so the numbers you see are the
+     order you'd actually drive */
+  let seq = 0;
+  const numberOf = stops.map(s => (ordered && !s.off) ? ++seq : null);
+
   stops.forEach((s, i)=>{
     const m = L.marker([s.lat, s.lon], {
-      icon: lemonIcon(multi ? i + 1 : null, i === active),
+      icon: lemonIcon(multi ? numberOf[i] : null, i === active, s.icon || 0, !!s.off),
       draggable: dragging,
       keyboard: false,
       zIndexOffset: i === active ? 1000 : 0
@@ -1852,8 +2092,11 @@ function drawStops(recenter){
     markers.push(m);
   });
 
-  if(multi){
-    tripLine = L.polyline(stops.map(s => [s.lat, s.lon]), {
+  /* the line means "then" — it has no business on an unordered list, and it
+     should route around anything you've taken off it */
+  const onRoute = stops.filter(s => !s.off);
+  if(multi && ordered && onRoute.length > 1){
+    tripLine = L.polyline(onRoute.map(s => [s.lat, s.lon]), {
       color: "#DDB32A", weight: 2.5, opacity: .75, dashArray: "7 7"
     }).addTo(map);
   }
@@ -1877,7 +2120,13 @@ function setActive(i){
   active = Math.max(0, Math.min(i, stops.length - 1));
   pin = stops[active];
   refreshPin({ recenter: false });
-  map.panTo([pin.lat, pin.lon], { animate: true, duration: .4 });
+  /* stepping through stops takes you in close; "show all" is how you get back out */
+  map.flyTo([pin.lat, pin.lon], Math.max(map.getZoom(), 16), { duration: .55 });
+}
+
+function showWholeTrip(){
+  if(stops.length < 2){ map.setView([pin.lat, pin.lon], 17); return; }
+  map.flyToBounds(L.latLngBounds(stops.map(s => [s.lat, s.lon])).pad(0.22), { duration: .6 });
 }
 
 let unlocked = false;
@@ -1911,6 +2160,7 @@ function refreshPin(opts = {}){
   $("#stepNext").classList.toggle("hidden", !multi);
   $("#stepCount").classList.toggle("hidden", !multi);
   $("#stepCount").textContent = `${active + 1} / ${stops.length}`;
+  if(allBtn) allBtn.classList.toggle("hidden", !multi);
   $("#tripBtn").classList.toggle("on", multi);
 
   $("#dropWhen").textContent = fmtWhen(pin.ts);
@@ -2014,6 +2264,7 @@ function openSheet(from){
   $("#sheetMoon").innerHTML = bigMoonLemon(moonPhase(), 210);
   $("#sheetUrl").textContent = pinUrl();
   $("#sheetOpen").classList.toggle("hidden", from === "pin");
+  if(SHORTENER){ $("#shortWrap").classList.remove("hidden"); shortReset(); }
   $("#sheet").classList.remove("hidden");
 }
 function closeSheet(){
@@ -2295,14 +2546,25 @@ function stopLabel(s){
 function renderTrip(){
   const list = $("#tripList");
   list.innerHTML = "";
+  let seq = 0;
+  const seqOf = stops.map(s => (!s.off) ? ++seq : null);
   stops.forEach((s, i)=>{
     const li = document.createElement("li");
-    li.className = "tripitem" + (i === active ? " current" : "");
+    li.className = "tripitem" + (i === active ? " current" : "")
+      + (ordered ? "" : " loose") + (s.off ? " offroute" : "");
     li.dataset.i = i;
 
-    const num = document.createElement("div");
+    const num = document.createElement("button");
     num.className = "tripnum";
-    num.textContent = i + 1;
+    num.type = "button";
+    num.setAttribute("aria-label", "Change this stop's icon");
+    if(s.icon) num.innerHTML = iconSvg(s.icon, 15);
+    else num.textContent = (ordered && !s.off) ? seqOf[i] : "";
+    num.addEventListener("pointerdown", e => e.stopPropagation());
+    num.addEventListener("click", e =>{
+      e.stopPropagation();
+      openIconPicker(i, num);
+    });
 
     const body = document.createElement("div");
     body.className = "tripbody";
@@ -2332,6 +2594,25 @@ function renderTrip(){
       <g stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
         <path d="M9 8h6M9 12h6M9 16h6"/></g></svg>`;
 
+    const skip = document.createElement("button");
+    skip.className = "tripskip" + (s.off ? " isoff" : "");
+    skip.type = "button";
+    skip.title = s.off ? "Put back on the route" : "Take off the route";
+    skip.setAttribute("aria-label", skip.title);
+    skip.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true">
+      <path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        ${s.off ? '' : 'stroke-dasharray="3 3"'}/>
+      ${s.off ? '' : '<path d="M12 5v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'}
+    </svg>`;
+    skip.addEventListener("pointerdown", e => e.stopPropagation());
+    skip.addEventListener("click", e =>{
+      e.stopPropagation();
+      s.off = !s.off;
+      refreshPin({ recenter: false });
+      renderTrip();
+      flash(s.off ? "off the route" : "back on the route");
+    });
+
     const del = document.createElement("button");
     del.className = "tripdel";
     del.setAttribute("aria-label", "Remove stop");
@@ -2349,7 +2630,7 @@ function renderTrip(){
       }, 190);
     });
 
-    li.append(num, body, handle, del);
+    li.append(num, body, skip, handle, del);
     if(!s.addr) fillAddr(s, where);
     startDragOn(li, handle, body);
     list.appendChild(li);
@@ -2358,9 +2639,22 @@ function renderTrip(){
   const n = stops.length;
   $("#tripLede").textContent = n === 1
     ? "One stop. Add another and they'll all ride in the same link."
-    : `${n} stops. Drag to reorder — the order is the route.`;
-  const chars = pinUrl().length;
-  $("#tripSize").textContent = `whole trip = ${chars} characters of link`;
+    : ordered
+      ? `${n} stops, in order. Drag to rearrange the route.`
+      : `${n} places, no particular order. Drag to rearrange anyway.`;
+  $("#modeSwitch").classList.toggle("hidden", n < 2);
+  $("#modeRoute").classList.toggle("on", ordered);
+  $("#modeRoute").setAttribute("aria-pressed", ordered);
+  $("#modeList").classList.toggle("on", !ordered);
+  $("#modeList").setAttribute("aria-pressed", !ordered);
+  $("#tripSize").textContent = `whole trip = ${pinUrl().length} characters of link`;
+}
+
+function setMode(isOrdered){
+  if(ordered === isOrdered) return;
+  ordered = isOrdered;
+  refreshPin({ recenter: false });
+  renderTrip();
 }
 
 /* look up an address once, then remember it on the stop */
@@ -2445,11 +2739,65 @@ function startDragOn(li, handle, body){
   body.addEventListener("pointerdown", begin);
 }
 
+/* ---------- the icon picker ----------
+   A little popover anchored to the mark you tapped. Thirty-six in a grid, the
+   plain pin first so clearing back to default is one tap. */
+let pickerFor = -1;
+
+function closeIconPicker(){
+  const el = $("#iconPop");
+  el.classList.add("hidden");
+  pickerFor = -1;
+}
+
+function openIconPicker(i, anchorEl){
+  const el = $("#iconPop");
+  if(pickerFor === i && !el.classList.contains("hidden")){ closeIconPicker(); return; }
+  pickerFor = i;
+  const grid = $("#iconGrid");
+  grid.innerHTML = "";
+  ICONS.forEach((ic, idx)=>{
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "iconcell" + ((stops[i].icon || 0) === idx ? " on" : "");
+    b.title = ic.k;
+    b.setAttribute("aria-label", ic.k);
+    b.innerHTML = iconSvg(idx, 19);
+    b.addEventListener("click", ()=>{
+      stops[i].icon = idx;
+      closeIconPicker();
+      refreshPin({ recenter: false });
+      renderTrip();
+    });
+    grid.appendChild(b);
+  });
+
+  /* sit it under the mark, nudged back inside the sheet if it would overhang */
+  el.classList.remove("hidden");
+  const host = $("#tripSheet").getBoundingClientRect();
+  const at = anchorEl.getBoundingClientRect();
+  const w = el.offsetWidth;
+  let left = at.left - host.left - 6;
+  left = Math.max(10, Math.min(left, host.width - w - 10));
+  el.style.left = left + "px";
+  el.style.top = (at.bottom - host.top + 8) + "px";
+}
+
+document.addEventListener("click", e =>{
+  const el = $("#iconPop");
+  if(el.classList.contains("hidden")) return;
+  if(!el.contains(e.target) && !e.target.closest(".tripnum")) closeIconPicker();
+});
+
+$("#modeRoute").addEventListener("click", ()=> setMode(true));
+$("#modeList").addEventListener("click", ()=> setMode(false));
+
 function openTripSheet(){
+  $("#tripMoon").innerHTML = bigMoonLemon(moonPhase(), 150);
   renderTrip();
   $("#tripSheet").classList.remove("hidden");
 }
-function closeTripSheet(){ $("#tripSheet").classList.add("hidden"); }
+function closeTripSheet(){ closeIconPicker(); $("#tripSheet").classList.add("hidden"); }
 
 $("#tripBtn").addEventListener("click", ()=>{
   if(!pin){ flash("drop a pin first"); return; }
@@ -2496,6 +2844,121 @@ $("#pickCancel").addEventListener("click", ()=>{
   showPinPage();
   openTripSheet();
 });
+
+/* ---------- short links ----------
+   Everything else here works with no server at all. This one part can't: a
+   short name has to be looked up somewhere. Point SHORTENER at the Worker and
+   this section appears; leave it blank and the app behaves exactly as before. */
+const SHORTENER = "";        /* e.g. "https://go.lemoncoords.com" */
+
+const SLUG_OK = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+let slugTimer = null, slugAbort = null, expDays = 0;
+
+function normalizeSlug(raw){
+  return String(raw || "").toLowerCase()
+    .replace(/[\s_]+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+function slugSays(msg, kind){
+  const el = $("#slugState");
+  el.textContent = msg;
+  el.classList.toggle("good", kind === "good");
+  el.classList.toggle("bad", kind === "bad");
+}
+
+function checkSlug(){
+  const raw = $("#slugInput").value;
+  const slug = normalizeSlug(raw);
+  if(raw !== slug) $("#slugInput").value = slug;
+  clearTimeout(slugTimer);
+  if(slugAbort){ slugAbort.abort(); slugAbort = null; }
+
+  if(!slug){ slugSays("leave it blank and we'll make one up"); return; }
+  if(slug.length < 3){ slugSays("a bit longer \u2014 three characters minimum"); return; }
+  if(!SLUG_OK.test(slug)){ slugSays("letters, numbers and hyphens only", "bad"); return; }
+
+  slugSays("checking\u2026");
+  slugTimer = setTimeout(async ()=>{
+    const ac = new AbortController();
+    slugAbort = ac;
+    try{
+      const r = await fetch(`${SHORTENER}/api/available?slug=${encodeURIComponent(slug)}`, { signal: ac.signal });
+      const j = await r.json();
+      if(ac.signal.aborted) return;
+      if(j.available) slugSays("that one's free", "good");
+      else slugSays(j.error === "slug_reserved" ? "that name is spoken for" : "already taken", "bad");
+    }catch(e){
+      if(e.name === "AbortError") return;
+      slugSays("couldn't check just now \u2014 you can still try it");
+    }
+  }, 350);
+}
+
+function shortReset(){
+  $("#shortForm").classList.remove("hidden");
+  $("#shortDone").classList.add("hidden");
+  $("#slugInput").value = "";
+  slugSays("leave it blank and we'll make one up");
+}
+
+async function makeShortLink(){
+  const btn = $("#shortGo");
+  btn.disabled = true;
+  btn.textContent = "squeezing\u2026";
+  try{
+    const r = await fetch(`${SHORTENER}/api/links`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug: normalizeSlug($("#slugInput").value), payload: tripHash(), expiryDays: expDays })
+    });
+    const j = await r.json();
+    if(!r.ok){
+      slugSays({
+        slug_taken: "someone already has that name \u2014 try another",
+        slug_reserved: "that name is spoken for \u2014 try another",
+        invalid_slug: "letters, numbers and hyphens only",
+        payload_too_large: "that trip is too big to shorten",
+        rate_limited: "easy there \u2014 give it a minute",
+        invalid_payload: "something's off with this pin"
+      }[j.error] || "couldn't make the link just now", "bad");
+      return;
+    }
+    $("#shortUrl").textContent = j.shortUrl.replace(/^https?:\/\//, "");
+    $("#shortUrl").dataset.url = j.shortUrl;
+    $("#shortMeta").textContent = j.expiresAt
+      ? `Set in stone. Gone ${new Date(j.expiresAt * 1000).toLocaleDateString([], {month:"long", day:"numeric"})}.`
+      : "Set in stone, and it never expires.";
+    $("#shortForm").classList.add("hidden");
+    $("#shortDone").classList.remove("hidden");
+    flash("short link made");
+  }catch{
+    slugSays("couldn't reach the shortener \u2014 the long link still works", "bad");
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "Make the short link";
+  }
+}
+
+if(SHORTENER){
+  $("#slugHost").textContent = SHORTENER.replace(/^https?:\/\//, "") + "/";
+  $("#slugInput").addEventListener("input", checkSlug);
+  $("#shortGo").addEventListener("click", makeShortLink);
+  $("#expiryRow").addEventListener("click", e =>{
+    const b = e.target.closest(".expbtn");
+    if(!b) return;
+    expDays = +b.dataset.exp;
+    [...$("#expiryRow").children].forEach(x => x.classList.toggle("on", x === b));
+  });
+  $("#shortCopy").addEventListener("click", ()=> copyText($("#shortUrl").dataset.url, "short link copied"));
+  $("#shortShare").addEventListener("click", async ()=>{
+    const url = $("#shortUrl").dataset.url;
+    if(navigator.share){
+      try{ await navigator.share({ title: "LEMONCOORDS.", text: "Here's the plan \u2014", url }); }catch{}
+    } else copyText(url, "short link copied");
+  });
+}
 
 /* ---------- stepper ---------- */
 $("#stepPrev").addEventListener("click", ()=> setActive((active - 1 + stops.length) % stops.length));
@@ -2576,16 +3039,17 @@ if("serviceWorker" in navigator &&
 function readHash(){
   const h = location.hash.slice(1);
   const trip = decodeTrip(h);
-  if(trip && trip.length) return trip;
+  if(trip && trip.stops.length) return trip;
   const one = unpackPin(h);
-  return one ? [one] : null;
+  return one ? { stops:[one], ordered:true } : null;
 }
 (function boot(){
-  const list = readHash();
-  if(list){
+  const got = readHash();
+  if(got){
     /* the link was already in the URL — this is someone we sent it to */
     isRecipient = true;
-    openPin(list, { push:false });
+    ordered = got.ordered;
+    openPin(got.stops, { push:false });
   } else {
     /* clean slate every visit, same as the weather */
     history.replaceState(null, "", location.pathname);
