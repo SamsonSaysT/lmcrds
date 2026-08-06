@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>LEMONCOORDS.</title>
+<!-- v15.5 trail shields + fullscreen controls fix -->
 <meta name="description" content="Drop a pin. Send it. Every way to find you, in one link.">
 <meta property="og:title" content="LEMONCOORDS.">
 <meta property="og:description" content="Someone sent you a pin. Open it.">
@@ -223,7 +224,7 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 :root[data-theme="dark"] #map:not(.sat) .leaflet-tile-pane .leaflet-tile{
   filter:brightness(1.56) contrast(1.2) saturate(1.06) sepia(.045)
 }
-#map.sat .leaflet-tile-pane .leaflet-tile:not(.sat-road-tile):not(.outdoors-hike-tile):not(.outdoors-overland-tile){filter:none !important}
+#map.sat .leaflet-tile-pane .leaflet-tile:not(.sat-road-tile):not(.outdoors-overland-tile){filter:none !important}
 .leaflet-tile{transition:filter .24s ease,opacity .24s ease}
 
 /* Outdoor overlay redesign.
@@ -235,15 +236,6 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
   filter:contrast(1.28) saturate(1.06) brightness(.94)
     drop-shadow(0 0 1px rgba(255,253,244,.78)) !important;
 }
-#map .outdoors-hike-tile{
-  /* Lemon-route ink: vivid enough to read on imagery, with a fine dark edge
-     and a restrained warm bloom so it feels drawn rather than pasted on. */
-  filter:brightness(0) saturate(100%) invert(88%) sepia(92%) saturate(1260%)
-    hue-rotate(344deg) brightness(105%) contrast(98%)
-    drop-shadow(0 0 1px rgba(35,36,27,.96))
-    drop-shadow(0 0 3px rgba(244,206,62,.48)) !important;
-}
-#map:not(.sat) .outdoors-hike-tile{mix-blend-mode:multiply}
 #map .outdoors-overland-tile{
   filter:brightness(0) saturate(100%) invert(49%) sepia(46%) saturate(620%)
     hue-rotate(337deg) brightness(94%) contrast(86%)
@@ -252,12 +244,6 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 :root[data-theme="dark"] #map .sat-road-tile{
   filter:contrast(1.34) saturate(1.1) brightness(1.12)
     drop-shadow(0 0 1px rgba(0,0,0,.82)) !important;
-}
-:root[data-theme="dark"] #map .outdoors-hike-tile{
-  filter:brightness(0) saturate(100%) invert(91%) sepia(88%) saturate(1210%)
-    hue-rotate(344deg) brightness(110%) contrast(99%)
-    drop-shadow(0 0 1px rgba(0,0,0,.97))
-    drop-shadow(0 0 4px rgba(244,206,62,.48)) !important;
 }
 :root[data-theme="dark"] #map .outdoors-overland-tile{
   filter:brightness(0) saturate(100%) invert(70%) sepia(34%) saturate(720%)
@@ -296,6 +282,10 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .mapwrap:fullscreen #map{height:100vh}
 .fullscreenchrome{display:none}
 .mapwrap.is-fullscreen .fullscreenchrome{display:block}
+.mapwrap.is-fullscreen > .sharedsheet{
+  z-index:calc(var(--z-modal) + 80);padding-top:max(72px,calc(env(safe-area-inset-top) + 28px));
+}
+.mapwrap.is-fullscreen > .unlockcelebration{z-index:calc(var(--z-modal) + 90)}
 .fsroutebtn{
   position:absolute;right:max(12px,env(safe-area-inset-right));
   top:max(12px,env(safe-area-inset-top));z-index:calc(var(--z-mapui) + 3);
@@ -1586,6 +1576,7 @@ body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 "use strict";
@@ -2726,14 +2717,14 @@ const TILES = {
   sat:       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
   satRoads:  "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
   satLabels: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-  /* Transparent, pre-rendered marked-route overlays.  These deliberately
-     replace the raw trail QA vector tiles that produced circles and boxes. */
-  hiking:    "https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png",
+  /* Detailed OSM trail vectors. Only the actual `trail` line layer is drawn;
+     route shields, POIs, centerpoints, parks and barriers are explicitly hidden. */
+  trails:    "https://tiles.openstreetmap.us/vector/trails/{z}/{x}/{y}.mvt",
   /* Official unlabeled U.S. Forest Service motor-vehicle-use roads + trails. */
   overland:  "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_MVUM_01/MapServer"
 };
 let tileLayer = null, satRoads = null, satLabels = null, tileKey = null, satellite = true;
-let outdoorsHiking = null, outdoorsOverland = null;
+let outdoorsTrails = null, outdoorsOverland = null;
 let outdoorsOn = store.get("lemoncoords.outdoors") === "on";
 let satBtn = null, outdoorsBtn = null, fullscreenBtn = null;
 let mapFullscreen = false, fullscreenWasUnlocked = false;
@@ -2767,41 +2758,85 @@ function arcGisExportLayer(serviceUrl, options = {}){
   return new ArcGISExport(serviceUrl, options);
 }
 
+const TRAIL_HIGHWAYS = new Set([
+  "path","footway","track","bridleway","cycleway","steps","pedestrian"
+]);
+function hiddenTrailVectorStyle(){
+  return { weight:0, opacity:0, fill:false, fillOpacity:0, radius:0, interactive:false };
+}
+function trailVectorStyle(p, zoom){
+  const highway = String(p?.highway || "").toLowerCase();
+  const access = String(p?.access || "").toLowerCase();
+  const foot = String(p?.foot || "").toLowerCase();
+  const isWater = !!(p?.waterway || p?.open_water || p?.boat || p?.canoe || p?.sea_kayak);
+  if(!TRAIL_HIGHWAYS.has(highway) || isWater || ["no","private"].includes(access) || foot === "no"){
+    return hiddenTrailVectorStyle();
+  }
+
+  /* Semantic zoom keeps regional views quiet. A two-pass casing makes each
+     trail readable over imagery without looking like a GIS debug layer. */
+  const inner = zoom >= 17 ? 3.15 : zoom >= 15 ? 2.65 : zoom >= 13 ? 2.05 : 1.45;
+  const alpha = zoom >= 16 ? .98 : zoom >= 14 ? .9 : zoom >= 12 ? .74 : .48;
+  const isTrack = highway === "track";
+  const informal = String(p?.informal || "").toLowerCase() === "yes";
+  const lowVisibility = ["bad","horrible","no"].includes(String(p?.trail_visibility || "").toLowerCase());
+  const dashArray = isTrack ? (zoom >= 15 ? "9 5" : "7 5")
+    : (informal || lowVisibility) ? (zoom >= 15 ? "3 5" : "2 4") : null;
+  const casing = satellite ? "#23241B" : (currentTheme() === "dark" ? "#15150F" : "#FFFDF4");
+
+  return [
+    {
+      color:casing, weight:inner + 2.25, opacity:alpha * .82,
+      lineCap:"round", lineJoin:"round", fill:false, interactive:false
+    },
+    {
+      color:"#F4CE3E", weight:inner, opacity:alpha,
+      dashArray, lineCap:"round", lineJoin:"round", fill:false, interactive:false
+    }
+  ];
+}
 function removeOutdoorsOverlay(){
-  [outdoorsHiking, outdoorsOverland].forEach(l => l && l.remove());
-  outdoorsHiking = outdoorsOverland = null;
+  [outdoorsTrails, outdoorsOverland].forEach(l => l && l.remove());
+  outdoorsTrails = outdoorsOverland = null;
 }
 function updateOutdoorsButton(){
   if(!outdoorsBtn) return;
   outdoorsBtn.setAttribute("aria-pressed", String(outdoorsOn));
-  outdoorsBtn.setAttribute("aria-label", outdoorsOn ? "Hide roads and marked trails" : "Show roads and marked trails");
-  outdoorsBtn.title = outdoorsOn ? "Hide roads & trails" : "Roads & marked trails";
+  outdoorsBtn.setAttribute("aria-label", outdoorsOn ? "Hide roads and trails" : "Show roads and trails");
+  outdoorsBtn.title = outdoorsOn ? "Hide roads & trails" : "Roads & trails";
 }
 function updateOutdoorsDensity(){
   if(!map) return;
   const z = map.getZoom();
-  /* The satellite base already has one Esri road layer.  The outdoor toggle
-     strengthens that existing layer rather than drawing a duplicate on top. */
+  /* The satellite base already has one Esri road layer. The outdoor toggle
+     strengthens it instead of stacking a duplicate transportation layer. */
   satRoads?.setOpacity(satellite
     ? (outdoorsOn ? (z >= 14 ? .88 : z >= 11 ? .72 : .58) : .48)
     : 0);
   if(!outdoorsOn) return;
-  /* Marked routes arrive gradually as the user gets close enough to use them.
-     This avoids the regional spiderweb that made the previous layer unreadable. */
-  const routeBase = z >= 16 ? 1 : z >= 14 ? .88 : z >= 12 ? .64 : .32;
-  outdoorsHiking?.setOpacity((satellite ? .84 : .76) * routeBase);
-  outdoorsOverland?.setOpacity((satellite ? .52 : .42) * routeBase);
+  const density = z >= 16 ? 1 : z >= 14 ? .92 : z >= 12 ? .72 : .46;
+  outdoorsTrails?.setOpacity((satellite ? 1 : .94) * density);
+  outdoorsOverland?.setOpacity((satellite ? .52 : .42) * density);
 }
 function setOutdoorsOverlay(force){
   if(!map) return;
   if(force) removeOutdoorsOverlay();
   if(!outdoorsOn){ removeOutdoorsOverlay(); updateOutdoorsButton(); return; }
 
-  if(!outdoorsHiking){
-    outdoorsHiking = L.tileLayer(TILES.hiking, {
-      pane:"outdoorsTrailsPane", className:"outdoors-hike-tile",
-      minZoom:11, maxZoom:20, maxNativeZoom:18, opacity:.35,
-      attribution:'Marked routes &copy; <a href="https://waymarkedtrails.org/">Waymarked Trails</a>, <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+  if(!outdoorsTrails && L.vectorGrid?.protobuf){
+    const hidden = hiddenTrailVectorStyle;
+    outdoorsTrails = L.vectorGrid.protobuf(TILES.trails, {
+      pane:"outdoorsTrailsPane", rendererFactory:L.canvas.tile,
+      interactive:false, minZoom:11, maxNativeZoom:14, maxZoom:20,
+      vectorTileLayerStyles:{
+        trail:trailVectorStyle,
+        trail_centerpoint:hidden,
+        trail_poi:hidden,
+        barrier_area:hidden,
+        barrier_line:hidden,
+        park:hidden
+      },
+      attribution:'Trail data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>; tiles by <a href="https://tiles.openstreetmap.us/">OpenStreetMap US</a>'
     }).addTo(map);
   }
   if(!outdoorsOverland){
@@ -3243,6 +3278,7 @@ function setMapFullscreen(on, fromNative = false){
     setMapUnlocked(fullscreenWasUnlocked);
     if(!fromNative && document.fullscreenElement) document.exitFullscreen?.().catch(()=>{});
   }
+  syncFullscreenPortals();
   setTimeout(()=>{ map.invalidateSize(); updateMapSelectionUI(); }, 70);
   setTimeout(()=> map.invalidateSize(), 330);
 }
@@ -3696,10 +3732,20 @@ function fsSetHint(text = "", kind = ""){
   el.textContent = text;
   el.classList.toggle("bad", kind === "bad");
 }
+function fsSyncAddButton(){
+  const btn = $("#fsAddPoint");
+  if(!btn) return;
+  const query = $("#fsSearchBox")?.value.trim() || "";
+  const ready = canChangeTrip() && (!!fsCandidate || !query);
+  btn.disabled = !ready;
+  btn.title = fsCandidate
+    ? "Add the selected search result"
+    : ready ? "Add a point at the center of the map" : "Pick a search result or unlock editing";
+}
 function removeFsCandidate(){
   if(fsCandidateMarker){ fsCandidateMarker.remove(); fsCandidateMarker = null; }
   fsCandidate = null;
-  if($("#fsAddPoint")) $("#fsAddPoint").disabled = true;
+  fsSyncAddButton();
 }
 function clearFullscreenSearch(clearInput = true){
   clearTimeout(fsSearchTimer);
@@ -3709,6 +3755,7 @@ function clearFullscreenSearch(clearInput = true){
   if(clearInput && $("#fsSearchBox")) $("#fsSearchBox").value = "";
   removeFsCandidate();
   fsSetHint(canChangeTrip() ? "" : "unlock editing to add a point");
+  fsSyncAddButton();
 }
 function renderFullscreenResults(hits){
   fsHits = hits; fsActiveHit = -1;
@@ -3747,8 +3794,8 @@ function chooseFullscreenHit(i){
       </svg>`
     }), keyboard:false, interactive:false, zIndexOffset:1200
   }).addTo(map);
-  $("#fsAddPoint").disabled = false;
   $("#fsSearchBox").value = h.name;
+  fsSyncAddButton();
   $("#fsResults").innerHTML = "";
   fsSetHint("ready to add — adjust it on the map afterward");
   map.flyTo([fsCandidate.lat, fsCandidate.lon], Math.max(map.getZoom(), 15), { duration:.5 });
@@ -3791,7 +3838,7 @@ function fullscreenLiveSearch(){
   if(fsSearchAbort){ fsSearchAbort.abort(); fsSearchAbort = null; }
   removeFsCandidate();
   $("#fsResults").innerHTML = "";
-  if(q.length < 2){ fsSetHint(""); return; }
+  if(q.length < 2){ fsSetHint(q ? "type one more character, or clear search to add the map center" : ""); fsSyncAddButton(); return; }
   fsSetHint("searching…");
   fsSearchTimer = setTimeout(()=> runFullscreenSearch(q), 170);
 }
@@ -3804,9 +3851,20 @@ function fsHighlight(next){
   btns[fsActiveHit].scrollIntoView({ block:"nearest" });
 }
 function addFullscreenCandidate(){
-  if(blockSharedChange() || !fsCandidate) return;
+  if(blockSharedChange()) return;
   if(stops.length >= 32){ fsSetHint("32 stops is the limit", "bad"); return; }
-  const p = fsCandidate;
+
+  const query = $("#fsSearchBox")?.value.trim() || "";
+  if(!fsCandidate && query){
+    fsSetHint("pick a search result, or clear search to add the map center", "bad");
+    return;
+  }
+
+  const center = map.getCenter();
+  const usedCenter = !fsCandidate;
+  const p = fsCandidate || {
+    lat:center.lat, lon:center.lng, ts:Date.now(), acc:0, note:"", addr:null
+  };
   removeFsCandidate();
   stops.push(p);
   active = stops.length - 1;
@@ -3814,11 +3872,20 @@ function addFullscreenCandidate(){
   mapSelected = active;
   $("#fsSearchBox").value = "";
   $("#fsResults").innerHTML = "";
-  fsSetHint("point added — use adjust pin to place it exactly");
+  fsSetHint(usedCenter ? "point added at map center — use adjust pin for exact placement" : "point added — use adjust pin to place it exactly");
   refreshPin({ recenter:false });
-  focusActiveStop();
+  if(!usedCenter) focusActiveStop();
   renderQR();
   syncSharedDirty();
+  if(usedCenter){
+    reverseGeocode(p).then(a=>{
+      if(!a) return;
+      p.addr = a;
+      refreshPin({ recenter:false });
+      renderFullscreenRoute();
+      renderQR();
+    }).catch(()=>{});
+  }
 }
 function commitFullscreenNote(i, input){
   if(blockSharedChange()) return;
@@ -3942,13 +4009,12 @@ function renderFullscreenRoute(){
   const editable = canChangeTrip();
   if($("#fsSearchBox")) $("#fsSearchBox").disabled = !editable;
   if(!editable){
-    $("#fsAddPoint").disabled = true;
     fsSetHint(sharedTrip?.editable ? "use the lock to unlock editing" : "this shared trip is read-only");
-  }else if(!fsCandidate){
-    $("#fsAddPoint").disabled = true;
+  }else{
     const hint = $("#fsRouteHint");
     if(hint && /unlock editing|read-only/.test(hint.textContent)) fsSetHint("");
   }
+  fsSyncAddButton();
 }
 $("#fsSearchBox")?.addEventListener("input", fullscreenLiveSearch);
 $("#fsSearchBox")?.addEventListener("keydown", e=>{
@@ -4477,13 +4543,42 @@ function sharedStateFromLocation(){
   };
 }
 
+const sharedSheetHome = {
+  parent:$("#sharedSheet")?.parentNode || document.body,
+  next:$("#sharedSheet")?.nextSibling || null
+};
+const unlockCelebrationHome = {
+  parent:$("#unlockCelebration")?.parentNode || document.body,
+  next:$("#unlockCelebration")?.nextSibling || null
+};
+function restorePortal(el, home){
+  if(!el || el.parentNode === home.parent) return;
+  if(home.next && home.next.parentNode === home.parent) home.parent.insertBefore(el, home.next);
+  else home.parent.appendChild(el);
+}
+function portalForMapContext(el){
+  if(!el) return;
+  if(mapFullscreen) $("#mapWrap")?.appendChild(el);
+}
+function syncFullscreenPortals(){
+  const sheet = $("#sharedSheet");
+  if(sheet && !sheet.classList.contains("hidden")){
+    if(mapFullscreen) portalForMapContext(sheet);
+    else restorePortal(sheet, sharedSheetHome);
+  }
+}
 function closeSharedSheet(){
-  $("#sharedSheet")?.classList.add("hidden");
+  const sheet = $("#sharedSheet");
+  sheet?.classList.add("hidden");
+  restorePortal(sheet, sharedSheetHome);
 }
 
 function openSharedSheet(showPassword = false){
   if(!sharedTrip) return;
-  $("#sharedSheet").classList.remove("hidden");
+  const sheet = $("#sharedSheet");
+  if(mapFullscreen) portalForMapContext(sheet);
+  else restorePortal(sheet, sharedSheetHome);
+  sheet.classList.remove("hidden");
   if(showPassword && sharedTrip.editable && !sharedTrip.unlocked){
     $("#sharedAuth").classList.remove("hidden");
     setTimeout(()=>$("#sharedPassword").focus(), 30);
@@ -4685,6 +4780,8 @@ function showUnlockCelebration(){
   const wrap = $("#unlockCelebration");
   const confetti = $("#lemonfetti");
   if(!wrap || !confetti) return;
+  if(mapFullscreen) portalForMapContext(wrap);
+  else restorePortal(wrap, unlockCelebrationHome);
   clearTimeout(unlockCelebrationTimer);
   confetti.innerHTML = "";
   const pieces = 30;
@@ -4708,6 +4805,7 @@ function showUnlockCelebration(){
   unlockCelebrationTimer = setTimeout(()=>{
     wrap.classList.remove("show");
     $("#kobeNet")?.classList.remove("swish");
+    restorePortal(wrap, unlockCelebrationHome);
   }, 3300);
 }
 
