@@ -209,27 +209,176 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 .satbtn svg{display:block}
 .satbtn[aria-pressed="true"]{background:var(--ink);color:var(--pith)}
 #map.locked{cursor:default}
-/* The drawn map gets a little more punch so roads and paths do not wash
-   into the cream background. Photography itself is still left untouched. */
+/* The drawn map gets a restrained contrast lift.  The intent is darker roads
+   and labels without turning the cream base into a noisy high-contrast map. */
 :root:not([data-theme="dark"]) #map:not(.sat) .leaflet-tile-pane .leaflet-tile{
-  filter:saturate(1.14) contrast(1.13) brightness(.94)
+  filter:saturate(.96) contrast(1.18) brightness(.965)
 }
 :root[data-theme="dark"] #map:not(.sat) .leaflet-tile-pane .leaflet-tile{
-  filter:brightness(1.72) contrast(1.18) saturate(1.2) sepia(.08)
+  filter:brightness(1.56) contrast(1.2) saturate(1.06) sepia(.045)
 }
-#map.sat .leaflet-tile-pane .leaflet-tile{filter:none !important}
-/* Esri's transparent transportation overlay gets its own stronger treatment.
-   This is above either base map, so the new toggle works in map and satellite. */
-#map .outdoors-road-tile{
-  filter:contrast(1.48) saturate(1.3) brightness(.9)
-    drop-shadow(0 0 1px rgba(255,255,244,.95)) !important;
+#map.sat .leaflet-tile-pane .leaflet-tile:not(.sat-road-tile):not(.outdoors-hike-tile):not(.outdoors-overland-tile){filter:none !important}
+.leaflet-tile{transition:filter .24s ease,opacity .24s ease}
+
+/* Outdoor overlay redesign.
+   Satellite uses one restrained transportation layer whose contrast increases
+   with the toggle; it is never duplicated. Hiking and official motor-use routes are
+   transparent rendered route tiles, not raw QA geometry, so point circles,
+   polygon boxes and straight feature artifacts never enter the map. */
+#map .sat-road-tile{
+  filter:contrast(1.28) saturate(1.06) brightness(.94)
+    drop-shadow(0 0 1px rgba(255,253,244,.78)) !important;
 }
-:root[data-theme="dark"] #map .outdoors-road-tile{
-  filter:contrast(1.6) saturate(1.4) brightness(1.18)
-    drop-shadow(0 0 1px rgba(0,0,0,.8)) !important;
+#map .outdoors-hike-tile{
+  filter:brightness(0) saturate(100%) invert(35%) sepia(25%) saturate(1030%)
+    hue-rotate(87deg) brightness(92%) contrast(88%)
+    drop-shadow(0 0 1px rgba(255,253,244,.96)) !important;
 }
-.leaflet-tile{transition:filter .2s ease}
-.outdoors-trail-pane canvas,.outdoors-trail-pane svg{pointer-events:none}
+#map .outdoors-overland-tile{
+  filter:brightness(0) saturate(100%) invert(49%) sepia(46%) saturate(620%)
+    hue-rotate(337deg) brightness(94%) contrast(86%)
+    drop-shadow(0 0 1px rgba(255,253,244,.94)) !important;
+}
+:root[data-theme="dark"] #map .sat-road-tile{
+  filter:contrast(1.34) saturate(1.1) brightness(1.12)
+    drop-shadow(0 0 1px rgba(0,0,0,.82)) !important;
+}
+:root[data-theme="dark"] #map .outdoors-hike-tile{
+  filter:brightness(0) saturate(100%) invert(72%) sepia(28%) saturate(675%)
+    hue-rotate(86deg) brightness(98%) contrast(91%)
+    drop-shadow(0 0 1px rgba(0,0,0,.9)) !important;
+}
+:root[data-theme="dark"] #map .outdoors-overland-tile{
+  filter:brightness(0) saturate(100%) invert(70%) sepia(34%) saturate(720%)
+    hue-rotate(337deg) brightness(101%) contrast(90%)
+    drop-shadow(0 0 1px rgba(0,0,0,.88)) !important;
+}
+
+/* ---------- fullscreen map ---------- */
+body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
+.mapselection{
+  position:absolute;left:50%;top:10px;z-index:calc(var(--z-mapui) + 1);
+  max-width:min(72%,560px);transform:translate(-50%,-7px);opacity:0;
+  pointer-events:none;padding:8px 14px;border-radius:999px;
+  color:var(--ink);background:color-mix(in srgb,var(--pith) 91%,transparent);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  box-shadow:0 8px 24px rgba(35,36,27,.12);
+  font-family:var(--display);font-weight:620;font-size:.9rem;line-height:1.25;
+  text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:opacity .2s ease,transform .32s cubic-bezier(.16,1,.3,1);
+}
+.mapselection.on{opacity:1;transform:translate(-50%,0)}
+.mapwrap.is-fullscreen{
+  position:fixed;inset:0;z-index:calc(var(--z-modal) + 12);background:var(--pith);
+  padding:0;margin:0;isolation:isolate;
+}
+.mapwrap.is-fullscreen #map{
+  width:100%;height:100dvh;min-height:0;border:0;border-radius:0;
+}
+.mapwrap.is-fullscreen .mapselection{display:none}
+.mapwrap.is-fullscreen .mapui{
+  right:max(12px,env(safe-area-inset-right));
+  bottom:max(12px,env(safe-area-inset-bottom));
+}
+.mapwrap:fullscreen{background:var(--pith)}
+.mapwrap:fullscreen #map{height:100vh}
+.fullscreenchrome{display:none}
+.mapwrap.is-fullscreen .fullscreenchrome{display:block}
+.fsroutebtn{
+  position:absolute;right:max(12px,env(safe-area-inset-right));
+  top:max(12px,env(safe-area-inset-top));z-index:calc(var(--z-mapui) + 3);
+  display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:999px;
+  color:var(--ink);background:color-mix(in srgb,var(--pith) 92%,transparent);
+  backdrop-filter:blur(13px);-webkit-backdrop-filter:blur(13px);
+  box-shadow:0 8px 26px rgba(35,36,27,.14);
+  font-size:.78rem;font-weight:720;letter-spacing:.01em;
+  transition:transform .18s cubic-bezier(.16,1,.3,1),background .18s ease,color .18s ease;
+}
+.fsroutebtn:hover{transform:translateY(-1px)}
+.fsroutebtn[aria-expanded="true"]{background:var(--ink);color:var(--pith)}
+.fsroutecount{
+  min-width:20px;height:20px;padding:0 6px;border-radius:999px;display:grid;place-items:center;
+  background:var(--zest);color:#23241B;font-family:var(--display);font-weight:700;font-size:.72rem;
+}
+.fsroutepanel{
+  position:absolute;right:max(12px,env(safe-area-inset-right));
+  top:calc(max(12px,env(safe-area-inset-top)) + 48px);
+  z-index:calc(var(--z-mapui) + 2);width:min(420px,calc(100vw - 24px));
+  max-height:min(66dvh,650px);overflow:hidden;display:flex;flex-direction:column;
+  color:var(--ink);background:color-mix(in srgb,var(--pith) 95%,transparent);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border-radius:18px;box-shadow:0 22px 60px rgba(35,36,27,.22);
+  opacity:0;transform:translateY(-10px) scale(.985);transform-origin:top right;
+  pointer-events:none;transition:opacity .18s ease,transform .28s cubic-bezier(.16,1,.3,1);
+}
+:root[data-theme="dark"] .fsroutepanel,
+:root[data-theme="dark"] .fsroutebtn{box-shadow:0 22px 62px rgba(0,0,0,.5)}
+.fsroutepanel.open{opacity:1;transform:none;pointer-events:auto}
+.fssearch{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:13px 13px 10px;
+}
+.fssearchfield{position:relative;min-width:0}
+.fssearch input{
+  width:100%;height:42px;padding:0 12px;border:0;border-radius:12px;
+  color:var(--ink);background:var(--flesh);font:500 .9rem var(--body);outline:none;
+  transition:box-shadow .18s ease,background .18s ease;
+}
+.fssearch input:focus{background:var(--pith);box-shadow:0 0 0 2px var(--zest)}
+.fssearch input::placeholder{color:var(--muted)}
+.fsadd{
+  height:42px;padding:0 15px;border-radius:999px;background:var(--ink);color:var(--pith);
+  font-size:.8rem;font-weight:720;white-space:nowrap;transition:opacity .16s ease,transform .16s ease;
+}
+.fsadd:active{transform:scale(.96)}
+.fsadd:disabled{opacity:.32;pointer-events:none}
+.fsresults{
+  position:absolute;left:0;right:0;top:47px;z-index:5;list-style:none;
+  background:var(--pith);border-radius:12px;box-shadow:0 16px 38px rgba(35,36,27,.2);
+  overflow:hidden;max-height:260px;overflow-y:auto;
+}
+.fsresults:empty{display:none}
+.fsresults button{display:block;width:100%;padding:10px 12px;text-align:left;color:var(--ink)}
+.fsresults li+li{border-top:1px solid var(--hairline)}
+.fsresults button:hover,.fsresults button.on{background:var(--flesh)}
+.fsresultname{display:block;font-weight:650;font-size:.86rem}
+.fsresultctx{display:block;margin-top:2px;color:var(--muted);font-size:.72rem;line-height:1.3}
+.fsroutehint{padding:8px 14px 0;color:var(--muted);font-size:.7rem;min-height:1.1em}
+.fsroutehint.bad{color:#a8482a}
+.fsroutehead{
+  display:flex;align-items:center;justify-content:space-between;padding:11px 14px 8px;
+  color:var(--muted);font-size:.66rem;text-transform:uppercase;letter-spacing:.13em;font-weight:650;
+}
+.fsroutelist{list-style:none;overflow-y:auto;padding:0 8px 10px;overscroll-behavior:contain}
+.fsroutelist{display:grid;gap:4px}
+.fsrouteitem{border:0}
+.fsrouteitem button{
+  width:100%;display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:center;
+  padding:11px 7px;text-align:left;color:var(--ink);border-radius:11px;
+  transition:background .16s ease,transform .16s cubic-bezier(.16,1,.3,1);
+}
+.fsrouteitem button:hover{background:var(--flesh)}
+.fsrouteitem button:active{transform:scale(.985)}
+.fsrouteitem.current button{background:var(--flesh)}
+.fsrouteindex{
+  width:25px;height:25px;border-radius:50%;display:grid;place-items:center;
+  background:var(--zest);color:#23241B;font-family:var(--display);font-size:.74rem;font-weight:700;
+}
+.fsroutetitle{display:block;font-family:var(--display);font-weight:620;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fsroutesub{display:block;margin-top:2px;color:var(--muted);font-size:.69rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.map-note-tooltip.leaflet-tooltip{
+  margin-top:-4px;padding:8px 12px;border:0;border-radius:999px;
+  color:var(--ink);background:color-mix(in srgb,var(--pith) 94%,transparent);
+  box-shadow:0 10px 28px rgba(35,36,27,.2);font-family:var(--display);font-weight:650;
+  font-size:.86rem;line-height:1.2;white-space:nowrap;max-width:min(70vw,420px);overflow:hidden;text-overflow:ellipsis;
+}
+.map-note-tooltip.leaflet-tooltip::before{display:none}
+.fscandidate{filter:drop-shadow(0 7px 12px rgba(35,36,27,.24));opacity:.82}
+@media(max-width:600px){
+  .fsroutepanel{left:10px;right:10px;width:auto;top:calc(max(10px,env(safe-area-inset-top)) + 48px);max-height:62dvh}
+  .fsroutebtn{right:10px;top:max(10px,env(safe-area-inset-top))}
+  .fssearch{grid-template-columns:minmax(0,1fr) auto;padding:11px 11px 9px}
+  .fsadd{padding:0 12px}
+}
 .leaflet-container{font-family:var(--body)}
 .leaflet-control-zoom a{display:block;width:30px;height:30px;line-height:30px;text-align:center;text-decoration:none;background:var(--pith);color:var(--ink);border-bottom:1px solid var(--hairline);font-weight:700}
 .leaflet-control-zoom{border:1px solid var(--ink);border-radius:8px;overflow:hidden;background:var(--pith)}
@@ -999,8 +1148,33 @@ body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-
         <p class="scrollhint">scroll down for more info</p>
       </div>
 
-      <div class="mapwrap">
+      <div class="mapwrap" id="mapWrap">
         <div id="map"></div>
+        <div class="mapselection" id="mapSelection" aria-live="polite"></div>
+        <div class="fullscreenchrome" id="fullscreenChrome">
+          <button class="fsroutebtn" id="fsRouteBtn" type="button" aria-expanded="false" aria-controls="fsRoutePanel">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+              <circle cx="6" cy="6" r="2.2" stroke="currentColor" stroke-width="1.8"/>
+              <circle cx="18" cy="18" r="2.2" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M6 8.5v4.2a3.3 3.3 0 0 0 3.3 3.3h6.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="1.7 2.5"/>
+            </svg>
+            <span>route</span><span class="fsroutecount" id="fsRouteCount">1</span>
+          </button>
+          <section class="fsroutepanel" id="fsRoutePanel" aria-label="Fullscreen route points">
+            <div class="fssearch">
+              <div class="fssearchfield">
+                <input id="fsSearchBox" type="text" autocomplete="off" autocapitalize="off"
+                  autocorrect="off" spellcheck="false" enterkeyhint="search"
+                  placeholder="Search to add a point" aria-label="Search for a point to add">
+                <ul class="fsresults" id="fsResults"></ul>
+              </div>
+              <button class="fsadd" id="fsAddPoint" type="button" disabled>Add point</button>
+            </div>
+            <p class="fsroutehint" id="fsRouteHint"></p>
+            <div class="fsroutehead"><span>route points</span><span id="fsRouteMode"></span></div>
+            <ul class="fsroutelist" id="fsRouteList"></ul>
+          </section>
+        </div>
         <div class="mapui">
           <button class="adjustbtn" id="lockBtn" aria-pressed="false">unlock map</button>
           <button class="adjustbtn" id="dragBtn" aria-pressed="false">adjust pin</button>
@@ -1354,7 +1528,6 @@ body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 "use strict";
@@ -2234,6 +2407,7 @@ let pin = null;
 let markers = [], tripLine = null;
 let map = null, accCircle = null, youMarker = null, farLine = null;
 let dragging = false, noteTimer = null, addrText = "";
+let mapSelected = 0;       /* visual map selection; -1 means nothing selected */
 let isRecipient = false;   /* arrived via someone else's link */
 let pickMode = false;      /* picking a stop to add rather than opening a pin */
 let ordered = true;        /* a route in order, or just a set of places */
@@ -2243,6 +2417,7 @@ function setStops(list, idx){
   stops = list;
   active = Math.max(0, Math.min(idx || 0, stops.length - 1));
   pin = stops[active];
+  mapSelected = active;
 }
 function tripHash(){
   /* a lone pin keeps the older, shorter L form — links already sent still work */
@@ -2422,80 +2597,99 @@ const TILES = {
   sat:       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
   satRoads:  "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
   satLabels: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-  /* Detailed OSM trail vectors: foot paths, tracks, ATV/vehicle access,
-     surfaces, informal/restricted status and related trail attributes. */
-  trails:    "https://tiles.openstreetmap.us/vector/trails/{z}/{x}/{y}.mvt"
+  /* Transparent, pre-rendered marked-route overlays.  These deliberately
+     replace the raw trail QA vector tiles that produced circles and boxes. */
+  hiking:    "https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png",
+  /* Official unlabeled U.S. Forest Service motor-vehicle-use roads + trails. */
+  overland:  "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_MVUM_01/MapServer"
 };
 let tileLayer = null, satRoads = null, satLabels = null, tileKey = null, satellite = true;
-let outdoorsRoads = null, outdoorsTrails = null;
+let outdoorsHiking = null, outdoorsOverland = null;
 let outdoorsOn = store.get("lemoncoords.outdoors") === "on";
-let satBtn = null, outdoorsBtn = null;
+let satBtn = null, outdoorsBtn = null, fullscreenBtn = null;
+let mapFullscreen = false, fullscreenWasUnlocked = false;
+let fsRouteOpen = false, fsCandidate = null, fsCandidateMarker = null;
 function currentTheme(){ return document.documentElement.dataset.theme === "dark" ? "dark" : "light"; }
 
-function trailAllowed(v){
-  return v && !["no","private","customers"].includes(String(v).toLowerCase());
+/* Turn an ArcGIS dynamic MapServer into ordinary transparent Leaflet tiles.
+   It requests only the two MVUM polyline layers, so labels/status polygons and
+   every other service artifact stay out of LemonCoords. */
+function arcGisExportLayer(serviceUrl, options = {}){
+  const ArcGISExport = L.TileLayer.extend({
+    getTileUrl(coords){
+      const bounds = this._tileCoordsToBounds(coords);
+      const nw = L.CRS.EPSG3857.project(bounds.getNorthWest());
+      const se = L.CRS.EPSG3857.project(bounds.getSouthEast());
+      const size = this.getTileSize();
+      const params = {
+        bbox:`${nw.x},${se.y},${se.x},${nw.y}`,
+        bboxSR:3857,
+        imageSR:3857,
+        size:`${size.x},${size.y}`,
+        dpi:96,
+        format:"png32",
+        transparent:true,
+        layers:this.options.layers || "show:1,2",
+        f:"image"
+      };
+      return serviceUrl + "/export" + L.Util.getParamString(params, serviceUrl);
+    }
+  });
+  return new ArcGISExport(serviceUrl, options);
 }
-function trailRestricted(p){
-  return [p.access,p.foot,p.motor_vehicle,p.vehicle,p.atv]
-    .some(v => ["no","private"].includes(String(v || "").toLowerCase()));
-}
-function trailVectorStyle(p, zoom){
-  const highway = String(p.highway || "").toLowerCase();
-  const motorized = trailAllowed(p.atv) || trailAllowed(p.motor_vehicle) ||
-    trailAllowed(p.vehicle) || trailAllowed(p.snowmobile) ||
-    (highway === "track" && !["no","private"].includes(String(p.motor_vehicle || "").toLowerCase()));
-  const restricted = trailRestricted(p);
-  const informal = String(p.informal || "").toLowerCase() === "yes";
-  const weight = zoom >= 15 ? 4.2 : zoom >= 13 ? 3.5 : zoom >= 10 ? 2.8 : 2.1;
 
-  if(restricted){
-    return { color:"#9B9077", weight:Math.max(1.7, weight - .6), opacity:.82,
-      dashArray:"3,5", lineCap:"round", lineJoin:"round", fill:false };
-  }
-  if(motorized){
-    return { color:satellite ? "#FF9A3D" : "#B94F24", weight, opacity:.98,
-      dashArray:informal ? "6,5" : null, lineCap:"round", lineJoin:"round", fill:false };
-  }
-  return { color:satellite ? "#85F36F" : "#256D3B", weight, opacity:.98,
-    dashArray:informal ? "5,5" : null, lineCap:"round", lineJoin:"round", fill:false };
-}
 function removeOutdoorsOverlay(){
-  [outdoorsRoads, outdoorsTrails].forEach(l => l && l.remove());
-  outdoorsRoads = outdoorsTrails = null;
+  [outdoorsHiking, outdoorsOverland].forEach(l => l && l.remove());
+  outdoorsHiking = outdoorsOverland = null;
 }
 function updateOutdoorsButton(){
   if(!outdoorsBtn) return;
   outdoorsBtn.setAttribute("aria-pressed", String(outdoorsOn));
-  outdoorsBtn.setAttribute("aria-label", outdoorsOn ? "Hide roads and trails" : "Show roads and trails");
-  outdoorsBtn.title = outdoorsOn ? "Hide roads & trails" : "Roads & trails";
+  outdoorsBtn.setAttribute("aria-label", outdoorsOn ? "Hide roads and marked trails" : "Show roads and marked trails");
+  outdoorsBtn.title = outdoorsOn ? "Hide roads & trails" : "Roads & marked trails";
+}
+function updateOutdoorsDensity(){
+  if(!map) return;
+  const z = map.getZoom();
+  /* The satellite base already has one Esri road layer.  The outdoor toggle
+     strengthens that existing layer rather than drawing a duplicate on top. */
+  satRoads?.setOpacity(satellite
+    ? (outdoorsOn ? (z >= 14 ? .88 : z >= 11 ? .72 : .58) : .48)
+    : 0);
+  if(!outdoorsOn) return;
+  /* Marked routes arrive gradually as the user gets close enough to use them.
+     This avoids the regional spiderweb that made the previous layer unreadable. */
+  const routeBase = z >= 16 ? 1 : z >= 14 ? .74 : z >= 12 ? .42 : .20;
+  outdoorsHiking?.setOpacity((satellite ? .58 : .46) * routeBase);
+  outdoorsOverland?.setOpacity((satellite ? .5 : .4) * routeBase);
 }
 function setOutdoorsOverlay(force){
   if(!map) return;
   if(force) removeOutdoorsOverlay();
   if(!outdoorsOn){ removeOutdoorsOverlay(); updateOutdoorsButton(); return; }
 
-  if(!outdoorsRoads){
-    outdoorsRoads = L.tileLayer(TILES.satRoads, {
-      pane:"outdoorsRoadsPane", className:"outdoors-road-tile",
-      maxZoom:20, maxNativeZoom:19, opacity:satellite ? .98 : .9,
-      attribution:'Transportation &copy; <a href="https://www.esri.com/">Esri</a>'
+  if(!outdoorsHiking){
+    outdoorsHiking = L.tileLayer(TILES.hiking, {
+      pane:"outdoorsTrailsPane", className:"outdoors-hike-tile",
+      minZoom:11, maxZoom:20, maxNativeZoom:18, opacity:.35,
+      attribution:'Marked routes &copy; <a href="https://waymarkedtrails.org/">Waymarked Trails</a>, <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
     }).addTo(map);
   }
-  if(!outdoorsTrails && L.vectorGrid && L.vectorGrid.protobuf){
-    outdoorsTrails = L.vectorGrid.protobuf(TILES.trails, {
-      pane:"outdoorsTrailsPane", rendererFactory:L.canvas.tile,
-      interactive:false, maxNativeZoom:14, maxZoom:20,
-      vectorTileLayerStyles:{ trail:trailVectorStyle },
-      attribution:'Tiles by <a href="https://tiles.openstreetmap.us/">OSM US</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  if(!outdoorsOverland){
+    outdoorsOverland = arcGisExportLayer(TILES.overland, {
+      pane:"outdoorsTrailsPane", className:"outdoors-overland-tile",
+      layers:"show:1,2", minZoom:11, maxZoom:20, opacity:.3,
+      attribution:'Motor-vehicle-use roads &amp; trails &copy; <a href="https://www.fs.usda.gov/visit/maps/mvum-faq">U.S. Forest Service</a>'
     }).addTo(map);
   }
+  updateOutdoorsDensity();
   updateOutdoorsButton();
 }
 function toggleOutdoors(){
   outdoorsOn = !outdoorsOn;
   store.set("lemoncoords.outdoors", outdoorsOn ? "on" : "off");
   setOutdoorsOverlay(true);
-  flash(outdoorsOn ? "roads + trails on" : "roads + trails off");
+  flash(outdoorsOn ? "roads + marked trails on" : "roads + trails off");
 }
 
 function setTiles(force){
@@ -2512,8 +2706,13 @@ function setTiles(force){
     tileLayer = L.tileLayer(TILES.sat, { ...opts, zIndex: 1,
       attribution: 'Imagery &copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics'
     }).addTo(map);
-    satRoads  = L.tileLayer(TILES.satRoads,  { ...opts, zIndex: 2 }).addTo(map);
-    satLabels = L.tileLayer(TILES.satLabels, { ...opts, zIndex: 3 }).addTo(map);
+    satRoads  = L.tileLayer(TILES.satRoads,  {
+      ...opts, zIndex: 2, opacity:.48, className:"sat-road-tile",
+      attribution:'Transportation &copy; <a href="https://www.esri.com/">Esri</a>'
+    }).addTo(map);
+    satLabels = L.tileLayer(TILES.satLabels, {
+      ...opts, zIndex: 3, opacity:.9, className:"sat-label-tile"
+    }).addTo(map);
   }else{
     tileLayer = L.tileLayer(TILES[currentTheme()], {
       maxZoom: 20, zIndex: 1,
@@ -2529,8 +2728,8 @@ function setTiles(force){
     satBtn.setAttribute("aria-label", satellite ? "Show the drawn map" : "Show satellite imagery");
     satBtn.title = satellite ? "Map" : "Satellite";
   }
-  /* Recreate the optional overlay so trail colors and road opacity stay tuned
-     for whichever base is currently underneath it. */
+  /* Recreate the optional route overlay and retune the single satellite road
+     layer for whichever base is currently underneath it. */
   setOutdoorsOverlay(true);
 }
 
@@ -2549,6 +2748,14 @@ const TRAILS_ICON = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none"
     stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
   <path d="M5.4 20.2c2.7-2.4 4.7-2.7 6.5-1.2 1.6 1.3 3.5 1.1 6.7-1.6"
     stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="2.5 2.5"/>
+</svg>`;
+const FULLSCREEN_ICON = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+  <path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"
+    stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+const RESTORE_ICON = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+  <path d="M9 9H4V4M15 9h5V4M9 15H4v5M15 15h5v5"
+    stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
 
 /* zoom back out to the whole trip — only worth showing when there is one */
@@ -2594,6 +2801,20 @@ const OutdoorsToggle = L.Control.extend({
     L.DomEvent.on(b, "click", toggleOutdoors);
     outdoorsBtn = b;
     updateOutdoorsButton();
+    return b;
+  }
+});
+const FullscreenToggle = L.Control.extend({
+  onAdd(){
+    const b = L.DomUtil.create("button", "satbtn fullscreenbtn");
+    b.type = "button";
+    b.innerHTML = FULLSCREEN_ICON;
+    b.title = "Fullscreen map";
+    b.setAttribute("aria-label", "Open fullscreen map");
+    b.setAttribute("aria-pressed", "false");
+    L.DomEvent.disableClickPropagation(b);
+    L.DomEvent.on(b, "click", ()=> setMapFullscreen(!mapFullscreen));
+    fullscreenBtn = b;
     return b;
   }
 });
@@ -2690,19 +2911,18 @@ function initMap(){
     doubleClickZoom: false, boxZoom: false, keyboard: false
   });
   document.getElementById("map").classList.add("locked");
-  map.createPane("outdoorsRoadsPane");
-  map.getPane("outdoorsRoadsPane").style.zIndex = 430;
-  map.getPane("outdoorsRoadsPane").style.pointerEvents = "none";
   map.createPane("outdoorsTrailsPane");
-  map.getPane("outdoorsTrailsPane").classList.add("outdoors-trail-pane");
   map.getPane("outdoorsTrailsPane").style.zIndex = 440;
   map.getPane("outdoorsTrailsPane").style.pointerEvents = "none";
   L.control.zoom({ position: "topleft" }).addTo(map);
   map.addControl(new ShowAll({ position: "topleft" }));
   map.addControl(new SatToggle({ position: "topleft" }));
-  /* Kept directly below the map/satellite button as a separate overlay. */
+  /* Clean marked-route overlay directly below the map/satellite toggle. */
   map.addControl(new OutdoorsToggle({ position: "topleft" }));
-  map.on("moveend zoomend", updateAllButton);
+  map.addControl(new FullscreenToggle({ position: "topleft" }));
+  map.on("moveend", updateAllButton);
+  map.on("zoomend", ()=>{ updateAllButton(); updateOutdoorsDensity(); });
+  map.on("click", clearMapSelection);
   setTiles();
 }
 
@@ -2719,13 +2939,18 @@ function drawStops(recenter){
   const numberOf = stops.map(s => (ordered && !s.off) ? ++seq : null);
 
   stops.forEach((s, i)=>{
+    const isSelected = i === mapSelected;
     const m = L.marker([s.lat, s.lon], {
-      icon: lemonIcon(multi ? numberOf[i] : null, i === active, s.icon || 0, !!s.off),
+      icon: lemonIcon(multi ? numberOf[i] : null, isSelected, s.icon || 0, !!s.off),
       draggable: dragging && canChangeTrip(),
       keyboard: false,
-      zIndexOffset: i === active ? 1000 : 0
+      zIndexOffset: isSelected ? 1000 : 0
     }).addTo(map);
-    m.on("click", ()=>{ if(i !== active) setActive(i); });
+    m.on("click", ()=>{
+      mapSelected = i;
+      if(i !== active) setActive(i);
+      else{ drawStops(false); updateMapSelectionUI(); renderFullscreenRoute(); }
+    });
     m.on("dragend", ()=>{
       if(!canChangeTrip()){ drawStops(false); return; }
       const ll = m.getLatLng();
@@ -2760,6 +2985,7 @@ function drawStops(recenter){
     if(multi) map.fitBounds(L.latLngBounds(stops.map(s => [s.lat, s.lon])).pad(0.22));
     else map.setView([pin.lat, pin.lon], pin.acc > 200 ? 15 : 17);
   }
+  updateMapSelectionUI();
 }
 
 /* move to another stop without redrawing the world */
@@ -2770,6 +2996,7 @@ function focusActiveStop(){
 function setActive(i){
   active = Math.max(0, Math.min(i, stops.length - 1));
   pin = stops[active];
+  mapSelected = active;
   refreshPin({ recenter: false });
   /* stepping through stops takes you in close; the overview button toggles back out */
   focusActiveStop();
@@ -2808,15 +3035,90 @@ function showWholeTrip(){
 }
 
 let unlocked = false;
-$("#lockBtn").addEventListener("click", ()=>{
-  unlocked = !unlocked;
+function setMapUnlocked(value){
+  unlocked = !!value;
   const on = unlocked ? "enable" : "disable";
   ["dragging","scrollWheelZoom","touchZoom","doubleClickZoom","boxZoom","keyboard"]
     .forEach(h => map[h] && map[h][on]());
   document.getElementById("map").classList.toggle("locked", !unlocked);
   $("#lockBtn").textContent = unlocked ? "lock map" : "unlock map";
   $("#lockBtn").setAttribute("aria-pressed", unlocked);
+}
+$("#lockBtn").addEventListener("click", ()=> setMapUnlocked(!unlocked));
+
+function selectedMapStop(){
+  return mapSelected >= 0 && mapSelected < stops.length ? stops[mapSelected] : null;
+}
+function updateMapSelectionUI(){
+  const chosen = selectedMapStop();
+  const note = chosen && String(chosen.note || "").trim();
+  const banner = $("#mapSelection");
+  if(banner){
+    banner.textContent = note || "";
+    banner.classList.toggle("on", !!note && !mapFullscreen);
+  }
+  markers.forEach(m => m.unbindTooltip?.());
+  if(mapFullscreen && chosen && note && markers[mapSelected]){
+    markers[mapSelected].bindTooltip(note, {
+      permanent:true, direction:"top", offset:[0,-51], className:"map-note-tooltip", opacity:1
+    }).openTooltip();
+  }
+  renderFullscreenRoute();
+}
+function clearMapSelection(){
+  if(mapSelected < 0) return;
+  mapSelected = -1;
+  drawStops(false);
+}
+function setFsRouteOpen(open){
+  fsRouteOpen = !!open;
+  $("#fsRoutePanel")?.classList.toggle("open", fsRouteOpen);
+  $("#fsRouteBtn")?.setAttribute("aria-expanded", String(fsRouteOpen));
+  if(fsRouteOpen){
+    renderFullscreenRoute();
+    setTimeout(()=> $("#fsSearchBox")?.focus({ preventScroll:true }), 120);
+  }else{
+    clearFullscreenSearch(false);
+  }
+}
+function setMapFullscreen(on, fromNative = false){
+  if(!map) return;
+  const wrap = $("#mapWrap");
+  mapFullscreen = !!on;
+  wrap.classList.toggle("is-fullscreen", mapFullscreen);
+  document.body.classList.toggle("mapfullscreen", mapFullscreen);
+  if(fullscreenBtn){
+    fullscreenBtn.innerHTML = mapFullscreen ? RESTORE_ICON : FULLSCREEN_ICON;
+    fullscreenBtn.title = mapFullscreen ? "Exit fullscreen map" : "Fullscreen map";
+    fullscreenBtn.setAttribute("aria-label", fullscreenBtn.title);
+    fullscreenBtn.setAttribute("aria-pressed", String(mapFullscreen));
+  }
+  if(mapFullscreen){
+    fullscreenWasUnlocked = unlocked;
+    setMapUnlocked(true);
+    if(mapSelected < 0) mapSelected = active;
+    if(!fromNative && !document.fullscreenElement && wrap.requestFullscreen){
+      wrap.requestFullscreen({ navigationUI:"hide" }).catch(()=>{});
+    }
+  }else{
+    setFsRouteOpen(false);
+    removeFsCandidate();
+    setMapUnlocked(fullscreenWasUnlocked);
+    if(!fromNative && document.fullscreenElement) document.exitFullscreen?.().catch(()=>{});
+  }
+  setTimeout(()=>{ map.invalidateSize(); updateMapSelectionUI(); }, 70);
+  setTimeout(()=> map.invalidateSize(), 330);
+}
+document.addEventListener("fullscreenchange", ()=>{
+  if(mapFullscreen && !document.fullscreenElement) setMapFullscreen(false, true);
 });
+window.addEventListener("keydown", e=>{
+  if(e.key !== "Escape") return;
+  if(fsRouteOpen){ setFsRouteOpen(false); e.preventDefault(); }
+  else if(mapFullscreen && !document.fullscreenElement) setMapFullscreen(false, true);
+});
+$("#fsRouteBtn")?.addEventListener("click", ()=> setFsRouteOpen(!fsRouteOpen));
+
 $("#dragBtn").addEventListener("click", ()=>{
   if(blockSharedChange()) return;
   dragging = !dragging;
@@ -2844,6 +3146,7 @@ function refreshPin(opts = {}){
     updateAllButton();
   }
   $("#tripBtn").classList.toggle("on", multi);
+  renderFullscreenRoute();
 
   $("#dropWhen").textContent = fmtWhen(pin.ts);
   $("#dropAgo").textContent = fmtAgo(pin.ts);
@@ -2924,6 +3227,7 @@ $("#noteInput").addEventListener("input", ()=>{
     const noteEl = $("#pinNote");
     noteEl.textContent = pin.note;
     noteEl.classList.toggle("hidden", !pin.note);
+    updateMapSelectionUI();
     renderQR();
     syncSharedDirty();
   }, 400);
@@ -3237,6 +3541,198 @@ $("#searchBox").addEventListener("keydown", e=>{
   }
 });
 
+/* ---------- fullscreen route drawer + add point ---------- */
+let fsSearchTimer = null, fsSearchAbort = null, fsHits = [], fsActiveHit = -1;
+
+function fsSetHint(text = "", kind = ""){
+  const el = $("#fsRouteHint");
+  if(!el) return;
+  el.textContent = text;
+  el.classList.toggle("bad", kind === "bad");
+}
+function removeFsCandidate(){
+  if(fsCandidateMarker){ fsCandidateMarker.remove(); fsCandidateMarker = null; }
+  fsCandidate = null;
+  if($("#fsAddPoint")) $("#fsAddPoint").disabled = true;
+}
+function clearFullscreenSearch(clearInput = true){
+  clearTimeout(fsSearchTimer);
+  if(fsSearchAbort){ fsSearchAbort.abort(); fsSearchAbort = null; }
+  fsHits = []; fsActiveHit = -1;
+  if($("#fsResults")) $("#fsResults").innerHTML = "";
+  if(clearInput && $("#fsSearchBox")) $("#fsSearchBox").value = "";
+  removeFsCandidate();
+  fsSetHint(canChangeTrip() ? "" : "unlock editing to add a point");
+}
+function renderFullscreenResults(hits){
+  fsHits = hits; fsActiveHit = -1;
+  const box = $("#fsResults");
+  if(!box) return;
+  box.innerHTML = "";
+  hits.forEach((h, i)=>{
+    const li = document.createElement("li");
+    const b = document.createElement("button");
+    b.type = "button";
+    const name = document.createElement("span");
+    name.className = "fsresultname";
+    name.textContent = h.name;
+    const ctx = document.createElement("span");
+    ctx.className = "fsresultctx";
+    ctx.textContent = h.ctx || h.kind || "";
+    b.append(name, ctx);
+    b.addEventListener("click", ()=> chooseFullscreenHit(i));
+    li.appendChild(b); box.appendChild(li);
+  });
+}
+function chooseFullscreenHit(i){
+  const h = fsHits[i];
+  if(!h) return;
+  removeFsCandidate();
+  fsCandidate = {
+    lat:Number(h.lat), lon:Number(h.lon), ts:Date.now(), acc:0, note:"",
+    addr:[h.name, h.ctx].filter(Boolean).join(", ")
+  };
+  fsCandidateMarker = L.marker([fsCandidate.lat, fsCandidate.lon], {
+    icon:L.divIcon({
+      className:"fscandidate", iconSize:[38,48], iconAnchor:[19,46],
+      html:`<svg width="38" height="48" viewBox="0 0 46 58" aria-hidden="true">
+        <path d="M22 56S42 35.5 42 21.5C42 10.2 33 1.5 22 1.5S2 10.2 2 21.5C2 35.5 22 56 22 56Z" fill="#FFFDF4" stroke="#23241B" stroke-width="3"/>
+        <circle cx="22" cy="21.5" r="12.5" fill="#F4CE3E"/><path d="M22 15v13M15.5 21.5h13" stroke="#23241B" stroke-width="2.4" stroke-linecap="round"/>
+      </svg>`
+    }), keyboard:false, interactive:false, zIndexOffset:1200
+  }).addTo(map);
+  $("#fsAddPoint").disabled = false;
+  $("#fsSearchBox").value = h.name;
+  $("#fsResults").innerHTML = "";
+  fsSetHint("ready to add — adjust it on the map afterward");
+  map.flyTo([fsCandidate.lat, fsCandidate.lon], Math.max(map.getZoom(), 15), { duration:.5 });
+}
+async function runFullscreenSearch(q){
+  const ac = new AbortController();
+  fsSearchAbort = ac;
+  const near = biasPoint();
+  try{
+    const pasted = parsePasted(q);
+    if(pasted){
+      renderFullscreenResults([{ lat:pasted.lat, lon:pasted.lon,
+        name:`${pasted.lat.toFixed(5)}, ${pasted.lon.toFixed(5)}`,
+        ctx:"coordinates", kind:"coordinates" }]);
+      return;
+    }
+    const tasks = [
+      fromPhoton(q, near, ac.signal, true),
+      fromPhoton(q, near, ac.signal, false),
+      fromNominatim(q, near, ac.signal, false)
+    ];
+    if((biasCC === "us" || STATE_TOKEN.test(q)) && leadingNumber(q)) tasks.push(fromCensus(q));
+    const settled = await Promise.allSettled(tasks);
+    if(fsSearchAbort !== ac || ac.signal.aborted) return;
+    const pool = settled.flatMap(r => r.status === "fulfilled" ? (r.value || []) : []);
+    const ranked = rankHits(dedupe(pool), q, near).slice(0, 6);
+    renderFullscreenResults(ranked);
+    fsSetHint(ranked.length ? "pick a result, then add it" : "nothing found — try adding the city", ranked.length ? "" : "bad");
+  }finally{
+    if(fsSearchAbort === ac) fsSearchAbort = null;
+  }
+}
+function fullscreenLiveSearch(){
+  if(!canChangeTrip()){
+    fsSetHint("unlock editing to add a point", "bad");
+    return;
+  }
+  const q = $("#fsSearchBox").value.trim();
+  clearTimeout(fsSearchTimer);
+  if(fsSearchAbort){ fsSearchAbort.abort(); fsSearchAbort = null; }
+  removeFsCandidate();
+  $("#fsResults").innerHTML = "";
+  if(q.length < 2){ fsSetHint(""); return; }
+  fsSetHint("searching…");
+  fsSearchTimer = setTimeout(()=> runFullscreenSearch(q), 170);
+}
+function fsHighlight(next){
+  const btns = [...$("#fsResults").querySelectorAll("button")];
+  if(!btns.length) return;
+  if(fsActiveHit >= 0) btns[fsActiveHit]?.classList.remove("on");
+  fsActiveHit = (next + btns.length) % btns.length;
+  btns[fsActiveHit].classList.add("on");
+  btns[fsActiveHit].scrollIntoView({ block:"nearest" });
+}
+function addFullscreenCandidate(){
+  if(blockSharedChange() || !fsCandidate) return;
+  if(stops.length >= 32){ fsSetHint("32 stops is the limit", "bad"); return; }
+  const p = fsCandidate;
+  removeFsCandidate();
+  stops.push(p);
+  active = stops.length - 1;
+  pin = stops[active];
+  mapSelected = active;
+  $("#fsSearchBox").value = "";
+  $("#fsResults").innerHTML = "";
+  fsSetHint("point added — use adjust pin to place it exactly");
+  refreshPin({ recenter:false });
+  focusActiveStop();
+  renderQR();
+  syncSharedDirty();
+}
+function renderFullscreenRoute(){
+  const count = $("#fsRouteCount");
+  if(count) count.textContent = stops.length || 0;
+  const mode = $("#fsRouteMode");
+  if(mode) mode.textContent = ordered ? "in order" : "loose list";
+  const list = $("#fsRouteList");
+  if(!list) return;
+  list.innerHTML = "";
+  stops.forEach((s, i)=>{
+    const li = document.createElement("li");
+    li.className = "fsrouteitem" + (i === mapSelected ? " current" : "");
+    const b = document.createElement("button");
+    b.type = "button";
+    const n = document.createElement("span");
+    n.className = "fsrouteindex";
+    n.textContent = i + 1;
+    const text = document.createElement("span");
+    const title = document.createElement("span");
+    title.className = "fsroutetitle";
+    title.textContent = s.note || s.addr || `Stop ${i + 1}`;
+    const sub = document.createElement("span");
+    sub.className = "fsroutesub";
+    sub.textContent = s.addr || `${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}`;
+    text.append(title, sub); b.append(n, text); li.appendChild(b); list.appendChild(li);
+    b.addEventListener("click", ()=>{
+      mapSelected = i;
+      setActive(i);
+      renderFullscreenRoute();
+      if(window.innerWidth < 620) setFsRouteOpen(false);
+    });
+    if(!s.addr){
+      reverseGeocode(s).then(a=>{
+        if(!a) return;
+        s.addr = a;
+        if(sub.isConnected) sub.textContent = a;
+        if(title.isConnected && !s.note) title.textContent = a;
+      }).catch(()=>{});
+    }
+  });
+  const editable = canChangeTrip();
+  if($("#fsSearchBox")) $("#fsSearchBox").disabled = !editable;
+  if(!editable){
+    $("#fsAddPoint").disabled = true;
+    fsSetHint("unlock editing to add a point");
+  }
+}
+$("#fsSearchBox")?.addEventListener("input", fullscreenLiveSearch);
+$("#fsSearchBox")?.addEventListener("keydown", e=>{
+  if(e.key === "ArrowDown"){ e.preventDefault(); fsHighlight(fsActiveHit + 1); }
+  else if(e.key === "ArrowUp"){ e.preventDefault(); fsHighlight(fsActiveHit - 1); }
+  else if(e.key === "Escape"){ $("#fsResults").innerHTML = ""; removeFsCandidate(); }
+  else if(e.key === "Enter"){
+    e.preventDefault();
+    if(fsHits.length) chooseFullscreenHit(fsActiveHit >= 0 ? fsActiveHit : 0);
+    else fullscreenLiveSearch();
+  }
+});
+$("#fsAddPoint")?.addEventListener("click", addFullscreenCandidate);
+
 /* ---------- intro: the lemon opens ---------- */
 (function intro(){
   const el = $("#intro");
@@ -3360,6 +3856,8 @@ function renderTrip(){
       setTimeout(()=>{
         stops.splice(i, 1);
         if(active >= stops.length) active = stops.length - 1;
+        if(mapSelected === i) mapSelected = active;
+        else if(mapSelected > i) mapSelected--;
         pin = stops[active];
         refreshPin({ recenter: true });
         renderTrip();
@@ -3492,6 +3990,9 @@ function startDragOn(li, handle, body){
           if(active === from) active = to;
           else if(from < active && to >= active) active--;
           else if(from > active && to <= active) active++;
+          if(mapSelected === from) mapSelected = to;
+          else if(from < mapSelected && to >= mapSelected) mapSelected--;
+          else if(from > mapSelected && to <= mapSelected) mapSelected++;
           pin = stops[active];
           refreshPin({ recenter: false });
         }
@@ -3702,6 +4203,7 @@ function addStop(p){
   stops.push(p);
   active = stops.length - 1;
   pin = stops[active];
+  mapSelected = active;
   exitPickMode();
   showPinPage();
   refreshPin({ recenter: true });
