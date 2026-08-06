@@ -422,6 +422,43 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 .shortgo{margin-top:20px;width:100%;justify-content:center}
 .shortgo[disabled]{opacity:.45;pointer-events:none}
 .shortwarn{margin-top:12px;color:var(--muted);font-size:.75rem;line-height:1.5}
+.editcheck{
+  display:flex;align-items:flex-start;gap:10px;margin-top:18px;padding:13px 14px;
+  border:1px solid var(--hairline);border-radius:14px;cursor:pointer;
+}
+.editcheck input{margin-top:3px;accent-color:var(--ink);width:17px;height:17px;flex:none}
+.editcheck b{display:block;font-size:.88rem;margin-bottom:2px}
+.editcheck small{display:block;color:var(--muted);font-size:.74rem;line-height:1.45}
+.editfields{margin-top:12px;padding:14px;border-radius:14px;background:var(--flesh);border:1px solid var(--hairline)}
+.passinput{
+  width:100%;background:var(--pith);border:1px solid var(--hairline);border-radius:10px;
+  color:var(--ink);font:600 .92rem var(--body);padding:10px 11px;margin-top:6px;
+}
+.passinput:focus{outline:2px solid var(--zest);outline-offset:1px}
+.passhint{color:var(--muted);font-size:.72rem;line-height:1.45;margin-top:8px}
+.sharedpanel{
+  max-width:720px;margin:-22px auto 30px;padding:17px 18px;border:1px solid var(--hairline);
+  border-radius:18px;background:var(--flesh);box-shadow:0 10px 30px rgba(35,36,27,.08);
+}
+:root[data-theme="dark"] .sharedpanel{box-shadow:0 10px 30px rgba(0,0,0,.28)}
+.sharedhead{display:flex;align-items:flex-start;justify-content:space-between;gap:15px}
+.sharedk{font-size:.64rem;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:600}
+.sharedtitle{font-family:var(--display);font-weight:640;font-size:1.06rem;margin-top:2px;overflow-wrap:anywhere}
+.sharedrev{font-size:.68rem;color:var(--muted);white-space:nowrap;margin-top:2px}
+.sharedstatus{font-size:.82rem;line-height:1.5;color:var(--muted);margin-top:8px}
+.sharedactions{display:flex;flex-wrap:wrap;gap:9px;margin-top:13px}
+.sharedactions .btn{font-size:.82rem;padding:9px 15px}
+.sharedauth{display:flex;gap:8px;align-items:center;margin-top:12px}
+.sharedauth .passinput{margin:0;flex:1;min-width:0}
+.sharedauth .btn{flex:none;font-size:.82rem;padding:10px 15px}
+.sharedmsg{font-size:.76rem;line-height:1.4;color:var(--muted);margin-top:9px;min-height:1em}
+.sharedmsg.bad{color:#a8482a;font-weight:600}
+:root[data-theme="dark"] .sharedmsg.bad{color:#E58A66}
+.sharedmsg.good{color:var(--leaf);font-weight:600}
+body.sharedlocked #noteInput,body.sharedlocked #dragBtn,body.sharedlocked #addStopBtn,
+body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-allowed}
+.tripitem.triplocked .triphandle,.tripitem.triplocked .tripskip,.tripitem.triplocked .tripdel{opacity:.3}
+.tripitem.triplocked .tripbody{cursor:pointer}
 .shorturl{
   font-family:var(--display);font-weight:640;font-size:1.15rem;
   border-bottom:2px solid var(--zest);padding-bottom:4px;
@@ -434,7 +471,7 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
   position:relative;display:flex;align-items:flex-start;gap:12px;
   background:var(--pith);border:1px solid var(--hairline);border-radius:14px;
   padding:12px 12px 12px 10px;margin-bottom:8px;
-  touch-action:none;user-select:none;-webkit-user-select:none;
+  touch-action:pan-y;user-select:none;-webkit-user-select:none;
   transition:transform .26s cubic-bezier(.2,.9,.3,1), box-shadow .18s ease, border-color .18s ease;
   will-change:transform;
 }
@@ -468,13 +505,110 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 }
 .tripdel:hover{color:var(--danger,#c0522d)}
 .triphandle{
-  flex:none;color:var(--muted);padding:4px 2px;cursor:grab;align-self:center;
+  flex:none;color:var(--muted);padding:8px 5px;cursor:grab;align-self:center;
+  touch-action:none;
 }
 .triphandle svg{display:block}
 .addstop{margin-top:6px;width:100%;justify-content:center}
 .tripfoot{
   margin-top:16px;color:var(--muted);font-size:.72rem;letter-spacing:.06em;
   font-variant-numeric:tabular-nums;
+}
+
+
+/* ---------- mobile hold-to-drag lemon ---------- */
+.holdlemon{
+  position:fixed;z-index:calc(var(--z-modal) + 8);width:48px;height:48px;
+  margin:-24px 0 0 -24px;pointer-events:none;opacity:1;
+  filter:drop-shadow(0 7px 12px rgba(35,36,27,.22));
+}
+.holdlemon svg{width:100%;height:100%;overflow:visible}
+.holdlemon .hold-left{transform:translateX(-9px);transform-origin:24px 24px}
+.holdlemon .hold-right{transform:translateX(9px);transform-origin:24px 24px}
+.holdlemon.arming .hold-left{animation:holdLeft .48s cubic-bezier(.2,.9,.3,1) forwards}
+.holdlemon.arming .hold-right{animation:holdRight .48s cubic-bezier(.2,.9,.3,1) forwards}
+.holdlemon.ready{animation:holdReady .28s cubic-bezier(.2,1.4,.3,1) forwards}
+.holdlemon.cancelled{animation:holdCancel .16s ease forwards}
+@keyframes holdLeft{to{transform:translateX(0)}}
+@keyframes holdRight{to{transform:translateX(0)}}
+@keyframes holdReady{0%{transform:scale(1)}55%{transform:scale(1.22)}100%{transform:scale(.8);opacity:0}}
+@keyframes holdCancel{to{transform:scale(.72);opacity:0}}
+
+/* ---------- Kobe edit-unlock celebration ---------- */
+.unlockcelebration{
+  position:fixed;inset:0;z-index:calc(var(--z-modal) + 20);display:grid;place-items:center;
+  padding:20px;background:rgba(21,21,15,.64);backdrop-filter:blur(5px);
+  opacity:0;visibility:hidden;pointer-events:none;overflow:hidden;
+}
+.unlockcelebration.show{visibility:visible;animation:unlockBackdrop 3.25s ease both}
+.kobestage{
+  position:relative;width:min(370px,94vw);height:330px;border-radius:28px;
+  background:linear-gradient(180deg,rgba(255,253,244,.98),rgba(244,206,62,.95));
+  border:2px solid #23241B;box-shadow:0 28px 80px rgba(0,0,0,.36);overflow:hidden;
+}
+:root[data-theme="dark"] .kobestage{background:linear-gradient(180deg,#25261d,#7f6a18)}
+.kobebackboard{position:absolute;right:24px;top:54px;width:96px;height:68px;border:5px solid #23241B;border-radius:5px;background:rgba(255,253,244,.72)}
+.koberim{position:absolute;right:33px;top:113px;width:74px;height:11px;border:5px solid #23241B;border-radius:50%;background:#F4CE3E;z-index:4}
+.kobenet{position:absolute;right:39px;top:124px;width:62px;height:58px;z-index:3}
+.kobenet:before,.kobenet:after{content:"";position:absolute;inset:0;border-left:2px solid rgba(35,36,27,.62);border-right:2px solid rgba(35,36,27,.62);transform:skewX(13deg)}
+.kobenet:after{transform:skewX(-13deg)}
+.kobenet i{position:absolute;left:3px;right:3px;height:1px;background:rgba(35,36,27,.55)}
+.kobenet i:nth-child(1){top:13px}.kobenet i:nth-child(2){top:29px}.kobenet i:nth-child(3){top:45px}
+.kobelemon{
+  position:absolute;left:26px;top:220px;width:46px;height:46px;border-radius:50%;
+  background:var(--zest);border:4px solid #23241B;z-index:5;
+  box-shadow:inset 0 0 0 8px rgba(255,253,244,.42);
+}
+.kobelemon:before,.kobelemon:after{content:"";position:absolute;left:20px;top:5px;width:3px;height:29px;background:rgba(35,36,27,.38);transform-origin:50% 18px}
+.kobelemon:after{transform:rotate(90deg)}
+.unlockcelebration.show .kobelemon{animation:kobeShot 1.25s cubic-bezier(.18,.72,.25,1) .12s both}
+.kobenet.swish{animation:netSwish .46s cubic-bezier(.2,1.4,.3,1) 1.14s both}
+.kobetext{position:absolute;left:18px;right:18px;bottom:22px;text-align:center;color:#23241B;z-index:8}
+:root[data-theme="dark"] .kobetext{color:#FFFDF4}
+.kobeword{font:640 clamp(2.55rem,13vw,4.5rem)/1 var(--display);letter-spacing:-.04em;opacity:0;transform:scale(.65) rotate(-5deg)}
+.unlockcelebration.show .kobeword{animation:kobeWord .48s cubic-bezier(.2,1.5,.3,1) 1.03s forwards}
+.kobeline{font:600 .95rem/1.4 var(--body);margin-top:8px;opacity:0;transform:translateY(8px)}
+.unlockcelebration.show .kobeline{animation:kobeLine .38s ease 1.55s forwards}
+.lemonfetti{position:absolute;inset:0;z-index:7;pointer-events:none}
+.lemonfetti span{
+  position:absolute;left:50%;top:44%;width:10px;height:15px;border-radius:60% 40% 60% 40%;
+  background:var(--zest);border:1.5px solid #23241B;opacity:0;
+  --x:0px;--y:0px;--r:0deg;--d:0s;
+}
+.unlockcelebration.show .lemonfetti span{animation:lemonfettiPop 1.25s cubic-bezier(.15,.7,.25,1) calc(1.05s + var(--d)) forwards}
+@keyframes unlockBackdrop{0%{opacity:0}8%,86%{opacity:1}100%{opacity:0}}
+@keyframes kobeShot{
+  0%{transform:translate(0,0) rotate(0) scale(1)}
+  46%{transform:translate(112px,-153px) rotate(330deg) scale(1.03)}
+  78%{transform:translate(210px,-167px) rotate(610deg) scale(.92)}
+  100%{transform:translate(260px,-98px) rotate(820deg) scale(.68)}
+}
+@keyframes netSwish{0%{transform:scaleY(1)}45%{transform:scaleY(1.28) rotate(3deg)}100%{transform:scaleY(1)}}
+@keyframes kobeWord{to{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes kobeLine{to{opacity:1;transform:translateY(0)}}
+@keyframes lemonfettiPop{
+  0%{opacity:0;transform:translate(0,0) rotate(0) scale(.45)}
+  12%{opacity:1}
+  78%{opacity:1}
+  100%{opacity:0;transform:translate(var(--x),var(--y)) rotate(var(--r)) scale(1)}
+}
+@media(max-width:520px){
+  .kobestage{height:310px}
+  .kobebackboard{right:15px}.koberim{right:24px}.kobenet{right:30px}
+  @keyframes kobeShot{
+    0%{transform:translate(0,0) rotate(0) scale(1)}
+    46%{transform:translate(102px,-145px) rotate(330deg) scale(1.03)}
+    78%{transform:translate(190px,-158px) rotate(610deg) scale(.92)}
+    100%{transform:translate(230px,-92px) rotate(820deg) scale(.68)}
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .holdlemon{display:none}
+  .unlockcelebration.show{animation:unlockBackdrop 2.3s ease both}
+  .unlockcelebration.show .kobelemon{animation:none;left:auto;right:52px;top:92px;transform:scale(.68)}
+  .kobenet.swish{animation:none}
+  .unlockcelebration.show .kobeword,.unlockcelebration.show .kobeline{animation:none;opacity:1;transform:none}
+  .lemonfetti{display:none}
 }
 
 /* ---------- keep it on your phone ---------- */
@@ -745,6 +879,28 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
         <p class="scrollhint">scroll down for more info</p>
       </div>
 
+      <div class="sharedpanel hidden" id="sharedPanel" aria-live="polite">
+        <div class="sharedhead">
+          <div>
+            <div class="sharedk">Shared link</div>
+            <div class="sharedtitle" id="sharedTitle">Protected trip</div>
+          </div>
+          <div class="sharedrev" id="sharedRev"></div>
+        </div>
+        <p class="sharedstatus" id="sharedStatus">Checking this link's edit settings…</p>
+        <div class="sharedactions">
+          <button class="btn btn-ghost hidden" id="sharedAction">Unlock editing</button>
+          <button class="btn hidden" id="sharedSave">Update shared trip</button>
+          <button class="btn btn-ghost hidden" id="sharedReload">Reload latest</button>
+        </div>
+        <div class="sharedauth hidden" id="sharedAuth">
+          <input class="passinput" id="sharedPassword" type="password" maxlength="128"
+            autocomplete="current-password" placeholder="Edit password" aria-label="Edit password">
+          <button class="btn" id="sharedUnlockGo">Unlock</button>
+        </div>
+        <div class="sharedmsg" id="sharedMsg"></div>
+      </div>
+
       <div class="mapwrap">
         <div id="map"></div>
         <div class="mapui">
@@ -837,7 +993,7 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
   </main>
 
   <footer class="site">
-    <b>How it works:</b> the coordinates, time, and note live inside the link itself — nothing is stored anywhere.
+    <b>How it works:</b> full links keep the trip inside the URL. Optional short links store only the trip payload and lock settings in Cloudflare D1.
     Search by Photon, addresses by Nominatim, both on OpenStreetMap data · basemap © OpenStreetMap &amp; CARTO.
     Made with 🍋 for people who are lost.
   </footer>
@@ -964,8 +1120,24 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
           <button class="expbtn" data-exp="7">a week</button>
           <button class="expbtn" data-exp="30">a month</button>
         </div>
-        <button class="btn shortgo" id="shortGo">Make the short link</button>
-        <p class="shortwarn">Once it's made, the name and the expiry are set in stone. The trip inside can't be edited either — send a new link if plans move.</p>
+        <label class="editcheck" for="editToggle">
+          <input id="editToggle" type="checkbox">
+          <span>
+            <b>Let this shared trip be updated later</b>
+            <small>The password changes the trip for everyone using this same short link. It can never change the link name or expiry.</small>
+          </span>
+        </label>
+        <div class="editfields hidden" id="editFields">
+          <label class="shortlabel" for="editPassword">Edit password</label>
+          <input class="passinput" id="editPassword" type="password" maxlength="128"
+            autocomplete="new-password" placeholder="At least 8 characters">
+          <label class="shortlabel" for="editPasswordAgain">Type it again</label>
+          <input class="passinput" id="editPasswordAgain" type="password" maxlength="128"
+            autocomplete="new-password" placeholder="Confirm the edit password">
+          <p class="passhint">The password is never stored or recoverable. Losing it leaves the trip viewable, but permanently uneditable.</p>
+        </div>
+        <button class="btn shortgo" id="shortGo">Make and lock the short link</button>
+        <p class="shortwarn">Once created, the name, expiry, and password choice are set in stone. Only the trip itself can be replaced, and only when an edit password was created here.</p>
       </div>
       <div class="shortdone hidden" id="shortDone">
         <div class="shorturl" id="shortUrl"></div>
@@ -979,13 +1151,30 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
   </div>
 </div>
 
+
+<!-- ============ EDIT UNLOCK CELEBRATION ============ -->
+<div class="unlockcelebration" id="unlockCelebration" role="status" aria-live="assertive" aria-label="Kobe! Editing unlocked for 24 minutes.">
+  <div class="kobestage" aria-hidden="true">
+    <div class="kobebackboard"></div>
+    <div class="koberim"></div>
+    <div class="kobenet" id="kobeNet"><i></i><i></i><i></i></div>
+    <div class="kobelemon"></div>
+    <div class="lemonfetti" id="lemonfetti"></div>
+    <div class="kobetext">
+      <div class="kobeword">Kobe!</div>
+      <div class="kobeline">Editing unlocked for 24 minutes.</div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 "use strict";
 /* =====================================================================
    LEMONCOORDS. — send someone a pin.
-   Zero backend: the pin lives inside the URL.
+   Full links need no backend: the pin lives inside the URL.
+   Optional short links use Cloudflare D1 and may be password-updatable.
    #L<base62>            lat/lon/time/accuracy in one packed integer
    #L<base62>.<note>     optional URI-encoded note rides along
    ===================================================================== */
@@ -1801,6 +1990,7 @@ let dragging = false, noteTimer = null, addrText = "";
 let isRecipient = false;   /* arrived via someone else's link */
 let pickMode = false;      /* picking a stop to add rather than opening a pin */
 let ordered = true;        /* a route in order, or just a set of places */
+let sharedTrip = null;      /* short-link edit state; null for ordinary full links */
 
 function setStops(list, idx){
   stops = list;
@@ -1859,13 +2049,22 @@ function showPinPage(){
 }
 $("#brandlink").addEventListener("click", e=>{
   e.preventDefault();
+  clearSharedTripContext();
   history.pushState(null, "", location.pathname);
   showFront();
 });
 window.addEventListener("popstate", ()=>{
   const got = readHash();
-  if(got){ ordered = got.ordered; openPin(got.stops, { push:false }); }
-  else showFront();
+  if(got){
+    clearSharedTripContext();
+    sharedTrip = sharedStateFromLocation();
+    ordered = got.ordered;
+    openPin(got.stops, { push:false });
+    if(sharedTrip) initSharedTrip();
+  }else{
+    clearSharedTripContext();
+    showFront();
+  }
 });
 
 /* ---------- map ---------- */
@@ -2075,12 +2274,13 @@ function drawStops(recenter){
   stops.forEach((s, i)=>{
     const m = L.marker([s.lat, s.lon], {
       icon: lemonIcon(multi ? numberOf[i] : null, i === active, s.icon || 0, !!s.off),
-      draggable: dragging,
+      draggable: dragging && canChangeTrip(),
       keyboard: false,
       zIndexOffset: i === active ? 1000 : 0
     }).addTo(map);
     m.on("click", ()=>{ if(i !== active) setActive(i); });
     m.on("dragend", ()=>{
+      if(!canChangeTrip()){ drawStops(false); return; }
       const ll = m.getLatLng();
       s.lat = ll.lat; s.lon = ll.lng;
       s.acc = 0;                       /* hand-placed = exact */
@@ -2140,6 +2340,7 @@ $("#lockBtn").addEventListener("click", ()=>{
   $("#lockBtn").setAttribute("aria-pressed", unlocked);
 });
 $("#dragBtn").addEventListener("click", ()=>{
+  if(blockSharedChange()) return;
   dragging = !dragging;
   markers.forEach(m => dragging ? m.dragging.enable() : m.dragging.disable());
   $("#dragBtn").textContent = dragging ? "done" : "adjust pin";
@@ -2201,6 +2402,7 @@ function refreshPin(opts = {}){
   }
 
   renderQR();
+  syncSharedDirty();
 }
 
 function renderQR(){
@@ -2227,6 +2429,10 @@ function openPin(p, opts = {}){
 
 /* note → url, debounced */
 $("#noteInput").addEventListener("input", ()=>{
+  if(blockSharedChange()){
+    $("#noteInput").value = pin.note || "";
+    return;
+  }
   clearTimeout(noteTimer);
   noteTimer = setTimeout(()=>{
     pin.note = $("#noteInput").value.trim();
@@ -2234,6 +2440,7 @@ $("#noteInput").addEventListener("input", ()=>{
     noteEl.textContent = pin.note;
     noteEl.classList.toggle("hidden", !pin.note);
     renderQR();
+    syncSharedDirty();
   }, 400);
 });
 
@@ -2545,13 +2752,15 @@ function stopLabel(s){
 
 function renderTrip(){
   const list = $("#tripList");
+  const tripLocked = !canChangeTrip();
   list.innerHTML = "";
   let seq = 0;
   const seqOf = stops.map(s => (!s.off) ? ++seq : null);
   stops.forEach((s, i)=>{
     const li = document.createElement("li");
     li.className = "tripitem" + (i === active ? " current" : "")
-      + (ordered ? "" : " loose") + (s.off ? " offroute" : "");
+      + (ordered ? "" : " loose") + (s.off ? " offroute" : "")
+      + (tripLocked ? " triplocked" : "");
     li.dataset.i = i;
 
     const num = document.createElement("button");
@@ -2561,8 +2770,10 @@ function renderTrip(){
     if(s.icon) num.innerHTML = iconSvg(s.icon, 15);
     else num.textContent = (ordered && !s.off) ? seqOf[i] : "";
     num.addEventListener("pointerdown", e => e.stopPropagation());
+    num.disabled = tripLocked;
     num.addEventListener("click", e =>{
       e.stopPropagation();
+      if(blockSharedChange()) return;
       openIconPicker(i, num);
     });
 
@@ -2605,8 +2816,10 @@ function renderTrip(){
       ${s.off ? '' : '<path d="M12 5v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'}
     </svg>`;
     skip.addEventListener("pointerdown", e => e.stopPropagation());
+    skip.disabled = tripLocked;
     skip.addEventListener("click", e =>{
       e.stopPropagation();
+      if(blockSharedChange()) return;
       s.off = !s.off;
       refreshPin({ recenter: false });
       renderTrip();
@@ -2617,8 +2830,10 @@ function renderTrip(){
     del.className = "tripdel";
     del.setAttribute("aria-label", "Remove stop");
     del.textContent = "\u00d7";
+    del.disabled = tripLocked;
     del.addEventListener("click", e =>{
       e.stopPropagation();
+      if(blockSharedChange()) return;
       if(stops.length <= 1){ flash("a trip needs at least one stop"); return; }
       li.classList.add("gone");
       setTimeout(()=>{
@@ -2632,7 +2847,7 @@ function renderTrip(){
 
     li.append(num, body, skip, handle, del);
     if(!s.addr) fillAddr(s, where);
-    startDragOn(li, handle, body);
+    if(!tripLocked) startDragOn(li, handle, body);
     list.appendChild(li);
   });
 
@@ -2640,17 +2855,24 @@ function renderTrip(){
   $("#tripLede").textContent = n === 1
     ? "One stop. Add another and they'll all ride in the same link."
     : ordered
-      ? `${n} stops, in order. Drag to rearrange the route.`
-      : `${n} places, no particular order. Drag to rearrange anyway.`;
+      ? coarsePointer
+        ? `${n} stops, in order. Hold a stop until the lemon closes, or grab the grip to move it instantly.`
+        : `${n} stops, in order. Drag to rearrange the route.`
+      : coarsePointer
+        ? `${n} places, no particular order. Hold briefly to move, or use the grip instantly.`
+        : `${n} places, no particular order. Drag to rearrange anyway.`;
   $("#modeSwitch").classList.toggle("hidden", n < 2);
   $("#modeRoute").classList.toggle("on", ordered);
   $("#modeRoute").setAttribute("aria-pressed", ordered);
+  $("#modeRoute").disabled = tripLocked;
   $("#modeList").classList.toggle("on", !ordered);
   $("#modeList").setAttribute("aria-pressed", !ordered);
+  $("#modeList").disabled = tripLocked;
   $("#tripSize").textContent = `whole trip = ${pinUrl().length} characters of link`;
 }
 
 function setMode(isOrdered){
+  if(blockSharedChange()) return;
   if(ordered === isOrdered) return;
   ordered = isOrdered;
   refreshPin({ recenter: false });
@@ -2666,18 +2888,40 @@ function fillAddr(s, el){
 }
 
 let justDragged = false;
+const MOBILE_DRAG_HOLD_MS = 480;
+const coarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches || navigator.maxTouchPoints > 0;
+
+function makeHoldLemon(x, y){
+  const el = document.createElement("div");
+  el.className = "holdlemon arming";
+  el.style.left = x + "px";
+  el.style.top = y + "px";
+  el.innerHTML = `<svg viewBox="0 0 48 48" aria-hidden="true">
+    <path class="hold-left" d="M24 5C13 5 5 13.5 5 24s8 19 19 19V5Z" fill="var(--zest)" stroke="var(--ink)" stroke-width="3"/>
+    <path class="hold-right" d="M24 5c11 0 19 8.5 19 19s-8 19-19 19V5Z" fill="var(--zest)" stroke="var(--ink)" stroke-width="3"/>
+    <path d="M24 10v28M10 24h28M14 14l20 20M34 14 14 34" stroke="rgba(35,36,27,.34)" stroke-width="2"/>
+  </svg>`;
+  document.body.appendChild(el);
+  return el;
+}
+
+function finishHoldLemon(el, ready){
+  if(!el) return;
+  el.classList.remove("arming");
+  el.classList.add(ready ? "ready" : "cancelled");
+  setTimeout(()=>el.remove(), ready ? 300 : 180);
+}
 
 function startDragOn(li, handle, body){
-  const begin = e =>{
-    if(e.button != null && e.button !== 0) return;
+  function activateDrag(startX, startY){
+    if(blockSharedChange()) return null;
     const list = $("#tripList");
     const rows = [...list.children];
     const from = rows.indexOf(li);
+    if(from < 0) return null;
     const rowH = li.offsetHeight + ROW_GAP;
-    let to = from, moved = false;
-    const startX = e.clientX, startY = e.clientY;
+    let to = from, moved = false, finished = false;
 
-    li.setPointerCapture(e.pointerId);
     li.classList.add("lifted");
 
     const layout = ()=>{
@@ -2690,34 +2934,40 @@ function startDragOn(li, handle, body){
       });
     };
 
-    const move = ev =>{
-      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+    const move = (clientX, clientY)=>{
+      if(finished) return;
+      const dx = clientX - startX, dy = clientY - startY;
       if(!moved && Math.abs(dx) + Math.abs(dy) > 4) moved = true;
-      /* free in both axes — it'll spring back, that's the fun of it */
       li.style.transform = `translate(${dx}px, ${dy}px) scale(1.035)`;
       const next = Math.max(0, Math.min(rows.length - 1, from + Math.round(dy / rowH)));
       if(next !== to){ to = next; layout(); }
     };
 
     const end = ()=>{
-      li.removeEventListener("pointermove", move);
-      li.removeEventListener("pointerup", end);
-      li.removeEventListener("pointercancel", end);
+      if(finished) return;
+      finished = true;
       li.classList.remove("lifted");
-      if(!moved){ li.style.transform = ""; return; }
+      if(!moved){
+        li.style.transform = "";
+        rows.forEach(r=>{ if(r !== li) r.style.transform = ""; });
+        justDragged = true;
+        setTimeout(()=>{ justDragged = false; }, 90);
+        return;
+      }
 
       justDragged = true;
-      setTimeout(()=>{ justDragged = false; }, 60);
-
+      setTimeout(()=>{ justDragged = false; }, 90);
       li.classList.add("settling");
       li.style.transform = `translate(0px, ${(to - from) * rowH}px)`;
 
+      let committed = false;
       const done = ()=>{
+        if(committed) return;
+        committed = true;
         li.removeEventListener("transitionend", done);
         if(to !== from){
           const [moving] = stops.splice(from, 1);
           stops.splice(to, 0, moving);
-          /* keep looking at the same place, wherever it ended up */
           if(active === from) active = to;
           else if(from < active && to >= active) active--;
           else if(from > active && to <= active) active++;
@@ -2727,16 +2977,112 @@ function startDragOn(li, handle, body){
         renderTrip();
       };
       li.addEventListener("transitionend", done, { once:true });
-      setTimeout(()=>{ if(li.isConnected) done(); }, 500);   /* belt and braces */
+      setTimeout(()=>{ if(li.isConnected) done(); }, 500);
     };
 
+    const cancel = ()=>{
+      if(finished) return;
+      finished = true;
+      li.classList.remove("lifted");
+      li.style.transform = "";
+      rows.forEach(r=>{ if(r !== li) r.style.transform = ""; });
+    };
+
+    return { move, end, cancel };
+  }
+
+  const beginImmediate = e=>{
+    if(blockSharedChange()) return;
+    if(e.button != null && e.button !== 0) return;
+    const drag = activateDrag(e.clientX, e.clientY);
+    if(!drag) return;
+    li.setPointerCapture?.(e.pointerId);
+    const move = ev=>drag.move(ev.clientX, ev.clientY);
+    const end = ()=>{ cleanup(); drag.end(); };
+    const cancel = ()=>{ cleanup(); drag.cancel(); };
+    const cleanup = ()=>{
+      li.removeEventListener("pointermove", move);
+      li.removeEventListener("pointerup", end);
+      li.removeEventListener("pointercancel", cancel);
+    };
     li.addEventListener("pointermove", move);
     li.addEventListener("pointerup", end);
-    li.addEventListener("pointercancel", end);
+    li.addEventListener("pointercancel", cancel);
     e.preventDefault();
   };
-  handle.addEventListener("pointerdown", begin);
-  body.addEventListener("pointerdown", begin);
+
+  /* The grip is always instant, including on phones. */
+  handle.addEventListener("pointerdown", beginImmediate);
+
+  /* Mouse/pen can grab the whole row instantly. Touch gets a hold delay so
+     vertical swipes keep scrolling instead of accidentally rearranging. */
+  body.addEventListener("pointerdown", e=>{
+    if(e.pointerType === "touch") return;
+    beginImmediate(e);
+  });
+
+  body.addEventListener("touchstart", e=>{
+    if(!coarsePointer || blockSharedChange()) return;
+    if(e.touches.length !== 1 || e.target.closest("button,.triphandle")) return;
+    const touch = e.touches[0];
+    const id = touch.identifier;
+    const startX = touch.clientX, startY = touch.clientY;
+    let activeDrag = null;
+    let cancelled = false;
+    let lemon = makeHoldLemon(startX, startY - 34);
+
+    const cleanup = ()=>{
+      clearTimeout(timer);
+      document.removeEventListener("touchmove", onMove, touchOpts);
+      document.removeEventListener("touchend", onEnd, touchOpts);
+      document.removeEventListener("touchcancel", onCancel, touchOpts);
+    };
+    const findTouch = list=>[...list].find(t=>t.identifier === id);
+    const cancelPending = ()=>{
+      if(cancelled) return;
+      cancelled = true;
+      cleanup();
+      finishHoldLemon(lemon, false);
+      lemon = null;
+    };
+    const onMove = ev=>{
+      const t = findTouch(ev.touches);
+      if(!t) return;
+      if(activeDrag){
+        ev.preventDefault();
+        activeDrag.move(t.clientX, t.clientY);
+        return;
+      }
+      if(Math.hypot(t.clientX - startX, t.clientY - startY) > 9){
+        cancelPending(); /* ordinary vertical swipe: browser keeps scrolling */
+      }
+    };
+    const onEnd = ev=>{
+      if(findTouch(ev.changedTouches)){
+        cleanup();
+        if(activeDrag){ ev.preventDefault(); activeDrag.end(); }
+        else finishHoldLemon(lemon, false);
+      }
+    };
+    const onCancel = ()=>{
+      cleanup();
+      if(activeDrag) activeDrag.cancel();
+      finishHoldLemon(lemon, false);
+    };
+    const touchOpts = { passive:false };
+    document.addEventListener("touchmove", onMove, touchOpts);
+    document.addEventListener("touchend", onEnd, touchOpts);
+    document.addEventListener("touchcancel", onCancel, touchOpts);
+
+    const timer = setTimeout(()=>{
+      if(cancelled) return;
+      activeDrag = activateDrag(startX, startY);
+      if(!activeDrag){ cancelPending(); return; }
+      finishHoldLemon(lemon, true);
+      lemon = null;
+      navigator.vibrate?.(12);
+    }, MOBILE_DRAG_HOLD_MS);
+  }, { passive:true });
 }
 
 /* ---------- the icon picker ----------
@@ -2751,6 +3097,7 @@ function closeIconPicker(){
 }
 
 function openIconPicker(i, anchorEl){
+  if(blockSharedChange()) return;
   const el = $("#iconPop");
   if(pickerFor === i && !el.classList.contains("hidden")){ closeIconPicker(); return; }
   pickerFor = i;
@@ -2808,6 +3155,7 @@ $("#tripClose").addEventListener("click", closeTripSheet);
 /* ---------- adding a stop ----------
    Reuses the whole front page rather than building a second search. */
 function enterPickMode(){
+  if(blockSharedChange()) return;
   pickMode = true;
   closeTripSheet();
   $("#front").classList.remove("hidden");
@@ -2845,11 +3193,318 @@ $("#pickCancel").addEventListener("click", ()=>{
   openTripSheet();
 });
 
+/* ---------- password-protected shared-trip editing ---------- */
+function sharedStateFromLocation(){
+  const query = new URLSearchParams(location.search);
+  const slug = normalizeSlug(query.get("shared"));
+  if(!slug || !SLUG_OK.test(slug)) return null;
+  return {
+    slug,
+    revision: Math.max(1, parseInt(query.get("rev") || "1", 10) || 1),
+    editable: false,
+    unlocked: false,
+    token: null,
+    sessionExpiresAt: 0,
+    unlockTimer: null,
+    loading: true,
+    baseline: location.hash.slice(1),
+    dirty: false
+  };
+}
+
+function clearSharedTripContext(){
+  if(sharedTrip?.unlockTimer) clearTimeout(sharedTrip.unlockTimer);
+  sharedTrip = null;
+  document.body.classList.remove("sharedlocked");
+  $("#sharedPanel")?.classList.add("hidden");
+  $("#sharedAuth")?.classList.add("hidden");
+  $("#sharedReload")?.classList.add("hidden");
+  if($("#sharedMsg")) sharedMessage("");
+  if($("#noteInput")) $("#noteInput").disabled = false;
+  if($("#dragBtn")) $("#dragBtn").disabled = false;
+  if($("#addStopBtn")) $("#addStopBtn").disabled = false;
+  if($("#modeRoute")) $("#modeRoute").disabled = false;
+  if($("#modeList")) $("#modeList").disabled = false;
+}
+
+function canChangeTrip(){
+  return !sharedTrip || sharedTrip.unlocked === true;
+}
+
+function sharedMessage(text, kind = ""){
+  const el = $("#sharedMsg");
+  if(!el) return;
+  el.textContent = text || "";
+  el.classList.toggle("bad", kind === "bad");
+  el.classList.toggle("good", kind === "good");
+}
+
+function blockSharedChange(){
+  if(canChangeTrip()) return false;
+  if(sharedTrip?.editable){
+    $("#sharedAuth").classList.remove("hidden");
+    $("#sharedPassword").focus();
+    sharedMessage("Enter the edit password before changing this shared trip.", "bad");
+  }else{
+    sharedMessage("This shared trip was created permanently read-only.", "bad");
+  }
+  return true;
+}
+
+function setSharedControlState(){
+  const locked = !!sharedTrip && !sharedTrip.unlocked;
+  document.body.classList.toggle("sharedlocked", locked);
+  if(!sharedTrip) return;
+
+  $("#noteInput").disabled = locked;
+  $("#dragBtn").disabled = locked;
+  $("#addStopBtn").disabled = locked;
+  $("#modeRoute").disabled = locked;
+  $("#modeList").disabled = locked;
+
+  if(locked && dragging){
+    dragging = false;
+    markers.forEach(m => m.dragging && m.dragging.disable());
+    $("#dragBtn").textContent = "adjust pin";
+    $("#dragBtn").setAttribute("aria-pressed", "false");
+  }
+
+  $("#sharedAction").classList.toggle("hidden", !sharedTrip.editable || sharedTrip.unlocked);
+  $("#sharedSave").classList.toggle("hidden", !sharedTrip.unlocked);
+  $("#sharedSave").disabled = !sharedTrip.dirty;
+  $("#sharedRev").textContent = sharedTrip.revision ? `version ${sharedTrip.revision}` : "";
+
+  if(sharedTrip.loading){
+    $("#sharedTitle").textContent = sharedTrip.slug;
+    $("#sharedStatus").textContent = "Checking this link's edit settings…";
+  }else if(sharedTrip.unlocked){
+    $("#sharedTitle").textContent = sharedTrip.slug;
+    $("#sharedStatus").textContent = sharedTrip.dirty
+      ? "You have changes that only become public after you update the shared trip."
+      : "Editing is unlocked for 24 minutes. The address and expiry still cannot change.";
+  }else if(sharedTrip.editable){
+    $("#sharedTitle").textContent = sharedTrip.slug;
+    $("#sharedStatus").textContent = "This trip is password-protected. Unlock it to change the plan for everyone using this link.";
+  }else{
+    $("#sharedTitle").textContent = sharedTrip.slug;
+    $("#sharedStatus").textContent = "This trip is permanently locked. It can be viewed and shared, but never replaced.";
+  }
+
+  if(stops.length && !$("#tripSheet").classList.contains("hidden")) renderTrip();
+  if(map) drawStops(false);
+}
+
+function syncSharedDirty(){
+  if(!sharedTrip || !sharedTrip.baseline || !stops.length) return;
+  sharedTrip.dirty = tripHash() !== sharedTrip.baseline;
+  if(sharedTrip.unlocked){
+    $("#sharedSave").disabled = !sharedTrip.dirty;
+    $("#sharedStatus").textContent = sharedTrip.dirty
+      ? "You have changes that only become public after you update the shared trip."
+      : "Editing is unlocked for 24 minutes. The address and expiry still cannot change.";
+  }
+}
+
+function putSharedRevisionInUrl(){
+  if(!sharedTrip) return;
+  const q = new URLSearchParams(location.search);
+  q.set("shared", sharedTrip.slug);
+  q.set("rev", String(sharedTrip.revision));
+  history.replaceState({ view:"pin" }, "", `${location.pathname}?${q.toString()}#${tripHash()}`);
+}
+
+async function initSharedTrip(){
+  if(!sharedTrip) return;
+  $("#sharedPanel").classList.remove("hidden");
+  sharedTrip.loading = true;
+  sharedTrip.baseline = tripHash();
+  sharedTrip.dirty = false;
+  setSharedControlState();
+
+  try{
+    const r = await fetch(`${SHORTENER}/api/links/${encodeURIComponent(sharedTrip.slug)}/meta`);
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error || "meta_failed");
+    sharedTrip.editable = !!j.editable;
+    sharedTrip.revision = Number(j.revision || sharedTrip.revision || 1);
+    sharedTrip.loading = false;
+    putSharedRevisionInUrl();
+    setSharedControlState();
+  }catch{
+    sharedTrip.loading = false;
+    sharedTrip.editable = false;
+    $("#sharedStatus").textContent = "The edit settings could not be verified, so this trip is staying locked for safety.";
+    sharedMessage("The trip still works for viewing and sharing.", "bad");
+    setSharedControlState();
+  }
+}
+
+function scheduleSharedRelock(expiresIn){
+  if(!sharedTrip) return;
+  if(sharedTrip.unlockTimer) clearTimeout(sharedTrip.unlockTimer);
+  const seconds = Math.max(1, Number(expiresIn || (24 * 60)));
+  sharedTrip.sessionExpiresAt = Date.now() + seconds * 1000;
+  sharedTrip.unlockTimer = setTimeout(()=>{
+    if(!sharedTrip) return;
+    sharedTrip.unlocked = false;
+    sharedTrip.token = null;
+    sharedTrip.sessionExpiresAt = 0;
+    sharedMessage("The 24-minute edit session ended. Unlock again to publish more changes.", "bad");
+    setSharedControlState();
+  }, seconds * 1000);
+}
+
+let unlockCelebrationTimer = null;
+function showUnlockCelebration(){
+  const wrap = $("#unlockCelebration");
+  const confetti = $("#lemonfetti");
+  if(!wrap || !confetti) return;
+  clearTimeout(unlockCelebrationTimer);
+  confetti.innerHTML = "";
+  const pieces = 30;
+  for(let i = 0; i < pieces; i++){
+    const bit = document.createElement("span");
+    const angle = (Math.PI * 2 * i / pieces) + (Math.random() * .35);
+    const radius = 105 + Math.random() * 150;
+    bit.style.setProperty("--x", `${Math.cos(angle) * radius}px`);
+    bit.style.setProperty("--y", `${Math.sin(angle) * radius - 25}px`);
+    bit.style.setProperty("--r", `${Math.round((Math.random() * 900) - 450)}deg`);
+    bit.style.setProperty("--d", `${(Math.random() * .18).toFixed(2)}s`);
+    if(i % 4 === 0) bit.style.background = "var(--leaf)";
+    confetti.appendChild(bit);
+  }
+  $("#kobeNet")?.classList.remove("swish");
+  void wrap.offsetWidth;
+  wrap.classList.remove("show");
+  void wrap.offsetWidth;
+  $("#kobeNet")?.classList.add("swish");
+  wrap.classList.add("show");
+  unlockCelebrationTimer = setTimeout(()=>{
+    wrap.classList.remove("show");
+    $("#kobeNet")?.classList.remove("swish");
+  }, 3300);
+}
+
+async function unlockSharedTrip(){
+  if(!sharedTrip?.editable) return;
+  const password = $("#sharedPassword").value;
+  if(!password){ sharedMessage("Enter the edit password.", "bad"); return; }
+  const btn = $("#sharedUnlockGo");
+  btn.disabled = true;
+  btn.textContent = "checking…";
+  sharedMessage("");
+  try{
+    const r = await fetch(`${SHORTENER}/api/links/${encodeURIComponent(sharedTrip.slug)}/unlock`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password })
+    });
+    const j = await r.json();
+    if(!r.ok){
+      sharedMessage({
+        wrong_password: "That edit password isn't right.",
+        too_many_attempts: "Too many tries from here. Try again after the hour changes.",
+        permanently_locked: "This trip is permanently read-only.",
+        expired: "This short link has expired."
+      }[j.error] || "Couldn't unlock editing.", "bad");
+      return;
+    }
+    sharedTrip.unlocked = true;
+    sharedTrip.token = j.editToken;
+    scheduleSharedRelock(j.expiresIn);
+    sharedTrip.revision = Number(j.revision || sharedTrip.revision);
+    sharedTrip.baseline = tripHash();
+    sharedTrip.dirty = false;
+    $("#sharedPassword").value = "";
+    $("#sharedAuth").classList.add("hidden");
+    sharedMessage("Kobe! Editing is unlocked for 24 minutes. Make your changes, then press Update shared trip.", "good");
+    setSharedControlState();
+    showUnlockCelebration();
+    flash("Kobe! editing unlocked");
+  }catch{
+    sharedMessage("Couldn't reach the shortener. Try again.", "bad");
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "Unlock";
+  }
+}
+
+async function saveSharedTrip(){
+  if(!sharedTrip?.unlocked || !sharedTrip.token) return;
+  syncSharedDirty();
+  if(!sharedTrip.dirty){ flash("no changes to update"); return; }
+
+  const btn = $("#sharedSave");
+  btn.disabled = true;
+  btn.textContent = "updating…";
+  sharedMessage("");
+  const payload = tripHash();
+  try{
+    const r = await fetch(`${SHORTENER}/api/links/${encodeURIComponent(sharedTrip.slug)}/trip`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sharedTrip.token}`
+      },
+      body: JSON.stringify({ payload, expectedRevision: sharedTrip.revision })
+    });
+    const j = await r.json();
+    if(!r.ok){
+      if(j.error === "edit_session_invalid"){
+        sharedTrip.unlocked = false;
+        sharedTrip.token = null;
+        if(sharedTrip.unlockTimer) clearTimeout(sharedTrip.unlockTimer);
+        sharedTrip.unlockTimer = null;
+        sharedTrip.sessionExpiresAt = 0;
+        sharedMessage("The 24-minute edit session ended. Unlock it again to save.", "bad");
+        setSharedControlState();
+        return;
+      }
+      if(j.error === "trip_changed_since_loaded"){
+        $("#sharedReload").classList.remove("hidden");
+        sharedMessage("Someone updated this trip after you opened it. Reload the latest version before editing again.", "bad");
+        return;
+      }
+      sharedMessage({
+        expired: "This short link expired and can no longer be updated.",
+        permanently_locked: "This trip is permanently read-only.",
+        payload_too_large: "This trip is too large to save as a short link."
+      }[j.error] || "Couldn't update the shared trip.", "bad");
+      return;
+    }
+    sharedTrip.revision = Number(j.revision);
+    sharedTrip.baseline = payload;
+    sharedTrip.dirty = false;
+    putSharedRevisionInUrl();
+    sharedMessage("Updated. Everyone opening the same short link will now get this version.", "good");
+    setSharedControlState();
+    renderQR();
+    flash("shared trip updated");
+  }catch{
+    sharedMessage("Couldn't reach the shortener. Your changes are still on this screen.", "bad");
+  }finally{
+    btn.textContent = "Update shared trip";
+    btn.disabled = !sharedTrip?.dirty;
+  }
+}
+
+$("#sharedAction").addEventListener("click", ()=>{
+  $("#sharedAuth").classList.toggle("hidden");
+  sharedMessage("");
+  if(!$("#sharedAuth").classList.contains("hidden")) $("#sharedPassword").focus();
+});
+$("#sharedUnlockGo").addEventListener("click", unlockSharedTrip);
+$("#sharedPassword").addEventListener("keydown", e=>{ if(e.key === "Enter") unlockSharedTrip(); });
+$("#sharedSave").addEventListener("click", saveSharedTrip);
+$("#sharedReload").addEventListener("click", ()=>{
+  if(sharedTrip) location.href = `${SHORTENER}/${encodeURIComponent(sharedTrip.slug)}`;
+});
+
 /* ---------- short links ----------
    Everything else here works with no server at all. This one part can't: a
    short name has to be looked up somewhere. Point SHORTENER at the Worker and
    this section appears; leave it blank and the app behaves exactly as before. */
-const SHORTENER = "";        /* e.g. "https://go.lemoncoords.com" */
+const SHORTENER = "https://go.lemoncoords.com";
 
 const SLUG_OK = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 let slugTimer = null, slugAbort = null, expDays = 0;
@@ -2900,18 +3555,34 @@ function shortReset(){
   $("#shortForm").classList.remove("hidden");
   $("#shortDone").classList.add("hidden");
   $("#slugInput").value = "";
+  $("#editToggle").checked = false;
+  $("#editFields").classList.add("hidden");
+  $("#editPassword").value = "";
+  $("#editPasswordAgain").value = "";
   slugSays("leave it blank and we'll make one up");
 }
 
 async function makeShortLink(){
   const btn = $("#shortGo");
+  let editPassword = "";
+  if($("#editToggle").checked){
+    editPassword = $("#editPassword").value;
+    const again = $("#editPasswordAgain").value;
+    if(editPassword.length < 8){ slugSays("edit password needs at least 8 characters", "bad"); return; }
+    if(editPassword !== again){ slugSays("those edit passwords don't match", "bad"); return; }
+  }
   btn.disabled = true;
   btn.textContent = "squeezing\u2026";
   try{
     const r = await fetch(`${SHORTENER}/api/links`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug: normalizeSlug($("#slugInput").value), payload: tripHash(), expiryDays: expDays })
+      body: JSON.stringify({
+        slug: normalizeSlug($("#slugInput").value),
+        payload: tripHash(),
+        expiryDays: expDays,
+        editPassword: editPassword || null
+      })
     });
     const j = await r.json();
     if(!r.ok){
@@ -2921,15 +3592,19 @@ async function makeShortLink(){
         invalid_slug: "letters, numbers and hyphens only",
         payload_too_large: "that trip is too big to shorten",
         rate_limited: "easy there \u2014 give it a minute",
-        invalid_payload: "something's off with this pin"
+        invalid_payload: "something's off with this pin",
+        password_length: "edit password needs 8 to 128 characters"
       }[j.error] || "couldn't make the link just now", "bad");
       return;
     }
     $("#shortUrl").textContent = j.shortUrl.replace(/^https?:\/\//, "");
     $("#shortUrl").dataset.url = j.shortUrl;
-    $("#shortMeta").textContent = j.expiresAt
-      ? `Set in stone. Gone ${new Date(j.expiresAt * 1000).toLocaleDateString([], {month:"long", day:"numeric"})}.`
-      : "Set in stone, and it never expires.";
+    const expiryText = j.expiresAt
+      ? `Gone ${new Date(j.expiresAt * 1000).toLocaleDateString([], {month:"long", day:"numeric"})}.`
+      : "It never expires.";
+    $("#shortMeta").textContent = j.editable
+      ? `Name and expiry are set in stone. ${expiryText} The trip can be updated with its edit password.`
+      : `Name, expiry, and trip are permanently set in stone. ${expiryText}`;
     $("#shortForm").classList.add("hidden");
     $("#shortDone").classList.remove("hidden");
     flash("short link made");
@@ -2937,13 +3612,17 @@ async function makeShortLink(){
     slugSays("couldn't reach the shortener \u2014 the long link still works", "bad");
   }finally{
     btn.disabled = false;
-    btn.textContent = "Make the short link";
+    btn.textContent = "Make and lock the short link";
   }
 }
 
 if(SHORTENER){
   $("#slugHost").textContent = SHORTENER.replace(/^https?:\/\//, "") + "/";
   $("#slugInput").addEventListener("input", checkSlug);
+  $("#editToggle").addEventListener("change", ()=>{
+    $("#editFields").classList.toggle("hidden", !$("#editToggle").checked);
+    if($("#editToggle").checked) $("#editPassword").focus();
+  });
   $("#shortGo").addEventListener("click", makeShortLink);
   $("#expiryRow").addEventListener("click", e =>{
     const b = e.target.closest(".expbtn");
@@ -3048,8 +3727,10 @@ function readHash(){
   if(got){
     /* the link was already in the URL — this is someone we sent it to */
     isRecipient = true;
+    sharedTrip = sharedStateFromLocation();
     ordered = got.ordered;
     openPin(got.stops, { push:false });
+    if(sharedTrip) initSharedTrip();
   } else {
     /* clean slate every visit, same as the weather */
     history.replaceState(null, "", location.pathname);
