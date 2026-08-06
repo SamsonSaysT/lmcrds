@@ -114,6 +114,7 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 .locscreen h1{font-family:var(--display);font-weight:640;font-size:clamp(1.8rem,6vw,2.6rem);text-wrap:balance;margin-bottom:8px}
 .locscreen .lede{color:var(--muted);max-width:42ch;margin:0 auto 28px}
 .quickrow{margin-top:14px}
+.locscreen.picking #quickBtn{display:none}
 .searchbox{position:relative;max-width:360px;margin:0 auto}
 .searchbox input{
   width:100%;font-family:var(--body);font-size:1rem;color:var(--ink);
@@ -318,6 +319,71 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 .sheetbtnrow .btn{font-size:.95rem;padding:12px 24px}
 .sheetalt{margin-top:18px}
 
+/* ---------- stepper between stops ---------- */
+.coordsrow{display:flex;align-items:center;justify-content:center;gap:4px}
+.steparrow{
+  flex:none;color:var(--muted);padding:8px 2px;
+  transition:color .15s ease,transform .15s cubic-bezier(.16,1,.3,1);
+}
+.steparrow:hover{color:var(--ink)}
+.steparrow:active{transform:scale(.86)}
+.steparrow svg{display:block}
+.stepcount{
+  margin-top:6px;color:var(--muted);font-size:.72rem;letter-spacing:.14em;
+  font-variant-numeric:tabular-nums;
+}
+#tripBtn.on{background:var(--ink);color:var(--pith)}
+
+/* ---------- trip sheet ---------- */
+.tripcontent{max-width:440px}
+.triplist{list-style:none;margin:22px 0 0;padding:0;position:relative;text-align:left}
+.tripitem{
+  position:relative;display:flex;align-items:flex-start;gap:12px;
+  background:var(--pith);border:1px solid var(--hairline);border-radius:14px;
+  padding:12px 12px 12px 10px;margin-bottom:8px;
+  touch-action:none;user-select:none;-webkit-user-select:none;
+  transition:transform .26s cubic-bezier(.2,.9,.3,1), box-shadow .18s ease, border-color .18s ease;
+  will-change:transform;
+}
+/* the one under your finger: lifted out of the stack, following freely */
+.tripitem.lifted{
+  z-index:30;transition:box-shadow .18s ease,border-color .18s ease;
+  box-shadow:0 16px 34px rgba(35,36,27,.22);border-color:var(--ink);cursor:grabbing;
+}
+:root[data-theme="dark"] .tripitem.lifted{box-shadow:0 16px 34px rgba(0,0,0,.6)}
+/* released: springs home with a little overshoot */
+.tripitem.settling{transition:transform .42s cubic-bezier(.34,1.42,.5,1), box-shadow .3s ease}
+.tripitem.gone{opacity:0;transform:scale(.9);transition:opacity .2s ease,transform .2s ease}
+.tripnum{
+  flex:none;width:26px;height:26px;border-radius:50%;background:var(--zest);color:#23241B;
+  display:grid;place-items:center;font-family:var(--display);font-weight:640;font-size:.82rem;
+  margin-top:1px;
+}
+.tripitem.current .tripnum{background:var(--ink);color:var(--pith)}
+.tripbody{flex:1;min-width:0;cursor:grab}
+.tripwhere{font-weight:600;font-size:.92rem;line-height:1.3;overflow-wrap:anywhere}
+.tripcoords{
+  color:var(--muted);font-size:.76rem;margin-top:2px;font-variant-numeric:tabular-nums;
+}
+.tripnote{
+  font-family:var(--display);font-weight:560;font-size:.86rem;margin-top:4px;
+  color:var(--ink);overflow-wrap:anywhere;
+}
+.tripdel{
+  flex:none;color:var(--muted);font-size:1.15rem;line-height:1;padding:2px 4px;
+  transition:color .15s ease;
+}
+.tripdel:hover{color:var(--danger,#c0522d)}
+.triphandle{
+  flex:none;color:var(--muted);padding:4px 2px;cursor:grab;align-self:center;
+}
+.triphandle svg{display:block}
+.addstop{margin-top:6px;width:100%;justify-content:center}
+.tripfoot{
+  margin-top:16px;color:var(--muted);font-size:.72rem;letter-spacing:.06em;
+  font-variant-numeric:tabular-nums;
+}
+
 /* ---------- keep it on your phone ---------- */
 .installbar{
   position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));
@@ -510,6 +576,14 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
         <span class="wordmark">LEMONCOORDS<span class="dot">.</span></span>
       </a>
       <div class="headctl">
+        <button id="tripBtn" class="themebtn" aria-label="Trip stops" title="Trip">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+            <circle cx="6" cy="6" r="2.4" stroke="currentColor" stroke-width="1.8"/>
+            <circle cx="18" cy="18" r="2.4" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M6 8.6v4.2a3.2 3.2 0 0 0 3.2 3.2h5.4" stroke="currentColor"
+              stroke-width="1.8" stroke-linecap="round" stroke-dasharray="1.6 2.6"/>
+          </svg>
+        </button>
         <button id="themetoggle" class="themebtn" aria-label="Toggle dark mode" aria-pressed="false"></button>
       </div>
     </div>
@@ -519,8 +593,8 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 
     <!-- ---------- FRONT ---------- -->
     <section class="locscreen" id="front">
-      <h1>Where are you, Lemons?</h1>
-      <p class="lede">Drop a pin, send one link. Coordinates, address, and a route for whatever maps app they've got.</p>
+      <h1 id="frontTitle">Where are you, Lemons?</h1>
+      <p class="lede" id="frontLede">Drop a pin, send one link. Coordinates, address, and a route for whatever maps app they've got.</p>
 
       <button class="btn" id="hereBtn">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -532,6 +606,7 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 
       <div class="quickrow">
         <button class="linkish" id="quickBtn">quick share — just grab the link</button>
+        <button class="linkish hidden" id="pickCancel">cancel — back to the trip</button>
       </div>
 
       <span class="or">or</span>
@@ -551,7 +626,22 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
       <div class="coordshero">
         <div class="coordswrap">
           <p class="pinnote hidden" id="pinNote"></p>
-          <div class="bigcoords" id="bigCoords"></div>
+          <div class="coordsrow">
+            <button class="steparrow hidden" id="stepPrev" aria-label="Previous stop">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+                <path d="M15 5 8 12l7 7" stroke="currentColor" stroke-width="1.5"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div class="bigcoords" id="bigCoords"></div>
+            <button class="steparrow hidden" id="stepNext" aria-label="Next stop">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+                <path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="1.5"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="stepcount hidden" id="stepCount"></div>
         </div>
         <p class="quip" id="quip"></p>
         <button class="btn sharehero" id="shareTopBtn">Share this pin</button>
@@ -658,6 +748,20 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
     Search by Photon, addresses by Nominatim, both on OpenStreetMap data · basemap © OpenStreetMap &amp; CARTO.
     Made with 🍋 for people who are lost.
   </footer>
+</div>
+
+<!-- ============ TRIP ============ -->
+<div class="sheet hidden" id="tripSheet">
+  <button class="modalclose" id="tripClose" aria-label="Close">&times;</button>
+  <div class="sheetcontent tripcontent">
+    <h2>Your trip</h2>
+    <p class="lede" id="tripLede">One stop. Add another and they'll all ride in the same link.</p>
+    <ul class="triplist" id="tripList"></ul>
+    <button class="btn btn-ghost addstop" id="addStopBtn">Add a stop</button>
+    <div class="tripfoot">
+      <span id="tripSize"></span>
+    </div>
+  </div>
 </div>
 
 <!-- ============ SQUEEZING: locating ============ -->
@@ -788,6 +892,176 @@ function unpackPin(hash){
   const lat = latE5 / 1e5 - 90, lon = lonE5 / 1e5 - 180;
   if(lat < -90 || lat > 90) return null;
   return { lat, lon, ts: EPOCH_2026 + mins * 60000, acc, note };
+}
+
+/* ---------- trip codec ----------
+   A whole multi-stop trip, packed into the hash. Stacked ideas:
+   byte stream over base64url (exactly 6 bits/char, beats base62's 5.954);
+   stop 0 absolute then zigzag varint deltas, so a stop within ~9 km of the
+   last one costs 2 bytes per coordinate instead of 4; one timestamp for the
+   whole trip; notes packed 6 bits per character with a shift code for
+   capitals — the real prize being that nothing gets percent-encoded, since
+   a space costs 6 bits here and three characters as %20; and a note bitmask
+   up front so stops without notes cost nothing at all. */
+const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+const N6  = " abcdefghijklmnopqrstuvwxyz0123456789.,'-!?:;/&()@#$%*+=_\"~^<>|";
+const SHIFT6 = 63;
+
+function b64encode(bytes){
+  let out = "";
+  for(let i = 0; i < bytes.length; i += 3){
+    const a = bytes[i], b = bytes[i+1], c = bytes[i+2];
+    out += B64[a >> 2];
+    out += B64[((a & 3) << 4) | ((b === undefined ? 0 : b) >> 4)];
+    if(b === undefined) break;
+    out += B64[((b & 15) << 2) | ((c === undefined ? 0 : c) >> 6)];
+    if(c === undefined) break;
+    out += B64[c & 63];
+  }
+  return out;
+}
+function b64decode(str){
+  const out = [];
+  let buf = 0, bits = 0;
+  for(const ch of str){
+    const v = B64.indexOf(ch);
+    if(v < 0) return null;
+    buf = (buf << 6) | v; bits += 6;
+    if(bits >= 8){ bits -= 8; out.push((buf >> bits) & 0xff); }
+  }
+  return new Uint8Array(out);
+}
+function putVarint(arr, n){
+  n = Math.max(0, Math.round(n));
+  while(n > 127){ arr.push((n & 127) | 128); n = Math.floor(n / 128); }
+  arr.push(n);
+}
+function zig(n){ return n >= 0 ? n * 2 : -n * 2 - 1; }
+function unzig(n){ return n % 2 === 0 ? n / 2 : -(n + 1) / 2; }
+function Reader(bytes){
+  let i = 0;
+  return {
+    varint(){
+      let n = 0, shift = 1;
+      while(i < bytes.length){
+        const b = bytes[i++];
+        n += (b & 127) * shift;
+        if((b & 128) === 0) return n;
+        shift *= 128;
+      }
+      throw new Error("truncated");
+    },
+    byte(){ if(i >= bytes.length) throw new Error("truncated"); return bytes[i++]; },
+    take(n){ if(i + n > bytes.length) throw new Error("truncated"); return bytes.slice(i, i += n); },
+    left(){ return bytes.length - i; }
+  };
+}
+function packNote(text){
+  const units = [];
+  for(const ch of text){
+    const lower = ch.toLowerCase();
+    const idx = N6.indexOf(lower);
+    if(idx < 0 || idx === SHIFT6) return null;
+    if(ch !== lower) units.push(SHIFT6);
+    units.push(idx);
+  }
+  const bytes = [];
+  let buf = 0, bits = 0;
+  for(const u of units){
+    buf = (buf << 6) | u; bits += 6;
+    while(bits >= 8){ bits -= 8; bytes.push((buf >> bits) & 0xff); }
+  }
+  if(bits > 0) bytes.push((buf << (8 - bits)) & 0xff);
+  return { count: units.length, bytes };
+}
+function unpackNote(count, bytes){
+  let out = "", buf = 0, bits = 0, got = 0, up = false;
+  for(const b of bytes){
+    buf = (buf << 8) | b; bits += 8;
+    while(bits >= 6 && got < count){
+      bits -= 6;
+      const u = (buf >> bits) & 63;
+      got++;
+      if(u === SHIFT6){ up = true; continue; }
+      out += up ? N6[u].toUpperCase() : N6[u];
+      up = false;
+    }
+  }
+  return out;
+}
+
+function encodeTrip(list, ts){
+  const n = Math.min(32, list.length);
+  const acc = Math.min(1023, Math.max(0, Math.round(list[0].acc || 0)));
+  const hasAcc = acc > 3 ? 1 : 0;
+  const bytes = [];
+  bytes.push((n - 1) | (hasAcc << 5));
+  putVarint(bytes, Math.max(0, Math.round((ts - EPOCH_2026) / 60000)));
+  if(hasAcc) putVarint(bytes, acc);
+  let mask = 0;
+  for(let i = 0; i < n; i++) if(list[i].note) mask += Math.pow(2, i);
+  putVarint(bytes, mask);
+  let pLat = 0, pLon = 0;
+  for(let i = 0; i < n; i++){
+    const latE5 = Math.round((list[i].lat + 90) * 1e5);
+    const lonE5 = Math.round((list[i].lon + 180) * 1e5);
+    if(i === 0){ putVarint(bytes, latE5); putVarint(bytes, lonE5); }
+    else { putVarint(bytes, zig(latE5 - pLat)); putVarint(bytes, zig(lonE5 - pLon)); }
+    pLat = latE5; pLon = lonE5;
+  }
+  for(let i = 0; i < n; i++){
+    const note = list[i].note;
+    if(!note) continue;
+    const packed = packNote(note.slice(0, 120));
+    if(packed){
+      putVarint(bytes, packed.count * 2 + 1);
+      for(const b of packed.bytes) bytes.push(b);
+    }else{
+      const raw = Array.from(new TextEncoder().encode(note.slice(0, 120)));
+      putVarint(bytes, raw.length * 2);
+      for(const b of raw) bytes.push(b);
+    }
+  }
+  return "T" + b64encode(new Uint8Array(bytes));
+}
+
+function decodeTrip(hash){
+  if(!hash || hash[0] !== "T") return null;
+  const bytes = b64decode(hash.slice(1));
+  if(!bytes || bytes.length < 3) return null;
+  try{
+    const r = Reader(bytes);
+    const head = r.byte();
+    if(head >> 6 !== 0) return null;
+    const n = (head & 31) + 1;
+    const hasAcc = (head >> 5) & 1;
+    const ts = EPOCH_2026 + r.varint() * 60000;
+    const acc = hasAcc ? r.varint() : 0;
+    const mask = r.varint();
+    const list = [];
+    let pLat = 0, pLon = 0;
+    for(let i = 0; i < n; i++){
+      let latE5, lonE5;
+      if(i === 0){ latE5 = r.varint(); lonE5 = r.varint(); }
+      else { latE5 = pLat + unzig(r.varint()); lonE5 = pLon + unzig(r.varint()); }
+      pLat = latE5; pLon = lonE5;
+      const lat = latE5 / 1e5 - 90, lon = lonE5 / 1e5 - 180;
+      if(!(lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180)) return null;
+      list.push({ lat, lon, ts, acc: i === 0 ? acc : 0, note: "" });
+    }
+    for(let i = 0; i < n; i++){
+      if(!(Math.floor(mask / Math.pow(2, i)) % 2)) continue;
+      if(r.left() <= 0) break;
+      const h = r.varint();
+      const nn = Math.floor(h / 2);
+      list[i].note = (h % 2 === 1)
+        ? unpackNote(nn, r.take(Math.ceil(nn * 6 / 8)))
+        : new TextDecoder().decode(r.take(nn));
+    }
+    return list;
+  }catch{
+    return null;
+  }
 }
 
 /* ---------- formats ---------- */
@@ -1363,12 +1637,28 @@ function locateErrorMsg(err){
   return "Couldn't get a fix. Try again, or search a place instead.";
 }
 
-/* ---------- state ---------- */
+/* ---------- state ----------
+   `stops` is the trip. `pin` always aliases the active stop — it's the same
+   object, so anything that mutates pin.lat mutates the trip too. */
+let stops = [];
+let active = 0;
 let pin = null;
-let map = null, marker = null, accCircle = null, youMarker = null, farLine = null;
+let markers = [], tripLine = null;
+let map = null, accCircle = null, youMarker = null, farLine = null;
 let dragging = false, noteTimer = null, addrText = "";
 let isRecipient = false;   /* arrived via someone else's link */
-function pinUrl(){ return location.origin + location.pathname + "#" + packPin(pin); }
+let pickMode = false;      /* picking a stop to add rather than opening a pin */
+
+function setStops(list, idx){
+  stops = list;
+  active = Math.max(0, Math.min(idx || 0, stops.length - 1));
+  pin = stops[active];
+}
+function pinUrl(){
+  /* a lone pin keeps the older, shorter L form — links already sent still work */
+  const hash = stops.length > 1 ? encodeTrip(stops, stops[0].ts) : packPin(pin);
+  return location.origin + location.pathname + "#" + hash;
+}
 
 /* ---------- theme (same lemon, midnight grove) ---------- */
 const store = {
@@ -1418,8 +1708,8 @@ $("#brandlink").addEventListener("click", e=>{
   showFront();
 });
 window.addEventListener("popstate", ()=>{
-  const p = unpackPin(location.hash.slice(1));
-  if(p) openPin(p, { push:false });
+  const list = readHash();
+  if(list) openPin(list, { push:false });
   else showFront();
 });
 
@@ -1499,19 +1789,27 @@ const SatToggle = L.Control.extend({
 new MutationObserver(()=>{ if(map) setTiles(); })
   .observe(document.documentElement, { attributes:true, attributeFilter:["data-theme"] });
 
-/* the pin is a lemon slice in a teardrop — same slice as the wordmark */
-const lemonIcon = L.divIcon({
-  className: "lemonpinicon",
-  html: `<svg width="44" height="58" viewBox="0 0 44 58" xmlns="http://www.w3.org/2000/svg">
-    <path d="M22 56C22 56 42 35.5 42 21.5C42 10.2 33 1.5 22 1.5C11 1.5 2 10.2 2 21.5C2 35.5 22 56 22 56Z"
-      fill="#F4CE3E" stroke="#23241B" stroke-width="3" stroke-linejoin="round"/>
-    <circle cx="22" cy="21.5" r="12.5" fill="#FFFDF4"/>
-    <g stroke="#F4CE3E" stroke-width="3" stroke-linecap="round">
-      <path d="M22 12v19M12.5 21.5h19M15.3 14.8l13.4 13.4M28.7 14.8L15.3 28.2"/>
-    </g>
-  </svg>`,
-  iconSize: [44, 58], iconAnchor: [22, 56]
-});
+/* the pin is a lemon slice in a teardrop — same slice as the wordmark.
+   In a trip each one carries its stop number where the slice sits. */
+function lemonIcon(num, isActive){
+  const face = num == null
+    ? `<circle cx="22" cy="21.5" r="12.5" fill="#FFFDF4"/>
+       <g stroke="#F4CE3E" stroke-width="3" stroke-linecap="round">
+         <path d="M22 12v19M12.5 21.5h19M15.3 14.8l13.4 13.4M28.7 14.8L15.3 28.2"/>
+       </g>`
+    : `<circle cx="22" cy="21.5" r="12.5" fill="#FFFDF4"/>
+       <text x="22" y="27.5" text-anchor="middle" font-family="Fraunces,Georgia,serif"
+             font-size="16" font-weight="640" fill="#23241B">${num}</text>`;
+  return L.divIcon({
+    className: "lemonpinicon" + (isActive ? " on" : " off"),
+    html: `<svg width="44" height="58" viewBox="0 0 44 58" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22 56C22 56 42 35.5 42 21.5C42 10.2 33 1.5 22 1.5C11 1.5 2 10.2 2 21.5C2 35.5 22 56 22 56Z"
+        fill="#F4CE3E" stroke="#23241B" stroke-width="3" stroke-linejoin="round"/>
+      ${face}
+    </svg>`,
+    iconSize: [44, 58], iconAnchor: [22, 56]
+  });
+}
 const youIcon = L.divIcon({ className: "youdot", iconSize: [15, 15], iconAnchor: [8, 8] });
 
 function initMap(){
@@ -1525,15 +1823,61 @@ function initMap(){
   L.control.zoom({ position: "topleft" }).addTo(map);
   map.addControl(new SatToggle({ position: "topleft" }));
   setTiles();
-  marker = L.marker([0, 0], { icon: lemonIcon, draggable: false, keyboard: false }).addTo(map);
-  marker.on("dragend", ()=>{
-    const ll = marker.getLatLng();
-    pin.lat = ll.lat; pin.lon = ll.lng;
-    pin.acc = 0;                     /* hand-placed = exact */
-    pin.ts = Date.now();
-    refreshPin({ recenter: false });
-    flash("pin adjusted");
+}
+
+/* redraw every stop, the line between them, and the accuracy ring */
+function drawStops(recenter){
+  markers.forEach(m => m.remove());
+  markers = [];
+  if(tripLine){ tripLine.remove(); tripLine = null; }
+  const multi = stops.length > 1;
+
+  stops.forEach((s, i)=>{
+    const m = L.marker([s.lat, s.lon], {
+      icon: lemonIcon(multi ? i + 1 : null, i === active),
+      draggable: dragging,
+      keyboard: false,
+      zIndexOffset: i === active ? 1000 : 0
+    }).addTo(map);
+    m.on("click", ()=>{ if(i !== active) setActive(i); });
+    m.on("dragend", ()=>{
+      const ll = m.getLatLng();
+      s.lat = ll.lat; s.lon = ll.lng;
+      s.acc = 0;                       /* hand-placed = exact */
+      s.ts = Date.now();
+      s.addr = null;
+      refreshPin({ recenter: false });
+      flash("pin adjusted");
+    });
+    markers.push(m);
   });
+
+  if(multi){
+    tripLine = L.polyline(stops.map(s => [s.lat, s.lon]), {
+      color: "#DDB32A", weight: 2.5, opacity: .75, dashArray: "7 7"
+    }).addTo(map);
+  }
+
+  if(accCircle){ accCircle.remove(); accCircle = null; }
+  if(pin.acc > 3){
+    accCircle = L.circle([pin.lat, pin.lon], {
+      radius: pin.acc, color: "#DDB32A", weight: 1.5, opacity: .55,
+      fillColor: "#F4CE3E", fillOpacity: .12
+    }).addTo(map);
+  }
+
+  if(recenter){
+    if(multi) map.fitBounds(L.latLngBounds(stops.map(s => [s.lat, s.lon])).pad(0.22));
+    else map.setView([pin.lat, pin.lon], pin.acc > 200 ? 15 : 17);
+  }
+}
+
+/* move to another stop without redrawing the world */
+function setActive(i){
+  active = Math.max(0, Math.min(i, stops.length - 1));
+  pin = stops[active];
+  refreshPin({ recenter: false });
+  map.panTo([pin.lat, pin.lon], { animate: true, duration: .4 });
 }
 
 let unlocked = false;
@@ -1548,7 +1892,7 @@ $("#lockBtn").addEventListener("click", ()=>{
 });
 $("#dragBtn").addEventListener("click", ()=>{
   dragging = !dragging;
-  if(dragging) marker.dragging.enable(); else marker.dragging.disable();
+  markers.forEach(m => dragging ? m.dragging.enable() : m.dragging.disable());
   $("#dragBtn").textContent = dragging ? "done" : "adjust pin";
   $("#dragBtn").setAttribute("aria-pressed", dragging);
 });
@@ -1556,18 +1900,18 @@ $("#dragBtn").addEventListener("click", ()=>{
 /* ---------- render ---------- */
 function refreshPin(opts = {}){
   const { recenter = true } = opts;
-  marker.setLatLng([pin.lat, pin.lon]);
-  if(accCircle){ accCircle.remove(); accCircle = null; }
-  if(pin.acc > 3){
-    accCircle = L.circle([pin.lat, pin.lon], {
-      radius: pin.acc, color: "#DDB32A", weight: 1.5, opacity: .55,
-      fillColor: "#F4CE3E", fillOpacity: .12
-    }).addTo(map);
-  }
+  drawStops(recenter);
   if(youMarker){ youMarker.remove(); youMarker = null; }
   if(farLine){ farLine.remove(); farLine = null; }
   $("#farAnswer").classList.add("hidden");
-  if(recenter) map.setView([pin.lat, pin.lon], pin.acc > 200 ? 15 : 17);
+
+  /* the stop stepper — only there when there's somewhere else to go */
+  const multi = stops.length > 1;
+  $("#stepPrev").classList.toggle("hidden", !multi);
+  $("#stepNext").classList.toggle("hidden", !multi);
+  $("#stepCount").classList.toggle("hidden", !multi);
+  $("#stepCount").textContent = `${active + 1} / ${stops.length}`;
+  $("#tripBtn").classList.toggle("on", multi);
 
   $("#dropWhen").textContent = fmtWhen(pin.ts);
   $("#dropAgo").textContent = fmtAgo(pin.ts);
@@ -1592,12 +1936,19 @@ function refreshPin(opts = {}){
   $("#wView").href  = `https://waze.com/ul?ll=${ll}&zoom=17`;
   $("#wRoute").href = `https://waze.com/ul?ll=${ll}&navigate=yes`;
 
-  addrText = "";
-  $("#addrVal").innerHTML = '<span class="pending">finding the address…</span>';
-  reverseGeocode(pin).then(a=>{
-    addrText = a || "";
-    $("#addrVal").textContent = a || "No address out here — pure wilderness.";
-  }).catch(()=>{ $("#addrVal").textContent = "Address unavailable right now."; });
+  const target = pin;
+  addrText = target.addr || "";
+  if(target.addr){
+    $("#addrVal").textContent = target.addr;
+  }else{
+    $("#addrVal").innerHTML = '<span class="pending">finding the address…</span>';
+    reverseGeocode(target).then(a=>{
+      target.addr = a || "";
+      if(pin !== target) return;               /* they moved on while we waited */
+      addrText = target.addr;
+      $("#addrVal").textContent = a || "No address out here — pure wilderness.";
+    }).catch(()=>{ if(pin === target) $("#addrVal").textContent = "Address unavailable right now."; });
+  }
 
   renderQR();
 }
@@ -1614,8 +1965,8 @@ function renderQR(){
 }
 
 function openPin(p, opts = {}){
-  const { push = true } = opts;
-  pin = p;
+  const { push = true, idx = 0 } = opts;
+  setStops(Array.isArray(p) ? p : [p], idx);
   showPinPage();
   $("#farWrap").classList.toggle("hidden", !isRecipient);
   if(!map) initMap();
@@ -1715,7 +2066,8 @@ function frontError(msg){
 $("#hereBtn").addEventListener("click", async ()=>{
   frontError("");
   try{
-    openPin(await squeezeLocate());
+    const p = await squeezeLocate();
+    if(pickMode) addStop(p); else openPin(p);
   }catch(err){
     frontError(locateErrorMsg(err));
   }
@@ -1777,7 +2129,8 @@ function choose(i){
   const h = currentHits[i];
   if(!h) return;
   if(h.cc) biasCC = h.cc;
-  openPin({ lat: h.lat, lon: h.lon, ts: Date.now(), acc: 0, note: "" });
+  const p = { lat: h.lat, lon: h.lon, ts: Date.now(), acc: 0, note: "" };
+  if(pickMode) addStop(p); else openPin(p);
 }
 
 function highlight(next){
@@ -1909,7 +2262,8 @@ $("#searchBox").addEventListener("keydown", e=>{
 /* ---------- intro: the lemon opens ---------- */
 (function intro(){
   const el = $("#intro");
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduced = window.matchMedia
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if(reduced){ el.remove(); return; }
   /* someone opening a shared pin gets the short cut — they came for the pin */
   const hasPin = !!unpackPin(location.hash.slice(1));
@@ -1927,13 +2281,233 @@ $("#searchBox").addEventListener("keydown", e=>{
   }
 })();
 
+/* ---------- the trip sheet ----------
+   Reordering is a free drag: the row you grab lifts out of the stack and
+   follows your finger anywhere on screen, the others slide aside to show
+   where it'll land, and on release it springs into the slot with a little
+   overshoot. Nothing is committed until the spring finishes. */
+const ROW_GAP = 8;
+
+function stopLabel(s){
+  return s.addr || (s.lat.toFixed(5) + ", " + s.lon.toFixed(5));
+}
+
+function renderTrip(){
+  const list = $("#tripList");
+  list.innerHTML = "";
+  stops.forEach((s, i)=>{
+    const li = document.createElement("li");
+    li.className = "tripitem" + (i === active ? " current" : "");
+    li.dataset.i = i;
+
+    const num = document.createElement("div");
+    num.className = "tripnum";
+    num.textContent = i + 1;
+
+    const body = document.createElement("div");
+    body.className = "tripbody";
+    const where = document.createElement("div");
+    where.className = "tripwhere";
+    where.textContent = stopLabel(s);
+    body.appendChild(where);
+    const co = document.createElement("div");
+    co.className = "tripcoords";
+    co.textContent = s.lat.toFixed(5) + ", " + s.lon.toFixed(5);
+    body.appendChild(co);
+    if(s.note){
+      const nt = document.createElement("div");
+      nt.className = "tripnote";
+      nt.textContent = s.note;
+      body.appendChild(nt);
+    }
+    body.addEventListener("click", ()=>{
+      if(justDragged) return;
+      setActive(i);
+      renderTrip();
+    });
+
+    const handle = document.createElement("div");
+    handle.className = "triphandle";
+    handle.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+      <g stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+        <path d="M9 8h6M9 12h6M9 16h6"/></g></svg>`;
+
+    const del = document.createElement("button");
+    del.className = "tripdel";
+    del.setAttribute("aria-label", "Remove stop");
+    del.textContent = "\u00d7";
+    del.addEventListener("click", e =>{
+      e.stopPropagation();
+      if(stops.length <= 1){ flash("a trip needs at least one stop"); return; }
+      li.classList.add("gone");
+      setTimeout(()=>{
+        stops.splice(i, 1);
+        if(active >= stops.length) active = stops.length - 1;
+        pin = stops[active];
+        refreshPin({ recenter: true });
+        renderTrip();
+      }, 190);
+    });
+
+    li.append(num, body, handle, del);
+    if(!s.addr) fillAddr(s, where);
+    startDragOn(li, handle, body);
+    list.appendChild(li);
+  });
+
+  const n = stops.length;
+  $("#tripLede").textContent = n === 1
+    ? "One stop. Add another and they'll all ride in the same link."
+    : `${n} stops. Drag to reorder — the order is the route.`;
+  const chars = pinUrl().length;
+  $("#tripSize").textContent = `whole trip = ${chars} characters of link`;
+}
+
+/* look up an address once, then remember it on the stop */
+function fillAddr(s, el){
+  reverseGeocode(s).then(a =>{
+    s.addr = a || "";
+    if(el.isConnected && a) el.textContent = a;
+  }).catch(()=>{});
+}
+
+let justDragged = false;
+
+function startDragOn(li, handle, body){
+  const begin = e =>{
+    if(e.button != null && e.button !== 0) return;
+    const list = $("#tripList");
+    const rows = [...list.children];
+    const from = rows.indexOf(li);
+    const rowH = li.offsetHeight + ROW_GAP;
+    let to = from, moved = false;
+    const startX = e.clientX, startY = e.clientY;
+
+    li.setPointerCapture(e.pointerId);
+    li.classList.add("lifted");
+
+    const layout = ()=>{
+      rows.forEach((r, i)=>{
+        if(r === li) return;
+        let off = 0;
+        if(from < to && i > from && i <= to) off = -rowH;
+        if(from > to && i < from && i >= to) off = rowH;
+        r.style.transform = `translateY(${off}px)`;
+      });
+    };
+
+    const move = ev =>{
+      const dx = ev.clientX - startX, dy = ev.clientY - startY;
+      if(!moved && Math.abs(dx) + Math.abs(dy) > 4) moved = true;
+      /* free in both axes — it'll spring back, that's the fun of it */
+      li.style.transform = `translate(${dx}px, ${dy}px) scale(1.035)`;
+      const next = Math.max(0, Math.min(rows.length - 1, from + Math.round(dy / rowH)));
+      if(next !== to){ to = next; layout(); }
+    };
+
+    const end = ()=>{
+      li.removeEventListener("pointermove", move);
+      li.removeEventListener("pointerup", end);
+      li.removeEventListener("pointercancel", end);
+      li.classList.remove("lifted");
+      if(!moved){ li.style.transform = ""; return; }
+
+      justDragged = true;
+      setTimeout(()=>{ justDragged = false; }, 60);
+
+      li.classList.add("settling");
+      li.style.transform = `translate(0px, ${(to - from) * rowH}px)`;
+
+      const done = ()=>{
+        li.removeEventListener("transitionend", done);
+        if(to !== from){
+          const [moving] = stops.splice(from, 1);
+          stops.splice(to, 0, moving);
+          /* keep looking at the same place, wherever it ended up */
+          if(active === from) active = to;
+          else if(from < active && to >= active) active--;
+          else if(from > active && to <= active) active++;
+          pin = stops[active];
+          refreshPin({ recenter: false });
+        }
+        renderTrip();
+      };
+      li.addEventListener("transitionend", done, { once:true });
+      setTimeout(()=>{ if(li.isConnected) done(); }, 500);   /* belt and braces */
+    };
+
+    li.addEventListener("pointermove", move);
+    li.addEventListener("pointerup", end);
+    li.addEventListener("pointercancel", end);
+    e.preventDefault();
+  };
+  handle.addEventListener("pointerdown", begin);
+  body.addEventListener("pointerdown", begin);
+}
+
+function openTripSheet(){
+  renderTrip();
+  $("#tripSheet").classList.remove("hidden");
+}
+function closeTripSheet(){ $("#tripSheet").classList.add("hidden"); }
+
+$("#tripBtn").addEventListener("click", ()=>{
+  if(!pin){ flash("drop a pin first"); return; }
+  openTripSheet();
+});
+$("#tripClose").addEventListener("click", closeTripSheet);
+
+/* ---------- adding a stop ----------
+   Reuses the whole front page rather than building a second search. */
+function enterPickMode(){
+  pickMode = true;
+  closeTripSheet();
+  $("#front").classList.remove("hidden");
+  $("#pinPage").classList.add("hidden");
+  $("#front").classList.add("picking");
+  $("#frontTitle").textContent = "Add a stop";
+  $("#frontLede").textContent = "Drop one where you are, or search for it.";
+  $("#pickCancel").classList.remove("hidden");
+  clearResults();
+  $("#searchBox").value = "";
+}
+function exitPickMode(){
+  pickMode = false;
+  $("#front").classList.remove("picking");
+  $("#frontTitle").textContent = "Where are you, Lemons?";
+  $("#frontLede").textContent = "Drop a pin, send one link. Coordinates, address, and a route for whatever maps app they've got.";
+  $("#pickCancel").classList.add("hidden");
+  clearResults();
+  $("#searchBox").value = "";
+}
+function addStop(p){
+  if(stops.length >= 32){ flash("32 stops is the limit"); return; }
+  stops.push(p);
+  active = stops.length - 1;
+  pin = stops[active];
+  exitPickMode();
+  showPinPage();
+  refreshPin({ recenter: true });
+  openTripSheet();
+}
+$("#addStopBtn").addEventListener("click", enterPickMode);
+$("#pickCancel").addEventListener("click", ()=>{
+  exitPickMode();
+  showPinPage();
+  openTripSheet();
+});
+
+/* ---------- stepper ---------- */
+$("#stepPrev").addEventListener("click", ()=> setActive((active - 1 + stops.length) % stops.length));
+$("#stepNext").addEventListener("click", ()=> setActive((active + 1) % stops.length));
+
 /* ---------- keep it on your phone ----------
    Chrome hands us a real install prompt. Safari has no such API, so iOS gets
    the two-tap instructions instead. Either way we wait until someone has
    actually used the thing before asking. */
 (function install(){
   const bar = $("#installBar");
-  const standalone = window.matchMedia("(display-mode: standalone)").matches
+  const standalone = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches)
     || window.navigator.standalone === true;
   if(standalone) return;                       /* already installed */
   if(store.get("lemoncoords.noinstall")) return;
@@ -1999,12 +2573,19 @@ if("serviceWorker" in navigator &&
 }
 
 /* ---------- boot ---------- */
+function readHash(){
+  const h = location.hash.slice(1);
+  const trip = decodeTrip(h);
+  if(trip && trip.length) return trip;
+  const one = unpackPin(h);
+  return one ? [one] : null;
+}
 (function boot(){
-  const p = unpackPin(location.hash.slice(1));
-  if(p){
+  const list = readHash();
+  if(list){
     /* the link was already in the URL — this is someone we sent it to */
     isRecipient = true;
-    openPin(p, { push:false });
+    openPin(list, { push:false });
   } else {
     /* clean slate every visit, same as the weather */
     history.replaceState(null, "", location.pathname);
