@@ -511,7 +511,6 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .approw + .approw{border-top:1px solid var(--hairline)}
 .approw .an{flex:1;font-weight:600;font-size:.95rem}
 .approw .linkish{flex:none}
-.fhnote{margin-top:9px;padding:0 2px;color:var(--muted);font-size:.78rem;line-height:1.4}
 .minibtn{
   display:inline-flex;align-items:center;justify-content:center;
   background:var(--ink);color:var(--pith);border:1px solid var(--ink);
@@ -1357,12 +1356,7 @@ body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-
             <a class="minibtn ghost" id="gaView" target="_blank" rel="noopener">View</a>
             <a class="minibtn" id="gaRoute" target="_blank" rel="noopener">Route</a>
           </div>
-          <div class="approw">
-            <span class="an">FlockHopper</span>
-            <a class="minibtn" id="fhOpen" href="https://dontgetflocked.com/" target="_blank" rel="noopener">Open</a>
-          </div>
         </div>
-        <p class="fhnote">FlockHopper opens on its own — copy the coordinates above and paste them in.</p>
       </div>
 
       <div class="qrsection">
@@ -5362,23 +5356,6 @@ function readHash(){
   const one = unpackPin(h);
   return one ? { stops:[one], ordered:true } : null;
 }
-/* FlockHopper is a PWA, not a native app with its own URL scheme. But if it's
-   been installed to the home screen, an Android intent URL hands it to that
-   installed instance instead of opening a fresh browser tab. The S.browser_
-   fallback_url means anyone without it still lands on the site as before.
-   iOS has no equivalent, so it keeps the plain link. */
-(function flockLink(){
-  const el = document.getElementById("fhOpen");
-  if(!el) return;
-  const isAndroid = /Android/i.test(navigator.userAgent);
-  if(isAndroid){
-    const site = "dontgetflocked.com/";
-    el.href = "intent://" + site +
-      "#Intent;scheme=https;package=;S.browser_fallback_url=" +
-      encodeURIComponent("https://" + site) + ";end";
-  }
-})();
-
 (function boot(){
   const rawHash = location.hash.slice(1);
   /* a private trip: stops are encrypted, so ask for the lemon password before

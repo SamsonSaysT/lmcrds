@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lemoncoords-v15-6-final-map-polish';
+const CACHE_NAME = 'lemoncoords-v15-7-open-in-cleanup';
 const APP_SHELL = [
   './',
   './index.html',
