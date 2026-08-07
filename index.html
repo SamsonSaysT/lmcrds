@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>LEMONCOORDS.</title>
-<!-- v15.9 map visibility + view-only polish -->
+<!-- v15.11 designed vector basemap + floated route control -->
 <meta name="description" content="Drop a pin. Send it. Every way to find you, in one link.">
 <meta property="og:title" content="LEMONCOORDS.">
 <meta property="og:description" content="Someone sent you a pin. Open it.">
@@ -22,6 +22,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,560;9..144,640&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css">
+<link rel="preconnect" href="https://tiles.openfreemap.org">
 <style>
 :root{
   --pith:#FFFDF4;        /* paper cream */
@@ -218,18 +220,13 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 .locatebtn.locating svg{animation:locatePulse .8s ease-in-out infinite alternate}
 @keyframes locatePulse{to{transform:scale(.78);opacity:.46}}
 #map.locked{cursor:default}
-/* Drawn-map treatment — one basemap only. No extra road/label raster is stacked
-   over CARTO. Day mode is warmer + darker so roads and names stay legible while
-   parks keep their green. Night mode uses contrast to push CARTO's own roads and
-   labels toward white without washing the black land/background. */
-:root:not([data-theme="dark"]) #map:not(.sat){background:#E6D58F}
-:root:not([data-theme="dark"]) #map:not(.sat) .drawn-base-tile{
-  filter:brightness(.84) contrast(1.27) saturate(1.10) sepia(.045) hue-rotate(356deg)
-}
-:root[data-theme="dark"] #map:not(.sat){background:#0B0C0A}
-:root[data-theme="dark"] #map:not(.sat) .drawn-base-tile{
-  filter:brightness(1.08) contrast(1.48) saturate(.76)
-}
+/* Drawn map: the actual vector basemap is styled feature-by-feature in JS.
+   No CSS color filter, no black veil, and no duplicate road/label layer.
+   This small block only supplies the canvas background while vector tiles load. */
+:root:not([data-theme="dark"]) #map:not(.sat){background:#E8D9A8}
+:root[data-theme="dark"] #map:not(.sat){background:#20211F}
+#map .leaflet-maplibre-gl{background:transparent}
+#map .maplibregl-canvas{outline:0}
 #map.sat .leaflet-tile-pane .leaflet-tile:not(.sat-road-tile):not(.outdoors-overland-tile){filter:none !important}
 .leaflet-tile{transition:filter .24s ease,opacity .24s ease}
 
@@ -328,11 +325,12 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .fsroutepanel.open{opacity:1;transform:none;pointer-events:auto}
 /* Compact preview: route navigation stays available without entering fullscreen. */
 .mapwrap:not(.is-fullscreen) .fsroutebtn{
-  right:10px;top:10px;padding:8px 11px;gap:7px;
+  right:4px;top:-39px;padding:7px 11px;gap:7px;min-height:33px;
+  white-space:nowrap;
 }
 .mapwrap:not(.is-fullscreen) .fsroutepanel{
-  right:10px;top:52px;width:min(390px,calc(100% - 20px));
-  max-height:min(76%,360px);
+  right:10px;top:8px;width:min(390px,calc(100% - 20px));
+  max-height:calc(100% - 16px);
 }
 /* Fullscreen keeps Route clear of the native map-control stack. */
 .mapwrap.is-fullscreen .fsroutebtn{
@@ -438,8 +436,8 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .map-note-tooltip.leaflet-tooltip::before{display:none}
 .fscandidate{filter:drop-shadow(0 7px 12px rgba(35,36,27,.24));opacity:.82}
 @media(max-width:600px){
-  .mapwrap:not(.is-fullscreen) .fsroutepanel{left:8px;right:8px;width:auto;top:50px;max-height:calc(100% - 60px)}
-  .mapwrap:not(.is-fullscreen) .fsroutebtn{right:8px;top:8px;padding:8px 10px;gap:6px}
+  .mapwrap:not(.is-fullscreen) .fsroutepanel{left:8px;right:8px;width:auto;top:8px;max-height:calc(100% - 16px)}
+  .mapwrap:not(.is-fullscreen) .fsroutebtn{right:3px;top:-37px;padding:7px 10px;gap:6px;min-height:32px}
   .mapwrap.is-fullscreen .fsroutepanel{left:10px;right:10px;width:auto;top:calc(max(10px,env(safe-area-inset-top)) + 46px);max-height:62dvh}
   .mapwrap.is-fullscreen .fsroutebtn{right:145px;top:max(10px,env(safe-area-inset-top));padding:8px 10px;gap:6px}
   .mapwrap.is-fullscreen .mapui{right:8px;top:max(10px,env(safe-area-inset-top));gap:4px}
@@ -1408,7 +1406,7 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
 
   <footer class="site">
     <b>How it works:</b> full links keep the trip inside the URL. Optional short links store only the trip payload and lock settings in Cloudflare D1.
-    Search by Photon, addresses by Nominatim, both on OpenStreetMap data · basemap © OpenStreetMap &amp; CARTO.
+    Search by Photon, addresses by Nominatim, both on OpenStreetMap data · vector basemap by OpenFreeMap / OpenMapTiles.
     Made with 🍋 for people who are lost.
   </footer>
 </div>
@@ -1666,6 +1664,8 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.3/leaflet-maplibre-gl.js"></script>
 <script src="https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
@@ -2800,9 +2800,9 @@ window.addEventListener("popstate", ()=>{
 
 /* ---------- map ---------- */
 const TILES = {
-  /* voyager has real street labels; dark_matter keeps them legible when lifted */
-  dark:  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-  light: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+  /* One real vector basemap for both themes. LemonCoords recolors the actual
+     vector features after the style loads rather than filtering/stacking tiles. */
+  drawnStyle: "https://tiles.openfreemap.org/styles/liberty",
   /* Keep the exact satellite source already used by LemonCoords. */
   sat:       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
   satRoads:  "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}",
@@ -2898,11 +2898,11 @@ function updateOutdoorsButton(){
 function updateOutdoorsDensity(){
   if(!map) return;
   const z = map.getZoom();
-  /* The satellite base already has one Esri road layer. The outdoor toggle
-     strengthens it instead of stacking a duplicate transportation layer. */
-  satRoads?.setOpacity(satellite
-    ? (outdoorsOn ? (z >= 14 ? .88 : z >= 11 ? .72 : .58) : .48)
-    : 0);
+  /* On satellite, roads + labels are part of the optional outdoors overlay.
+     Off really means imagery only; no always-on duplicate reference map. */
+  const satRef = satellite && outdoorsOn;
+  satRoads?.setOpacity(satRef ? (z >= 14 ? .88 : z >= 11 ? .72 : .58) : 0);
+  satLabels?.setOpacity(satRef ? .9 : 0);
   if(!outdoorsOn) return;
   const density = z >= 16 ? 1 : z >= 14 ? .92 : z >= 12 ? .72 : .46;
   outdoorsTrails?.setOpacity((satellite ? 1 : .94) * density);
@@ -2911,7 +2911,7 @@ function updateOutdoorsDensity(){
 function setOutdoorsOverlay(force){
   if(!map) return;
   if(force) removeOutdoorsOverlay();
-  if(!outdoorsOn){ removeOutdoorsOverlay(); updateOutdoorsButton(); return; }
+  if(!outdoorsOn){ removeOutdoorsOverlay(); updateOutdoorsDensity(); updateOutdoorsButton(); return; }
 
   if(!outdoorsTrails && L.vectorGrid?.protobuf){
     const hidden = hiddenTrailVectorStyle;
@@ -2946,12 +2946,127 @@ function toggleOutdoors(){
   flash(outdoorsOn ? "roads + marked trails on" : "roads + trails off");
 }
 
+const DRAWN_ATTRIBUTION = '<a href="https://openfreemap.org/">OpenFreeMap</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+let drawnAttributionOn = false;
+function setDrawnAttribution(on){
+  if(!map?.attributionControl) return;
+  if(on && !drawnAttributionOn){ map.attributionControl.addAttribution(DRAWN_ATTRIBUTION); drawnAttributionOn = true; }
+  if(!on && drawnAttributionOn){ map.attributionControl.removeAttribution(DRAWN_ATTRIBUTION); drawnAttributionOn = false; }
+}
+
+function safePaint(gl, id, prop, value){
+  try{ gl.setPaintProperty(id, prop, value); }catch(_){ }
+}
+function safeLayout(gl, id, prop, value){
+  try{ gl.setLayoutProperty(id, prop, value); }catch(_){ }
+}
+function roadTier(id){
+  const n = String(id || '').toLowerCase();
+  if(n.includes('motorway') || n.includes('trunk') || n.includes('primary')) return 'major';
+  if(n.includes('secondary') || n.includes('tertiary') || n.includes('link')) return 'secondary';
+  if(n.includes('path') || n.includes('pedestrian') || n.includes('track') || n.includes('service')) return 'path';
+  if(n.includes('rail')) return 'rail';
+  return 'local';
+}
+function applyLemonBasemapPalette(gl, theme = currentTheme()){
+  if(!gl?.getStyle) return;
+  const dark = theme === 'dark';
+  const c = dark ? {
+    land:'#20211F', residential:'#242520', park:'#29422E', wood:'#263629', grass:'#2C3B2B',
+    wetland:'#24413A', sand:'#393325', water:'#235F7A', waterLine:'#4A95B3', building:'#32332F',
+    generic:'#252620', aeroway:'#2B2C28', boundary:'#555851',
+    roadMajor:'#F7F3E8', roadSecondary:'#DCD9D0', roadLocal:'#B4B4AE', roadPath:'#888B83',
+    roadCasing:'#11120F', rail:'#787A74', label:'#F1ECDE', labelMuted:'#C5C0B2',
+    labelHalo:'#20211F', waterLabel:'#8FD0E7'
+  } : {
+    land:'#E8D9A8', residential:'#E9DDB8', park:'#B9D09B', wood:'#B5C99C', grass:'#C6D6A8',
+    wetland:'#ACCCB8', sand:'#E2C788', water:'#98C9DD', waterLine:'#67A7C2', building:'#D3C5A5',
+    generic:'#E5D8B4', aeroway:'#D8CFB8', boundary:'#A69A78',
+    roadMajor:'#A96E20', roadSecondary:'#C38A34', roadLocal:'#D1AA60', roadPath:'#B9A77C',
+    roadCasing:'#F7ECCB', rail:'#827963', label:'#443A2B', labelMuted:'#625B48',
+    labelHalo:'#F5EACB', waterLabel:'#386D82'
+  };
+
+  const layers = gl.getStyle()?.layers || [];
+  layers.forEach(layer=>{
+    const id = layer.id || '';
+    const n = id.toLowerCase();
+    const sl = String(layer['source-layer'] || '').toLowerCase();
+    const type = layer.type;
+
+    /* Remove the low-zoom shaded raster so the vector palette is always the map. */
+    if(type === 'raster' && (n.includes('natural_earth') || n.includes('hillshade'))){
+      safeLayout(gl, id, 'visibility', 'none');
+      return;
+    }
+    if(type === 'background'){ safePaint(gl,id,'background-color',c.land); return; }
+
+    if(type === 'fill'){
+      if(sl === 'water' || n === 'water' || n.startsWith('water_')) safePaint(gl,id,'fill-color',c.water);
+      else if(sl === 'park' || n.includes('park')) safePaint(gl,id,'fill-color',c.park);
+      else if(sl === 'building' || n.includes('building')) safePaint(gl,id,'fill-color',c.building);
+      else if(sl === 'landcover'){
+        if(n.includes('wood') || n.includes('forest')) safePaint(gl,id,'fill-color',c.wood);
+        else if(n.includes('grass')) safePaint(gl,id,'fill-color',c.grass);
+        else if(n.includes('wetland')) safePaint(gl,id,'fill-color',c.wetland);
+        else if(n.includes('sand')) safePaint(gl,id,'fill-color',c.sand);
+        else safePaint(gl,id,'fill-color',c.generic);
+      }else if(sl === 'landuse'){
+        if(n.includes('cemetery') || n.includes('pitch') || n.includes('track')) safePaint(gl,id,'fill-color',c.park);
+        else if(n.includes('residential')) safePaint(gl,id,'fill-color',c.residential);
+        else safePaint(gl,id,'fill-color',c.generic);
+      }else if(sl === 'aeroway') safePaint(gl,id,'fill-color',c.aeroway);
+      return;
+    }
+
+    if(type === 'line'){
+      if(sl === 'waterway' || n.includes('waterway')){ safePaint(gl,id,'line-color',c.waterLine); return; }
+      if(sl === 'boundary' || n.includes('boundary')){ safePaint(gl,id,'line-color',c.boundary); return; }
+      if(sl === 'transportation'){
+        const tier = roadTier(id);
+        const casing = n.includes('casing');
+        const color = casing ? c.roadCasing : tier === 'major' ? c.roadMajor : tier === 'secondary' ? c.roadSecondary : tier === 'path' ? c.roadPath : tier === 'rail' ? c.rail : c.roadLocal;
+        safePaint(gl,id,'line-color',color);
+        return;
+      }
+      return;
+    }
+
+    if(type === 'symbol'){
+      const isWater = sl.includes('water') || n.includes('water_name');
+      const isRoad = sl.includes('transportation_name') || n.includes('road_name') || n.includes('highway_name');
+      const isPlace = sl === 'place' || n.includes('place_');
+      const text = isWater ? c.waterLabel : (isRoad || isPlace) ? c.label : c.labelMuted;
+      safePaint(gl,id,'text-color',text);
+      safePaint(gl,id,'text-halo-color',c.labelHalo);
+      safePaint(gl,id,'text-halo-width',isRoad ? (dark ? 1.8 : 1.45) : (dark ? 1.45 : 1.15));
+      safePaint(gl,id,'text-halo-blur',.2);
+    }
+  });
+}
+
+function addDrawnBasemap(){
+  if(!L.maplibreGL || !window.maplibregl) return null;
+  const glLayer = L.maplibreGL({
+    style:TILES.drawnStyle,
+    interactive:false,
+    attributionControl:false,
+    pitchWithRotate:false,
+    dragRotate:false
+  }).addTo(map);
+  const gl = glLayer.getMaplibreMap();
+  const paint = ()=> applyLemonBasemapPalette(gl, currentTheme());
+  if(gl.loaded()) paint(); else gl.once('load', paint);
+  return glLayer;
+}
+
 function setTiles(force){
-  const key = satellite ? "sat" : currentTheme();
+  const key = satellite ? "sat" : `drawn-${currentTheme()}`;
   if(tileKey === key && !force) return;
   tileKey = key;
   [tileLayer, satRoads, satLabels].forEach(l => l && l.remove());
   tileLayer = satRoads = satLabels = null;
+  setDrawnAttribution(!satellite);
 
   if(satellite){
     /* imagery runs out around z19 in most places — let Leaflet upscale past it
@@ -2961,20 +3076,24 @@ function setTiles(force){
       attribution: 'Imagery &copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics'
     }).addTo(map);
     satRoads  = L.tileLayer(TILES.satRoads,  {
-      ...opts, zIndex: 2, opacity:.48, className:"sat-road-tile",
+      ...opts, zIndex: 2, opacity:0, className:"sat-road-tile",
       attribution:'Transportation &copy; <a href="https://www.esri.com/">Esri</a>'
     }).addTo(map);
     satLabels = L.tileLayer(TILES.satLabels, {
-      ...opts, zIndex: 3, opacity:.9, className:"sat-label-tile"
+      ...opts, zIndex: 3, opacity:0, className:"sat-label-tile"
     }).addTo(map);
   }else{
-    tileLayer = L.tileLayer(TILES[currentTheme()], {
-      maxZoom: 20, zIndex: 1, className:"drawn-base-tile",
-      detectRetina: true,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-    }).addTo(map);
+    tileLayer = addDrawnBasemap();
+    /* Graceful fallback only if WebGL/MapLibre is unavailable. No styling layer
+       is stacked above it; the fallback itself is the sole basemap. */
+    if(!tileLayer){
+      tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom:20, zIndex:1, detectRetina:true,
+        attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+      }).addTo(map);
+    }
   }
-  /* the lemon tint is for the drawn basemap only — never filter photography */
+  /* Satellite photography is never color-filtered. */
   document.getElementById("map").classList.toggle("sat", satellite);
   if(satBtn){
     satBtn.innerHTML = satellite ? MAP_ICON : SAT_ICON;
@@ -3090,9 +3209,9 @@ async function showCurrentLocationNoZoom(){
     youMarker = L.marker([me.lat, me.lon], { icon:youIcon, keyboard:false, zIndexOffset:1300 }).addTo(map);
     locateBtn?.setAttribute("aria-pressed", "true");
     locateBtn?.classList.add("on");
-    /* Pan so the dot is actually visible, but preserve the user's exact zoom level. */
-    map.panTo([me.lat, me.lon], { animate:true, duration:.45 });
-    flash(`your location · ± ${Math.round(me.acc || 0)} m`);
+    /* Deliberately leave center AND zoom untouched. The location button marks
+       where you are without stealing the viewport the user arranged. */
+    flash(`your location marked · ± ${Math.round(me.acc || 0)} m`);
   }catch(err){
     flash(locateErrorMsg(err));
   }finally{
@@ -3107,7 +3226,7 @@ const LocateToggle = L.Control.extend({
     b.type = "button";
     b.innerHTML = LOCATION_ICON;
     b.title = "Show my location";
-    b.setAttribute("aria-label", "Show my current location without changing zoom");
+    b.setAttribute("aria-label", "Show my current location without changing the map view");
     b.setAttribute("aria-pressed", "false");
     L.DomEvent.disableClickPropagation(b);
     L.DomEvent.on(b, "click", showCurrentLocationNoZoom);
