@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>LEMONCOORDS.</title>
-<!-- v15.6 fullscreen route polish + safe pin deletion -->
+<!-- v15.9 map visibility + view-only polish -->
 <meta name="description" content="Drop a pin. Send it. Every way to find you, in one link.">
 <meta property="og:title" content="LEMONCOORDS.">
 <meta property="og:description" content="Someone sent you a pin. Open it.">
@@ -215,14 +215,29 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 }
 .satbtn svg{display:block}
 .satbtn[aria-pressed="true"]{background:var(--ink);color:var(--pith)}
+.locatebtn.locating svg{animation:locatePulse .8s ease-in-out infinite alternate}
+@keyframes locatePulse{to{transform:scale(.78);opacity:.46}}
 #map.locked{cursor:default}
 /* The drawn map gets a restrained contrast lift.  The intent is darker roads
    and labels without turning the cream base into a noisy high-contrast map. */
-:root:not([data-theme="dark"]) #map:not(.sat) .leaflet-tile-pane .leaflet-tile{
-  filter:saturate(.96) contrast(1.18) brightness(.965)
+:root:not([data-theme="dark"]) #map:not(.sat){background:#F1E2A6}
+:root:not([data-theme="dark"]) #map:not(.sat) .drawn-base-tile{
+  /* Warm the land without flattening CARTO's green parks or black labels. */
+  filter:sepia(.13) saturate(1.16) contrast(1.12) brightness(.99) hue-rotate(352deg)
 }
-:root[data-theme="dark"] #map:not(.sat) .leaflet-tile-pane .leaflet-tile{
-  filter:brightness(1.56) contrast(1.2) saturate(1.06) sepia(.045)
+:root[data-theme="dark"] #map:not(.sat) .drawn-base-tile{
+  filter:brightness(1.42) contrast(1.15) saturate(.96)
+}
+/* A separate transportation reference layer gives roads and road names their own
+   contrast instead of forcing the entire basemap brighter. */
+:root:not([data-theme="dark"]) #map:not(.sat) .drawn-road-tile{
+  filter:brightness(0) saturate(100%) invert(45%) sepia(94%) saturate(760%)
+    hue-rotate(7deg) brightness(79%) contrast(104%)
+    drop-shadow(0 0 1px rgba(255,253,244,.92)) !important;
+}
+:root[data-theme="dark"] #map:not(.sat) .drawn-road-tile{
+  filter:brightness(0) invert(100%) brightness(1.08)
+    drop-shadow(0 0 1px rgba(0,0,0,.92)) !important;
 }
 #map.sat .leaflet-tile-pane .leaflet-tile:not(.sat-road-tile):not(.outdoors-overland-tile){filter:none !important}
 .leaflet-tile{transition:filter .24s ease,opacity .24s ease}
@@ -284,8 +299,8 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 }
 .mapwrap:fullscreen{background:var(--pith)}
 .mapwrap:fullscreen #map{height:100vh}
-.fullscreenchrome{display:none}
-.mapwrap.is-fullscreen .fullscreenchrome{display:block}
+/* The route drawer lives on both the compact preview and fullscreen map. */
+.fullscreenchrome{display:block}
 .mapwrap.is-fullscreen > .sharedsheet{
   z-index:calc(var(--z-modal) + 80);padding-top:max(72px,calc(env(safe-area-inset-top) + 28px));
 }
@@ -320,6 +335,19 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 :root[data-theme="dark"] .fsroutepanel,
 :root[data-theme="dark"] .fsroutebtn{box-shadow:0 22px 62px rgba(0,0,0,.5)}
 .fsroutepanel.open{opacity:1;transform:none;pointer-events:auto}
+/* Compact preview: route navigation stays available without entering fullscreen. */
+.mapwrap:not(.is-fullscreen) .fsroutebtn{
+  right:10px;top:10px;padding:8px 11px;gap:7px;
+}
+.mapwrap:not(.is-fullscreen) .fsroutepanel{
+  right:10px;top:52px;width:min(390px,calc(100% - 20px));
+  max-height:min(76%,360px);
+}
+/* Fullscreen keeps Route clear of the native map-control stack. */
+.mapwrap.is-fullscreen .fsroutebtn{
+  right:calc(max(12px,env(safe-area-inset-right)) + 148px);
+  top:max(12px,env(safe-area-inset-top));
+}
 .fssearch{
   display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;padding:13px 13px 10px;
 }
@@ -419,8 +447,10 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .map-note-tooltip.leaflet-tooltip::before{display:none}
 .fscandidate{filter:drop-shadow(0 7px 12px rgba(35,36,27,.24));opacity:.82}
 @media(max-width:600px){
-  .fsroutepanel{left:10px;right:10px;width:auto;top:calc(max(10px,env(safe-area-inset-top)) + 46px);max-height:62dvh}
-  .fsroutebtn{right:145px;top:max(10px,env(safe-area-inset-top));padding:8px 10px;gap:6px}
+  .mapwrap:not(.is-fullscreen) .fsroutepanel{left:8px;right:8px;width:auto;top:50px;max-height:calc(100% - 60px)}
+  .mapwrap:not(.is-fullscreen) .fsroutebtn{right:8px;top:8px;padding:8px 10px;gap:6px}
+  .mapwrap.is-fullscreen .fsroutepanel{left:10px;right:10px;width:auto;top:calc(max(10px,env(safe-area-inset-top)) + 46px);max-height:62dvh}
+  .mapwrap.is-fullscreen .fsroutebtn{right:145px;top:max(10px,env(safe-area-inset-top));padding:8px 10px;gap:6px}
   .mapwrap.is-fullscreen .mapui{right:8px;top:max(10px,env(safe-area-inset-top));gap:4px}
   .mapwrap.is-fullscreen .adjustbtn{height:34px;min-height:34px;padding:0 7px;font-size:.59rem}
   .fssearch{grid-template-columns:42px minmax(0,1fr);padding:11px 11px 9px}
@@ -800,10 +830,28 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 :root[data-theme="dark"] .sharedmsg.bad{color:#E58A66}
 .sharedmsg.good{color:var(--leaf);font-weight:600}
 .sharedfine{margin-top:13px;padding-top:12px;border-top:1px solid var(--hairline);color:var(--muted);font-size:.7rem;line-height:1.45}
-body.sharedlocked #noteInput,body.sharedlocked #dragBtn,body.sharedlocked #addStopBtn,
-body.sharedlocked #modeRoute,body.sharedlocked #modeList{opacity:.48;cursor:not-allowed}
-.tripitem.triplocked .triphandle,.tripitem.triplocked .tripskip,.tripitem.triplocked .tripdel{opacity:.3}
-.tripitem.triplocked .tripbody{cursor:pointer}
+/* Locked shared trips are view-first: controls that cannot do anything disappear
+   rather than hanging around greyed out. The shared lock itself remains available
+   when the creator allowed password editing. */
+body.sharedlocked .notefield,
+body.sharedlocked #dragBtn,
+body.sharedlocked #addStopBtn,
+body.sharedlocked #modeSwitch{display:none !important}
+body.sharedlocked .tripitem.triplocked .triphandle,
+body.sharedlocked .tripitem.triplocked .tripskip,
+body.sharedlocked .tripitem.triplocked .tripdel{display:none !important}
+body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:none}
+.tripitem.triplocked .tripbody{cursor:grab}
+.tripitem.playdrag{
+  z-index:32;border-color:color-mix(in srgb,var(--zest) 72%,var(--ink));
+  box-shadow:0 18px 38px rgba(35,36,27,.2);cursor:grabbing;
+  transition:box-shadow .16s ease,border-color .16s ease;
+}
+:root[data-theme="dark"] .tripitem.playdrag{box-shadow:0 18px 40px rgba(0,0,0,.58)}
+.fssearch.viewonly{grid-template-columns:auto;justify-content:end;padding:9px 12px 2px}
+.fssearch.viewonly .fssearchfield,.fssearch.viewonly .fsadd{display:none !important}
+.fsrouteitem.viewonly{grid-template-columns:minmax(0,1fr)}
+.fsrouteitem.viewonly .fsroutefocus{padding-right:10px}
 .shorturl{
   font-family:var(--display);font-weight:640;font-size:1.15rem;
   border-bottom:2px solid var(--zest);padding-bottom:4px;
@@ -2774,10 +2822,10 @@ const TILES = {
   /* Official unlabeled U.S. Forest Service motor-vehicle-use roads + trails. */
   overland:  "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_MVUM_01/MapServer"
 };
-let tileLayer = null, satRoads = null, satLabels = null, tileKey = null, satellite = true;
+let tileLayer = null, satRoads = null, satLabels = null, mapRoads = null, tileKey = null, satellite = true;
 let outdoorsTrails = null, outdoorsOverland = null;
 let outdoorsOn = store.get("lemoncoords.outdoors") === "on";
-let satBtn = null, outdoorsBtn = null, fullscreenBtn = null;
+let satBtn = null, outdoorsBtn = null, fullscreenBtn = null, locateBtn = null;
 let mapFullscreen = false, fullscreenWasUnlocked = false;
 let fsRouteOpen = false, fsCandidate = null, fsCandidateMarker = null;
 function currentTheme(){ return document.documentElement.dataset.theme === "dark" ? "dark" : "light"; }
@@ -2911,8 +2959,8 @@ function setTiles(force){
   const key = satellite ? "sat" : currentTheme();
   if(tileKey === key && !force) return;
   tileKey = key;
-  [tileLayer, satRoads, satLabels].forEach(l => l && l.remove());
-  tileLayer = satRoads = satLabels = null;
+  [tileLayer, satRoads, satLabels, mapRoads].forEach(l => l && l.remove());
+  tileLayer = satRoads = satLabels = mapRoads = null;
 
   if(satellite){
     /* imagery runs out around z19 in most places — let Leaflet upscale past it
@@ -2930,9 +2978,17 @@ function setTiles(force){
     }).addTo(map);
   }else{
     tileLayer = L.tileLayer(TILES[currentTheme()], {
-      maxZoom: 20, zIndex: 1,
+      maxZoom: 20, zIndex: 1, className:"drawn-base-tile",
       detectRetina: true,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    }).addTo(map);
+    /* Transportation gets its own transparent pass so roads + names can be
+       dark mustard in day mode and near-white at night without bleaching parks. */
+    mapRoads = L.tileLayer(TILES.satRoads, {
+      maxZoom:20, maxNativeZoom:19, zIndex:2,
+      opacity: currentTheme() === "dark" ? .9 : .72,
+      className:"drawn-road-tile",
+      attribution:'Transportation &copy; <a href="https://www.esri.com/">Esri</a>'
     }).addTo(map);
   }
   /* the lemon tint is for the drawn basemap only — never filter photography */
@@ -2971,6 +3027,11 @@ const FULLSCREEN_ICON = `<svg viewBox="0 0 24 24" width="17" height="17" fill="n
 const RESTORE_ICON = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
   <path d="M9 9H4V4M15 9h5V4M9 15H4v5M15 15h5v5"
     stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+const LOCATION_ICON = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+  <circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="1.8"/>
+  <circle cx="12" cy="12" r="1.45" fill="currentColor"/>
+  <path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
 </svg>`;
 
 /* zoom back out to the whole trip — only worth showing when there is one */
@@ -3030,6 +3091,44 @@ const FullscreenToggle = L.Control.extend({
     L.DomEvent.disableClickPropagation(b);
     L.DomEvent.on(b, "click", ()=> setMapFullscreen(!mapFullscreen));
     fullscreenBtn = b;
+    return b;
+  }
+});
+let locatingOnMap = false;
+async function showCurrentLocationNoZoom(){
+  if(locatingOnMap || !mapFullscreen) return;
+  locatingOnMap = true;
+  locateBtn?.classList.add("locating");
+  if(locateBtn) locateBtn.disabled = true;
+  try{
+    const me = await locate({ target:18, maxWait:10000 });
+    if(youMarker) youMarker.remove();
+    if(farLine){ farLine.remove(); farLine = null; }
+    youMarker = L.marker([me.lat, me.lon], { icon:youIcon, keyboard:false, zIndexOffset:1300 }).addTo(map);
+    locateBtn?.setAttribute("aria-pressed", "true");
+    locateBtn?.classList.add("on");
+    /* Pan so the dot is actually visible, but preserve the user's exact zoom level. */
+    map.panTo([me.lat, me.lon], { animate:true, duration:.45 });
+    flash(`your location · ± ${Math.round(me.acc || 0)} m`);
+  }catch(err){
+    flash(locateErrorMsg(err));
+  }finally{
+    locatingOnMap = false;
+    locateBtn?.classList.remove("locating");
+    if(locateBtn) locateBtn.disabled = false;
+  }
+}
+const LocateToggle = L.Control.extend({
+  onAdd(){
+    const b = L.DomUtil.create("button", "satbtn locatebtn hidden");
+    b.type = "button";
+    b.innerHTML = LOCATION_ICON;
+    b.title = "Show my location";
+    b.setAttribute("aria-label", "Show my current location without changing zoom");
+    b.setAttribute("aria-pressed", "false");
+    L.DomEvent.disableClickPropagation(b);
+    L.DomEvent.on(b, "click", showCurrentLocationNoZoom);
+    locateBtn = b;
     return b;
   }
 });
@@ -3141,6 +3240,7 @@ function initMap(){
   /* Clean marked-route overlay directly below the map/satellite toggle. */
   map.addControl(new OutdoorsToggle({ position: "topleft" }));
   map.addControl(new FullscreenToggle({ position: "topleft" }));
+  map.addControl(new LocateToggle({ position: "topleft" }));
   map.on("moveend", updateAllButton);
   map.on("zoomend", ()=>{ updateAllButton(); updateOutdoorsDensity(); });
   map.on("click", clearMapSelection);
@@ -3317,6 +3417,7 @@ function setMapFullscreen(on, fromNative = false){
     fullscreenBtn.setAttribute("aria-label", fullscreenBtn.title);
     fullscreenBtn.setAttribute("aria-pressed", String(mapFullscreen));
   }
+  locateBtn?.classList.toggle("hidden", !mapFullscreen);
   if(mapFullscreen){
     fullscreenWasUnlocked = unlocked;
     setMapUnlocked(true);
@@ -4083,8 +4184,9 @@ window.addEventListener("keydown", e=>{
 function updateFullscreenEditLock(){
   const b = $("#fsEditLock");
   if(!b) return;
-  b.classList.toggle("hidden", !sharedTrip);
-  if(!sharedTrip) return;
+  const show = !!sharedTrip && (!!sharedTrip.editable || !!sharedTrip.unlocked);
+  b.classList.toggle("hidden", !show);
+  if(!show) return;
   b.classList.toggle("unlocked", !!sharedTrip.unlocked);
   b.classList.toggle("loading", !!sharedTrip.loading);
   b.classList.toggle("dirty", !!sharedTrip.unlocked && !!sharedTrip.dirty);
@@ -4095,17 +4197,29 @@ function updateFullscreenEditLock(){
   b.setAttribute("aria-label", b.title);
 }
 function renderFullscreenRoute(){
+  const editable = canChangeTrip();
   const count = $("#fsRouteCount");
   if(count) count.textContent = stops.length || 0;
   const mode = $("#fsRouteMode");
   if(mode) mode.textContent = ordered ? "in order" : "loose list";
   updateFullscreenEditLock();
+
+  /* In a locked shared view, the drawer is navigation only. Search/add/note/icon/
+     delete controls disappear instead of presenting disabled chrome. */
+  const searchRow = document.querySelector(".fssearch");
+  if(searchRow){
+    searchRow.classList.toggle("viewonly", !editable);
+    searchRow.classList.toggle("hidden", !editable && !sharedTrip?.editable);
+  }
+  const hint = $("#fsRouteHint");
+  if(hint) hint.classList.toggle("hidden", !editable);
+
   const list = $("#fsRouteList");
   if(!list) return;
   list.innerHTML = "";
   stops.forEach((s, i)=>{
     const li = document.createElement("li");
-    li.className = "fsrouteitem" + (i === mapSelected ? " current" : "");
+    li.className = "fsrouteitem" + (i === mapSelected ? " current" : "") + (editable ? "" : " viewonly");
 
     const focus = document.createElement("button");
     focus.type = "button"; focus.className = "fsroutefocus";
@@ -4120,54 +4234,55 @@ function renderFullscreenRoute(){
     sub.className = "fsroutesub";
     sub.textContent = s.addr || `${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}`;
     text.append(title, sub); focus.append(n, text);
+    li.appendChild(focus);
 
-    const iconButton = document.createElement("button");
-    iconButton.type = "button";
-    iconButton.className = "fsrouteaction icon-trigger";
-    iconButton.innerHTML = iconSvg(s.icon || 0, 17);
-    iconButton.title = "Choose icon";
-    iconButton.setAttribute("aria-label", `Choose icon for stop ${i + 1}`);
-    iconButton.disabled = !canChangeTrip();
-    iconButton.addEventListener("click", e=>{
-      e.stopPropagation();
-      if(blockSharedChange()) return;
-      openIconPicker(i, iconButton);
-    });
+    if(editable){
+      const iconButton = document.createElement("button");
+      iconButton.type = "button";
+      iconButton.className = "fsrouteaction icon-trigger";
+      iconButton.innerHTML = iconSvg(s.icon || 0, 17);
+      iconButton.title = "Choose icon";
+      iconButton.setAttribute("aria-label", `Choose icon for stop ${i + 1}`);
+      iconButton.addEventListener("click", e=>{
+        e.stopPropagation();
+        openIconPicker(i, iconButton);
+      });
 
-    const noteButton = document.createElement("button");
-    noteButton.type = "button"; noteButton.className = "fsrouteaction";
-    noteButton.title = "Edit note";
-    noteButton.setAttribute("aria-label", `Edit note for stop ${i + 1}`);
-    noteButton.disabled = !canChangeTrip();
-    noteButton.innerHTML = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
-      <path d="m5 16.5-.7 3.2 3.2-.7L18.6 7.9a2.2 2.2 0 0 0-3.1-3.1Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="m13.8 6.5 3.1 3.1" stroke="currentColor" stroke-width="1.8"/>
-    </svg>`;
-    noteButton.addEventListener("click", e=>{
-      e.stopPropagation();
-      openFullscreenNoteEditor(i, li);
-    });
+      const noteButton = document.createElement("button");
+      noteButton.type = "button"; noteButton.className = "fsrouteaction";
+      noteButton.title = "Edit note";
+      noteButton.setAttribute("aria-label", `Edit note for stop ${i + 1}`);
+      noteButton.innerHTML = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+        <path d="m5 16.5-.7 3.2 3.2-.7L18.6 7.9a2.2 2.2 0 0 0-3.1-3.1Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="m13.8 6.5 3.1 3.1" stroke="currentColor" stroke-width="1.8"/>
+      </svg>`;
+      noteButton.addEventListener("click", e=>{
+        e.stopPropagation();
+        openFullscreenNoteEditor(i, li);
+      });
 
-    const deleteButton = document.createElement("button");
-    deleteButton.type = "button";
-    deleteButton.className = "fsrouteaction fsroutedelete";
-    deleteButton.title = "Delete point";
-    deleteButton.setAttribute("aria-label", `Delete stop ${i + 1}`);
-    deleteButton.disabled = !canChangeTrip() || stops.length <= 1;
-    deleteButton.innerHTML = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
-      <path d="M5.5 7.5h13M9 7.5V5h6v2.5M8 10.5l.6 8h6.8l.6-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>`;
-    deleteButton.addEventListener("click", e=>{
-      e.stopPropagation();
-      openPointDelete(i, deleteButton);
-    });
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "fsrouteaction fsroutedelete";
+      deleteButton.title = "Delete point";
+      deleteButton.setAttribute("aria-label", `Delete stop ${i + 1}`);
+      deleteButton.disabled = stops.length <= 1;
+      deleteButton.innerHTML = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+        <path d="M5.5 7.5h13M9 7.5V5h6v2.5M8 10.5l.6 8h6.8l.6-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`;
+      deleteButton.addEventListener("click", e=>{
+        e.stopPropagation();
+        openPointDelete(i, deleteButton);
+      });
+      li.append(iconButton, noteButton, deleteButton);
+    }
 
-    li.append(focus, iconButton, noteButton, deleteButton); list.appendChild(li);
+    list.appendChild(li);
     focus.addEventListener("click", ()=>{
       mapSelected = i;
       setActive(i);
       renderFullscreenRoute();
-      if(window.innerWidth < 620) setFsRouteOpen(false);
+      if(mapFullscreen && window.innerWidth < 620) setFsRouteOpen(false);
     });
     if(!s.addr){
       reverseGeocode(s).then(a=>{
@@ -4178,14 +4293,9 @@ function renderFullscreenRoute(){
       }).catch(()=>{});
     }
   });
-  const editable = canChangeTrip();
+
   if($("#fsSearchBox")) $("#fsSearchBox").disabled = !editable;
-  if(!editable){
-    fsSetHint(sharedTrip?.editable ? "use the lock to unlock editing" : "this shared trip is read-only");
-  }else{
-    const hint = $("#fsRouteHint");
-    if(hint && /unlock editing|read-only/.test(hint.textContent)) fsSetHint("");
-  }
+  if(editable && hint && /unlock editing|read-only/.test(hint.textContent)) fsSetHint("");
   fsSyncAddButton();
 }
 $("#fsSearchBox")?.addEventListener("input", fullscreenLiveSearch);
@@ -4321,20 +4431,23 @@ function renderTrip(){
 
     li.append(num, body, skip, handle, del);
     if(!s.addr) fillAddr(s, null);
-    if(!tripLocked) startDragOn(li, handle, body);
+    if(tripLocked) startPlayDragOn(li, body);
+    else startDragOn(li, handle, body);
     list.appendChild(li);
   });
 
   const n = stops.length;
-  $("#tripLede").textContent = n === 1
-    ? "One stop. Add another and they'll all ride in the same link."
-    : ordered
-      ? coarsePointer
-        ? `${n} stops, in order. Hold a stop until the lemon closes, or grab the grip to move it instantly.`
-        : `${n} stops, in order. Drag to rearrange the route.`
-      : coarsePointer
-        ? `${n} places, no particular order. Hold briefly to move, or use the grip instantly.`
-        : `${n} places, no particular order. Drag to rearrange anyway.`;
+  $("#tripLede").textContent = tripLocked
+    ? (n === 1 ? "One saved stop." : `${n} saved stops. You can toss the cards around — they'll spring back and the saved order won't change.`)
+    : n === 1
+      ? "One stop. Add another and they'll all ride in the same link."
+      : ordered
+        ? coarsePointer
+          ? `${n} stops, in order. Hold a stop until the lemon closes, or grab the grip to move it instantly.`
+          : `${n} stops, in order. Drag to rearrange the route.`
+        : coarsePointer
+          ? `${n} places, no particular order. Hold briefly to move, or use the grip instantly.`
+          : `${n} places, no particular order. Drag to rearrange anyway.`;
   $("#modeSwitch").classList.toggle("hidden", n < 2);
   $("#modeRoute").classList.toggle("on", ordered);
   $("#modeRoute").setAttribute("aria-pressed", ordered);
@@ -4384,6 +4497,104 @@ function finishHoldLemon(el, ready){
   el.classList.remove("arming");
   el.classList.add(ready ? "ready" : "cancelled");
   setTimeout(()=>el.remove(), ready ? 300 : 180);
+}
+
+function startPlayDragOn(li, body){
+  function begin(startX, startY){
+    let moved = false, finished = false;
+    li.classList.add("playdrag");
+    const move = (x, y)=>{
+      if(finished) return;
+      const dx = x - startX, dy = y - startY;
+      if(Math.abs(dx) + Math.abs(dy) > 5) moved = true;
+      const tilt = Math.max(-3.2, Math.min(3.2, dx / 42));
+      li.style.transform = `translate(${dx}px, ${dy}px) rotate(${tilt}deg) scale(1.025)`;
+    };
+    const end = ()=>{
+      if(finished) return;
+      finished = true;
+      li.classList.remove("playdrag");
+      if(moved){
+        justDragged = true;
+        setTimeout(()=>{ justDragged = false; }, 120);
+      }
+      li.classList.add("settling");
+      li.style.transform = "translate(0,0) rotate(0deg) scale(1)";
+      const done = ()=>{
+        li.classList.remove("settling");
+        li.style.transform = "";
+      };
+      li.addEventListener("transitionend", done, {once:true});
+      setTimeout(done, 480);
+    };
+    const cancel = ()=>{
+      if(finished) return;
+      finished = true;
+      li.classList.remove("playdrag");
+      li.style.transform = "";
+    };
+    return {move,end,cancel};
+  }
+
+  body.addEventListener("pointerdown", e=>{
+    if(e.pointerType === "touch" || (e.button != null && e.button !== 0)) return;
+    const drag = begin(e.clientX, e.clientY);
+    li.setPointerCapture?.(e.pointerId);
+    const move = ev=>drag.move(ev.clientX, ev.clientY);
+    const end = ()=>{ cleanup(); drag.end(); };
+    const cancel = ()=>{ cleanup(); drag.cancel(); };
+    const cleanup = ()=>{
+      li.removeEventListener("pointermove", move);
+      li.removeEventListener("pointerup", end);
+      li.removeEventListener("pointercancel", cancel);
+    };
+    li.addEventListener("pointermove", move);
+    li.addEventListener("pointerup", end);
+    li.addEventListener("pointercancel", cancel);
+    e.preventDefault();
+  });
+
+  body.addEventListener("touchstart", e=>{
+    if(!coarsePointer || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const id = touch.identifier;
+    const startX = touch.clientX, startY = touch.clientY;
+    let activeDrag = null, cancelled = false;
+    let lemon = makeHoldLemon(startX, startY - 34);
+    const touchOpts = {passive:false};
+    const findTouch = list=>[...list].find(t=>t.identifier === id);
+    const cleanup = ()=>{
+      clearTimeout(timer);
+      document.removeEventListener("touchmove", onMove, touchOpts);
+      document.removeEventListener("touchend", onEnd, touchOpts);
+      document.removeEventListener("touchcancel", onCancel, touchOpts);
+    };
+    const cancelPending = ()=>{
+      if(cancelled) return;
+      cancelled = true; cleanup(); finishHoldLemon(lemon,false); lemon=null;
+    };
+    const onMove = ev=>{
+      const t=findTouch(ev.touches); if(!t) return;
+      if(activeDrag){ ev.preventDefault(); activeDrag.move(t.clientX,t.clientY); return; }
+      if(Math.hypot(t.clientX-startX,t.clientY-startY)>9) cancelPending();
+    };
+    const onEnd = ev=>{
+      if(!findTouch(ev.changedTouches)) return;
+      cleanup();
+      if(activeDrag){ ev.preventDefault(); activeDrag.end(); }
+      else finishHoldLemon(lemon,false);
+    };
+    const onCancel = ()=>{ cleanup(); activeDrag?.cancel(); finishHoldLemon(lemon,false); };
+    document.addEventListener("touchmove",onMove,touchOpts);
+    document.addEventListener("touchend",onEnd,touchOpts);
+    document.addEventListener("touchcancel",onCancel,touchOpts);
+    const timer=setTimeout(()=>{
+      if(cancelled) return;
+      activeDrag=begin(startX,startY);
+      finishHoldLemon(lemon,true); lemon=null;
+      navigator.vibrate?.(9);
+    }, MOBILE_DRAG_HOLD_MS);
+  }, {passive:true});
 }
 
 function startDragOn(li, handle, body){
@@ -4862,6 +5073,7 @@ function setSharedControlState(){
     $("#sharedStatus").textContent = "This trip is permanently locked. It can be viewed and shared, but never replaced.";
   }
 
+  renderFullscreenRoute();
   if(stops.length && !$("#tripSheet").classList.contains("hidden")) renderTrip();
   if(map) drawStops(false);
 }
