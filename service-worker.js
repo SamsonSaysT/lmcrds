@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lemoncoords-v15-9-map-visibility';
+const CACHE_NAME = 'lemoncoords-v15.10-clean-basemap';
 const APP_SHELL = [
   './',
   './index.html',

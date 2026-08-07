@@ -218,26 +218,17 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 .locatebtn.locating svg{animation:locatePulse .8s ease-in-out infinite alternate}
 @keyframes locatePulse{to{transform:scale(.78);opacity:.46}}
 #map.locked{cursor:default}
-/* The drawn map gets a restrained contrast lift.  The intent is darker roads
-   and labels without turning the cream base into a noisy high-contrast map. */
-:root:not([data-theme="dark"]) #map:not(.sat){background:#F1E2A6}
+/* Drawn-map treatment — one basemap only. No extra road/label raster is stacked
+   over CARTO. Day mode is warmer + darker so roads and names stay legible while
+   parks keep their green. Night mode uses contrast to push CARTO's own roads and
+   labels toward white without washing the black land/background. */
+:root:not([data-theme="dark"]) #map:not(.sat){background:#E6D58F}
 :root:not([data-theme="dark"]) #map:not(.sat) .drawn-base-tile{
-  /* Warm the land without flattening CARTO's green parks or black labels. */
-  filter:sepia(.13) saturate(1.16) contrast(1.12) brightness(.99) hue-rotate(352deg)
+  filter:brightness(.84) contrast(1.27) saturate(1.10) sepia(.045) hue-rotate(356deg)
 }
+:root[data-theme="dark"] #map:not(.sat){background:#0B0C0A}
 :root[data-theme="dark"] #map:not(.sat) .drawn-base-tile{
-  filter:brightness(1.42) contrast(1.15) saturate(.96)
-}
-/* A separate transportation reference layer gives roads and road names their own
-   contrast instead of forcing the entire basemap brighter. */
-:root:not([data-theme="dark"]) #map:not(.sat) .drawn-road-tile{
-  filter:brightness(0) saturate(100%) invert(45%) sepia(94%) saturate(760%)
-    hue-rotate(7deg) brightness(79%) contrast(104%)
-    drop-shadow(0 0 1px rgba(255,253,244,.92)) !important;
-}
-:root[data-theme="dark"] #map:not(.sat) .drawn-road-tile{
-  filter:brightness(0) invert(100%) brightness(1.08)
-    drop-shadow(0 0 1px rgba(0,0,0,.92)) !important;
+  filter:brightness(1.08) contrast(1.48) saturate(.76)
 }
 #map.sat .leaflet-tile-pane .leaflet-tile:not(.sat-road-tile):not(.outdoors-overland-tile){filter:none !important}
 .leaflet-tile{transition:filter .24s ease,opacity .24s ease}
@@ -2822,7 +2813,7 @@ const TILES = {
   /* Official unlabeled U.S. Forest Service motor-vehicle-use roads + trails. */
   overland:  "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_MVUM_01/MapServer"
 };
-let tileLayer = null, satRoads = null, satLabels = null, mapRoads = null, tileKey = null, satellite = true;
+let tileLayer = null, satRoads = null, satLabels = null, tileKey = null, satellite = true;
 let outdoorsTrails = null, outdoorsOverland = null;
 let outdoorsOn = store.get("lemoncoords.outdoors") === "on";
 let satBtn = null, outdoorsBtn = null, fullscreenBtn = null, locateBtn = null;
@@ -2959,8 +2950,8 @@ function setTiles(force){
   const key = satellite ? "sat" : currentTheme();
   if(tileKey === key && !force) return;
   tileKey = key;
-  [tileLayer, satRoads, satLabels, mapRoads].forEach(l => l && l.remove());
-  tileLayer = satRoads = satLabels = mapRoads = null;
+  [tileLayer, satRoads, satLabels].forEach(l => l && l.remove());
+  tileLayer = satRoads = satLabels = null;
 
   if(satellite){
     /* imagery runs out around z19 in most places — let Leaflet upscale past it
@@ -2982,14 +2973,6 @@ function setTiles(force){
       detectRetina: true,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
     }).addTo(map);
-    /* Transportation gets its own transparent pass so roads + names can be
-       dark mustard in day mode and near-white at night without bleaching parks. */
-    mapRoads = L.tileLayer(TILES.satRoads, {
-      maxZoom:20, maxNativeZoom:19, zIndex:2,
-      opacity: currentTheme() === "dark" ? .9 : .72,
-      className:"drawn-road-tile",
-      attribution:'Transportation &copy; <a href="https://www.esri.com/">Esri</a>'
-    }).addTo(map);
   }
   /* the lemon tint is for the drawn basemap only — never filter photography */
   document.getElementById("map").classList.toggle("sat", satellite);
@@ -2999,8 +2982,8 @@ function setTiles(force){
     satBtn.setAttribute("aria-label", satellite ? "Show the drawn map" : "Show satellite imagery");
     satBtn.title = satellite ? "Map" : "Satellite";
   }
-  /* Recreate the optional route overlay and retune the single satellite road
-     layer for whichever base is currently underneath it. */
+  /* Recreate the optional trail overlay and retune the satellite-only road
+     reference for whichever base is currently underneath it. */
   setOutdoorsOverlay(true);
 }
 
