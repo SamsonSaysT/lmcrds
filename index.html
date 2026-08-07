@@ -3219,8 +3219,10 @@ function setActive(i){
   pin = stops[active];
   mapSelected = active;
   refreshPin({ recenter: false });
-  /* stepping through stops takes you in close; the overview button toggles back out */
-  focusActiveStop();
+  /* Preview-map stop selection still focuses in close. In fullscreen, selecting
+     a pin or route item must never change the current viewport; zoom/reframe is
+     reserved for the explicit focus / view-all control. */
+  if(!mapFullscreen) focusActiveStop();
 }
 
 function isWholeTripView(){

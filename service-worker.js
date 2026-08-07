@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lemoncoords-v15-7-open-in-cleanup';
+const CACHE_NAME = 'lemoncoords-v15-8-fullscreen-no-autozoom';
 const APP_SHELL = [
   './',
   './index.html',
