@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lemoncoords-v15.13-preview-route-dropdown';
+const CACHE_NAME = 'lemoncoords-v15.15-default-basemap';
 const APP_SHELL = [
   './',
   './index.html',

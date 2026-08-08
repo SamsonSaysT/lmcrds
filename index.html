@@ -211,7 +211,7 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
   height:min(48vh,440px);min-height:300px;border-radius:14px;border:1px solid var(--ink);
   z-index:var(--z-map);background:#EDEBDD;overflow:hidden;
 }
-:root[data-theme="dark"] #map{background:#1A1A12}
+:root[data-theme="dark"] #map{background:#E8D9A8}
 .mapui{
   position:absolute;right:9px;top:auto;bottom:24px;z-index:var(--z-mapui);
   display:flex;flex-direction:column;align-items:flex-end;gap:4px;
@@ -243,7 +243,7 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
    No CSS color filter, no black veil, and no duplicate road/label layer.
    This small block only supplies the canvas background while vector tiles load. */
 :root:not([data-theme="dark"]) #map:not(.sat){background:#E8D9A8}
-:root[data-theme="dark"] #map:not(.sat){background:#20211F}
+:root[data-theme="dark"] #map:not(.sat){background:#E8D9A8}
 #map .leaflet-maplibre-gl{background:transparent}
 #map .maplibregl-canvas{outline:0}
 #map.sat .leaflet-tile-pane .leaflet-tile:not(.sat-road-tile):not(.outdoors-overland-tile){filter:none !important}
@@ -840,6 +840,15 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .sharedauth{display:flex;gap:8px;align-items:center;margin-top:12px}
 .sharedauth .passinput{margin:0;flex:1;min-width:0}
 .sharedauth .btn{flex:none;font-size:.82rem;padding:10px 15px}
+.sharedbasemap{margin-top:14px;padding-top:13px;border-top:1px solid var(--hairline)}
+.sharedbasemaplabel{font-size:.68rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.sharedbasemapchoices{display:flex;gap:8px;align-items:center}
+.sharedbasechoice{appearance:none;border:1px solid var(--hairline);background:transparent;color:var(--ink);border-radius:999px;min-height:38px;padding:7px 13px 7px 10px;display:inline-flex;align-items:center;gap:8px;font:700 .78rem/1 var(--sans);cursor:pointer;transition:background .18s ease,color .18s ease,border-color .18s ease,transform .18s ease}
+.sharedbasechoice:active{transform:scale(.97)}
+.sharedbasechoice.on{background:var(--ink);color:var(--pith);border-color:var(--ink)}
+.sharedbaseicon{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,currentColor 9%,transparent)}
+.sharedbasechoice.on .sharedbaseicon{background:color-mix(in srgb,var(--pith) 15%,transparent)}
+.sharedbasehint{display:block;color:var(--muted);font-size:.67rem;line-height:1.4;margin-top:8px}
 .sharedmsg{font-size:.76rem;line-height:1.4;color:var(--muted);margin-top:9px;min-height:1em}
 .sharedmsg.bad{color:#a8482a;font-weight:600}
 :root[data-theme="dark"] .sharedmsg.bad{color:#E58A66}
@@ -1669,6 +1678,18 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
       <div class="sharedrev" id="sharedRev"></div>
     </div>
     <p class="sharedstatus" id="sharedStatus">Checking this link's edit settings…</p>
+    <div class="sharedbasemap hidden" id="sharedBaseMap">
+      <div class="sharedbasemaplabel">Choose default base map</div>
+      <div class="sharedbasemapchoices" role="group" aria-label="Default base map">
+        <button class="sharedbasechoice" id="sharedBaseMapMap" type="button" data-base-map="map">
+          <span class="sharedbaseicon" id="sharedBaseMapMapIcon" aria-hidden="true"></span><span>Map</span>
+        </button>
+        <button class="sharedbasechoice" id="sharedBaseMapSatellite" type="button" data-base-map="satellite">
+          <span class="sharedbaseicon" id="sharedBaseMapSatelliteIcon" aria-hidden="true"></span><span>Satellite</span>
+        </button>
+      </div>
+      <small class="sharedbasehint">Everyone opening this multi-pin trip starts with this base map. They can still switch it while viewing.</small>
+    </div>
     <div class="sharedactions">
       <button class="btn btn-ghost hidden" id="sharedAction">Unlock editing</button>
       <button class="btn hidden" id="sharedSave">Update shared trip</button>
@@ -1847,7 +1868,7 @@ function unpackNote(count, bytes){
   return out;
 }
 
-function encodeTrip(list, ts, ordered){
+function encodeTrip(list, ts, ordered, defaultBaseMap = null){
   const n = Math.min(32, list.length);
   const acc = Math.min(1023, Math.max(0, Math.round(list[0].acc || 0)));
   const hasAcc = acc > 3 ? 1 : 0;
@@ -1889,6 +1910,13 @@ function encodeTrip(list, ts, ordered){
       putVarint(bytes, raw.length * 2);
       for(const b of raw) bytes.push(b);
     }
+  }
+  /* Optional backwards-compatible trailer. Older LemonCoords builds ignore
+     leftover bytes; newer builds recognize 0xEC + 1(Map)/2(Satellite). */
+  const basePref = normalizedBaseMap(defaultBaseMap);
+  if(basePref){
+    bytes.push(0xEC);
+    bytes.push(basePref === "satellite" ? 2 : 1);
   }
   return "T" + b64encode(new Uint8Array(bytes));
 }
@@ -1934,7 +1962,16 @@ function decodeTrip(hash){
         ? unpackNote(nn, r.take(Math.ceil(nn * 6 / 8)))
         : new TextDecoder().decode(r.take(nn));
     }
-    return { stops: list, ordered: isOrdered };
+    let defaultBaseMap = null;
+    if(r.left() >= 2){
+      const marker = r.byte();
+      if(marker === 0xEC){
+        const pref = r.byte();
+        if(pref === 1) defaultBaseMap = "map";
+        else if(pref === 2) defaultBaseMap = "satellite";
+      }
+    }
+    return { stops: list, ordered: isOrdered, defaultBaseMap };
   }catch{
     return null;
   }
@@ -2587,7 +2624,16 @@ let isRecipient = false;   /* arrived via someone else's link */
 let pickMode = false;      /* picking a stop to add rather than opening a pin */
 let ordered = true;        /* a route in order, or just a set of places */
 let sharedTrip = null;      /* short-link edit state; null for ordinary full links */
+/* Saved per multi-pin trip. null means "legacy/implicit": multi-pin trips open
+   on Map, while a lone pin keeps the original Satellite default. */
+let tripDefaultBaseMap = null;   /* "map" | "satellite" | null */
 
+function normalizedBaseMap(value){
+  return value === "map" || value === "satellite" ? value : null;
+}
+function effectiveTripBaseMap(count = stops.length){
+  return normalizedBaseMap(tripDefaultBaseMap) || (count > 1 ? "map" : "satellite");
+}
 function setStops(list, idx){
   stops = list;
   active = Math.max(0, Math.min(idx || 0, stops.length - 1));
@@ -2595,8 +2641,11 @@ function setStops(list, idx){
   mapSelected = active;
 }
 function tripHash(){
-  /* a lone pin keeps the older, shorter L form — links already sent still work */
-  return stops.length > 1 ? encodeTrip(stops, stops[0].ts, ordered) : packPin(pin);
+  /* a lone pin keeps the older, shorter L form — links already sent still work.
+     Multi-pin T links carry two tiny trailer bytes for the preferred base map. */
+  return stops.length > 1
+    ? encodeTrip(stops, stops[0].ts, ordered, effectiveTripBaseMap())
+    : packPin(pin);
 }
 
 /* ---------- private trips ----------
@@ -2714,7 +2763,7 @@ async function finishPrivateUnlock(password, { quiet = false, remember = true } 
     $("#lockMsg").textContent = "";
     $("#lockMsg").classList.remove("bad");
     $("#lockScreen").classList.add("hidden");
-    openPin(decoded.stops, { push:false });
+    openPin(decoded.stops, { push:false, defaultBaseMap:decoded.defaultBaseMap });
     if(sharedTrip) initSharedTrip();
     return true;
   }catch{
@@ -2826,7 +2875,7 @@ window.addEventListener("popstate", ()=>{
     clearSharedTripContext();
     sharedTrip = sharedStateFromLocation();
     ordered = got.ordered;
-    openPin(got.stops, { push:false });
+    openPin(got.stops, { push:false, defaultBaseMap:got.defaultBaseMap });
     if(sharedTrip) initSharedTrip();
   }else{
     clearSharedTripContext();
@@ -3043,14 +3092,10 @@ function ensureWetlandPattern(gl, name, baseHex, lineHex){
 function applyLemonBasemapPalette(gl, theme = currentTheme()){
   if(!gl?.getStyle) return;
   const dark = theme === 'dark';
-  const c = dark ? {
-    land:'#20211F', residential:'#242520', park:'#29422E', wood:'#263629', grass:'#2C3B2B',
-    wetland:'#24413A', sand:'#393325', water:'#235F7A', waterLine:'#4A95B3', building:'#32332F',
-    generic:'#252620', aeroway:'#2B2C28', boundary:'#555851',
-    roadMajor:'#F7F3E8', roadSecondary:'#DCD9D0', roadLocal:'#B4B4AE', roadPath:'#888B83',
-    roadCasing:'#11120F', rail:'#787A74', label:'#F1ECDE', labelMuted:'#C5C0B2',
-    labelHalo:'#20211F', waterLabel:'#8FD0E7'
-  } : {
+  /* Dark-mode map intentionally reuses the complete DAY palette.
+     The only exception is water: keep the richer dark-theme blue family.
+     No second basemap, overlay, filter, or alternate dark road/land styling. */
+  const day = {
     land:'#E8D9A8', residential:'#E9DDB8', park:'#B9D09B', wood:'#B5C99C', grass:'#C6D6A8',
     wetland:'#ACCCB8', sand:'#E2C788', water:'#98C9DD', waterLine:'#67A7C2', building:'#D3C5A5',
     generic:'#E5D8B4', aeroway:'#D8CFB8', boundary:'#A69A78',
@@ -3058,9 +3103,15 @@ function applyLemonBasemapPalette(gl, theme = currentTheme()){
     roadCasing:'#F7ECCB', rail:'#827963', label:'#443A2B', labelMuted:'#625B48',
     labelHalo:'#F5EACB', waterLabel:'#386D82'
   };
+  const c = dark ? {
+    ...day,
+    water:'#235F7A',
+    waterLine:'#4A95B3',
+    waterLabel:'#8FD0E7'
+  } : day;
 
-  const wetlandPattern = dark ? "lemon-wetland-lines-dark" : "lemon-wetland-lines-light";
-  ensureWetlandPattern(gl, wetlandPattern, c.wetland, dark ? "#5F9187" : "#6F9F93");
+  const wetlandPattern = "lemon-wetland-lines-light";
+  ensureWetlandPattern(gl, wetlandPattern, c.wetland, "#6F9F93");
 
   const layers = gl.getStyle()?.layers || [];
   layers.forEach(layer=>{
@@ -3118,7 +3169,7 @@ function applyLemonBasemapPalette(gl, theme = currentTheme()){
       const text = isWater ? c.waterLabel : (isRoad || isPlace) ? c.label : c.labelMuted;
       safePaint(gl,id,'text-color',text);
       safePaint(gl,id,'text-halo-color',c.labelHalo);
-      safePaint(gl,id,'text-halo-width',isRoad ? (dark ? 1.8 : 1.45) : (dark ? 1.45 : 1.15));
+      safePaint(gl,id,'text-halo-width',isRoad ? 1.45 : 1.15);
       safePaint(gl,id,'text-halo-blur',.2);
     }
   });
@@ -3743,11 +3794,17 @@ function renderQR(){
 }
 
 function openPin(p, opts = {}){
-  const { push = true, idx = 0 } = opts;
-  setStops(Array.isArray(p) ? p : [p], idx);
+  const { push = true, idx = 0, defaultBaseMap = null } = opts;
+  const list = Array.isArray(p) ? p : [p];
+  tripDefaultBaseMap = normalizedBaseMap(defaultBaseMap);
+  /* Multi-pin trips intentionally default to the drawn Map. Single pins keep
+     LemonCoords' original Satellite default. A saved preference wins. */
+  satellite = effectiveTripBaseMap(list.length) === "satellite";
+  setStops(list, idx);
   showPinPage();
   $("#farWrap").classList.toggle("hidden", !isRecipient);
   if(!map) initMap();
+  else setTiles(true);
   if(push) history.pushState({ view:"pin" }, "", location.pathname + location.hash);
   refreshPin();
   setTimeout(()=> map.invalidateSize(), 60);
@@ -5081,6 +5138,12 @@ function exitPickMode(){
 function addStop(p){
   if(stops.length >= 32){ flash("32 stops is the limit"); return; }
   stops.push(p);
+  /* The moment a trip becomes multi-pin, its implicit default becomes Map.
+     A saved explicit preference (from the shared-trip chooser) still wins. */
+  if(stops.length === 2 && tripDefaultBaseMap === null){
+    satellite = false;
+    if(map) setTiles(true);
+  }
   active = stops.length - 1;
   pin = stops[active];
   mapSelected = active;
@@ -5234,6 +5297,35 @@ function updateSharedLockButton(){
   updateFullscreenEditLock();
 }
 
+function updateSharedBaseMapChooser(){
+  const wrap = $("#sharedBaseMap");
+  if(!wrap) return;
+  const show = !!sharedTrip?.unlocked && stops.length > 1;
+  wrap.classList.toggle("hidden", !show);
+  if(!show) return;
+  const selected = effectiveTripBaseMap();
+  const mapChoice = $("#sharedBaseMapMap");
+  const satChoice = $("#sharedBaseMapSatellite");
+  mapChoice?.classList.toggle("on", selected === "map");
+  satChoice?.classList.toggle("on", selected === "satellite");
+  mapChoice?.setAttribute("aria-pressed", String(selected === "map"));
+  satChoice?.setAttribute("aria-pressed", String(selected === "satellite"));
+  if($("#sharedBaseMapMapIcon")) $("#sharedBaseMapMapIcon").innerHTML = MAP_ICON;
+  if($("#sharedBaseMapSatelliteIcon")) $("#sharedBaseMapSatelliteIcon").innerHTML = SAT_ICON;
+}
+function chooseSharedDefaultBaseMap(value){
+  if(!sharedTrip?.unlocked || stops.length <= 1) return;
+  const next = normalizedBaseMap(value);
+  if(!next) return;
+  tripDefaultBaseMap = next;
+  /* Show the choice immediately, but this does not prevent viewers from later
+     toggling the map for themselves. */
+  satellite = next === "satellite";
+  if(map) setTiles(true);
+  syncSharedDirty();
+  updateSharedBaseMapChooser();
+}
+
 function setSharedControlState(){
   const locked = !!sharedTrip && !sharedTrip.unlocked;
   document.body.classList.toggle("sharedlocked", locked);
@@ -5261,6 +5353,7 @@ function setSharedControlState(){
   $("#sharedSave").classList.toggle("hidden", !sharedTrip.unlocked);
   $("#sharedSave").disabled = !sharedTrip.dirty;
   $("#sharedRev").textContent = sharedTrip.revision ? `version ${sharedTrip.revision}` : "";
+  updateSharedBaseMapChooser();
 
   if(sharedTrip.loading){
     $("#sharedTitle").textContent = sharedTrip.slug;
@@ -5287,6 +5380,7 @@ function syncSharedDirty(){
   if(!sharedTrip || !sharedTrip.baseline || !stops.length) return;
   sharedTrip.dirty = tripHash() !== sharedTrip.baseline;
   updateSharedLockButton();
+  updateSharedBaseMapChooser();
   if(sharedTrip.unlocked){
     $("#sharedSave").disabled = !sharedTrip.dirty;
     $("#sharedStatus").textContent = sharedTrip.dirty
@@ -5512,6 +5606,9 @@ $("#sharedAction").addEventListener("click", ()=>{
 $("#sharedUnlockGo").addEventListener("click", unlockSharedTrip);
 $("#sharedPassword").addEventListener("keydown", e=>{ if(e.key === "Enter") unlockSharedTrip(); });
 $("#sharedSave").addEventListener("click", saveSharedTrip);
+document.querySelectorAll("[data-base-map]").forEach(btn=>{
+  btn.addEventListener("click", ()=> chooseSharedDefaultBaseMap(btn.dataset.baseMap));
+});
 $("#sharedReload").addEventListener("click", ()=>{
   if(sharedTrip) location.href = `${SHORTENER}/${encodeURIComponent(sharedTrip.slug)}`;
 });
@@ -5773,7 +5870,7 @@ function readHash(){
   const trip = decodeTrip(h);
   if(trip && trip.stops.length) return trip;
   const one = unpackPin(h);
-  return one ? { stops:[one], ordered:true } : null;
+  return one ? { stops:[one], ordered:true, defaultBaseMap:null } : null;
 }
 (function boot(){
   const rawHash = location.hash.slice(1);
@@ -5791,7 +5888,7 @@ function readHash(){
     isRecipient = true;
     sharedTrip = sharedStateFromLocation();
     ordered = got.ordered;
-    openPin(got.stops, { push:false });
+    openPin(got.stops, { push:false, defaultBaseMap:got.defaultBaseMap });
     if(sharedTrip) initSharedTrip();
   } else {
     /* clean slate every visit, same as the weather */
