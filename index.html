@@ -4192,12 +4192,15 @@ function updateMapSelectionUI(){
   const chosen = selectedMapStop();
   const note = chosen && String(chosen.note || "").trim();
   const banner = $("#mapSelection");
+  /* The selected point title now lives with the point itself in both the
+     embedded preview and fullscreen map. Keep the old top banner dormant so
+     the preview stays uncluttered and the label never appears twice. */
   if(banner){
-    banner.textContent = note || "";
-    banner.classList.toggle("on", !!note && !mapFullscreen);
+    banner.textContent = "";
+    banner.classList.remove("on");
   }
   markers.forEach(m => m.unbindTooltip?.());
-  if(mapFullscreen && chosen && note && markers[mapSelected]){
+  if(chosen && note && markers[mapSelected]){
     markers[mapSelected].bindTooltip(note, {
       permanent:true, direction:"top", offset:[0,-51], className:"map-note-tooltip", opacity:1
     }).openTooltip();
