@@ -176,6 +176,7 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 }
 .quipslot{
   min-height:42px;margin:12px auto 0;display:grid;place-items:center;
+  position:relative;z-index:calc(var(--z-mapui) + 8);overflow:visible;
 }
 .quip{
   max-width:34ch;margin:0 auto;color:var(--muted);
@@ -347,6 +348,16 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
   right:10px;top:8px;width:min(390px,calc(100% - 20px));
   max-height:calc(100% - 16px);
 }
+/* Main pin page: All Pins opens directly beneath its pill and floats over
+   Share / map links without changing page layout. The same drawer is re-parented
+   back into the map when fullscreen Route is used. */
+.quipslot > .fsroutepanel{
+  left:50%;right:auto;top:calc(100% + 7px);
+  width:min(420px,calc(100vw - 30px));max-height:min(58vh,560px);
+  z-index:calc(var(--z-modal) + 6);transform:translate(-50%,-9px) scale(.985);
+  transform-origin:top center;text-align:left;
+}
+.quipslot > .fsroutepanel.open{transform:translate(-50%,0) scale(1)}
 /* Fullscreen keeps Route clear of the native map-control stack. */
 .mapwrap.is-fullscreen .fsroutebtn{
   right:calc(max(12px,env(safe-area-inset-right)) + 148px);
@@ -2843,7 +2854,7 @@ let outdoorsTrails = null, outdoorsOverland = null;
 let outdoorsOn = store.get("lemoncoords.outdoors") === "on";
 let satBtn = null, outdoorsBtn = null, fullscreenBtn = null, locateBtn = null;
 let mapFullscreen = false, fullscreenWasUnlocked = false;
-let fsRouteOpen = false, fsCandidate = null, fsCandidateMarker = null;
+let fsRouteOpen = false, fsRouteHost = "fullscreen", fsCandidate = null, fsCandidateMarker = null;
 function currentTheme(){ return document.documentElement.dataset.theme === "dark" ? "dark" : "light"; }
 
 /* Turn an ArcGIS dynamic MapServer into ordinary transparent Leaflet tiles.
@@ -3564,11 +3575,20 @@ function clearMapSelection(){
   mapSelected = -1;
   drawStops(false);
 }
-function setFsRouteOpen(open){
+function mountRoutePanel(host){
+  const panel = $("#fsRoutePanel");
+  if(!panel) return;
+  fsRouteHost = host === "preview" ? "preview" : "fullscreen";
+  const parent = fsRouteHost === "preview" ? $("#quipSlot") : $("#fullscreenChrome");
+  if(parent && panel.parentElement !== parent) parent.appendChild(panel);
+  panel.dataset.host = fsRouteHost;
+}
+function setFsRouteOpen(open, host = null){
+  if(open) mountRoutePanel(host || (mapFullscreen ? "fullscreen" : "preview"));
   fsRouteOpen = !!open;
   $("#fsRoutePanel")?.classList.toggle("open", fsRouteOpen);
-  $("#fsRouteBtn")?.setAttribute("aria-expanded", String(fsRouteOpen));
-  $("#previewRouteBtn")?.setAttribute("aria-expanded", String(fsRouteOpen));
+  $("#fsRouteBtn")?.setAttribute("aria-expanded", String(fsRouteOpen && fsRouteHost === "fullscreen"));
+  $("#previewRouteBtn")?.setAttribute("aria-expanded", String(fsRouteOpen && fsRouteHost === "preview"));
   $("#fsSearchBox")?.blur();
   if(fsRouteOpen){
     renderFullscreenRoute();
@@ -3615,8 +3635,14 @@ window.addEventListener("keydown", e=>{
   if(fsRouteOpen){ setFsRouteOpen(false); e.preventDefault(); }
   else if(mapFullscreen && !document.fullscreenElement) setMapFullscreen(false, true);
 });
-$("#fsRouteBtn")?.addEventListener("click", ()=> setFsRouteOpen(!fsRouteOpen));
-$("#previewRouteBtn")?.addEventListener("click", ()=> setFsRouteOpen(!fsRouteOpen));
+$("#fsRouteBtn")?.addEventListener("click", ()=>{
+  const opening = !(fsRouteOpen && fsRouteHost === "fullscreen");
+  setFsRouteOpen(opening, "fullscreen");
+});
+$("#previewRouteBtn")?.addEventListener("click", ()=>{
+  const opening = !(fsRouteOpen && fsRouteHost === "preview");
+  setFsRouteOpen(opening, "preview");
+});
 $("#fsEditLock")?.addEventListener("click", ()=>{
   if(!sharedTrip) return;
   openSharedSheet(!!sharedTrip.editable && !sharedTrip.unlocked);
@@ -4457,10 +4483,11 @@ function renderFullscreenRoute(){
 
     list.appendChild(li);
     focus.addEventListener("click", ()=>{
+      const closeAfterPick = fsRouteHost === "preview" || (mapFullscreen && window.innerWidth < 620);
       mapSelected = i;
       setActive(i);
-      renderFullscreenRoute();
-      if(mapFullscreen && window.innerWidth < 620) setFsRouteOpen(false);
+      if(closeAfterPick) setFsRouteOpen(false);
+      else renderFullscreenRoute();
     });
     if(!s.addr){
       reverseGeocode(s).then(a=>{
