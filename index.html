@@ -252,6 +252,17 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 }
 .satbtn svg{display:block}
 .satbtn[aria-pressed="true"]{background:var(--ink);color:var(--pith)}
+/* Fullscreen lives beside the native +/- zoom rocker instead of joining the
+   vertical map-control stack. The same anchor is kept in fullscreen mode so
+   the control never jumps to another part of the interface. */
+.leaflet-top.leaflet-left .fullscreenbtn{
+  position:absolute;left:51px;top:10px;margin:0;
+}
+.fullscreenexitbtn{display:none}
+.mapwrap.is-fullscreen .fullscreenexitbtn{
+  display:grid;place-items:center;width:36px;min-width:36px;padding:0;
+  font-size:1.08rem;line-height:1;font-weight:650;
+}
 .locatebtn.locating svg{animation:locatePulse .8s ease-in-out infinite alternate}
 @keyframes locatePulse{to{transform:scale(.78);opacity:.46}}
 #map.locked{cursor:default}
@@ -1461,6 +1472,7 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
         </div>
         <div class="mapui">
           <button class="adjustbtn" id="lockBtn" aria-pressed="false">unlock map</button>
+          <button class="adjustbtn fullscreenexitbtn" id="fullscreenExitBtn" type="button" aria-label="Exit fullscreen map" title="Exit fullscreen map">×</button>
           <button class="adjustbtn" id="dragBtn" aria-pressed="false">adjust pin</button>
         </div>
         <section class="landinfo hidden" id="landInfo" aria-live="polite" aria-label="Land and parcel information">
@@ -4029,13 +4041,14 @@ function initMap(){
   map.getPane("landSelectedPane").style.zIndex = 455;
   map.getPane("landSelectedPane").style.pointerEvents = "none";
   L.control.zoom({ position: "topleft" }).addTo(map);
+  map.addControl(new FullscreenToggle({ position: "topleft" }));
   map.addControl(new ShowAll({ position: "topleft" }));
   map.addControl(new SatToggle({ position: "topleft" }));
   /* Clean marked-route overlay directly below the map/satellite toggle. */
   map.addControl(new OutdoorsToggle({ position: "topleft" }));
-  /* Land ownership / parcels sits directly above fullscreen as requested. */
+  /* Land ownership / parcels remains in the vertical tool stack; fullscreen
+     is pinned beside +/- above, so the stack stays compact. */
   map.addControl(new LandToggle({ position: "topleft" }));
-  map.addControl(new FullscreenToggle({ position: "topleft" }));
   map.addControl(new LocateToggle({ position: "topleft" }));
   map.on("moveend", ()=>{ updateAllButton(); schedulePublicLandRefresh(); });
   map.on("zoom", updateLandVisibility);
@@ -4170,6 +4183,7 @@ function setMapUnlocked(value){
   $("#lockBtn").title = unlocked ? "Lock map movement" : "Unlock map movement";
 }
 $("#lockBtn").addEventListener("click", ()=> setMapUnlocked(!unlocked));
+$("#fullscreenExitBtn")?.addEventListener("click", ()=> setMapFullscreen(false));
 
 function selectedMapStop(){
   return mapSelected >= 0 && mapSelected < stops.length ? stops[mapSelected] : null;
