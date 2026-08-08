@@ -3519,16 +3519,31 @@ function removeLandOverlay(){
   parcelTiles = publicLandLayer = selectedParcelLayer = null;
   hideLandInfo();
 }
+const EMPTY_PARCEL_TILE = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+const ParcelBoundaryLayer = L.TileLayer.extend({
+  /* Do not use Leaflet's minZoom option here. A minZoom on an active GridLayer
+     contributes to the map's own zoom limits, which was trapping parcel mode at
+     zoom 15. Instead return a transparent local tile below parcel-detail zoom. */
+  getTileUrl(coords){
+    if(coords.z < 15) return EMPTY_PARCEL_TILE;
+    return L.TileLayer.prototype.getTileUrl.call(this, coords);
+  }
+});
+function updateLandVisibility(){
+  if(!landOn || !map) return;
+  if(parcelTiles) parcelTiles.setOpacity(map.getZoom() >= 15 ? .9 : 0);
+}
 function setLandOverlay(){
   updateLandButton();
   if(!landOn){ removeLandOverlay(); return; }
   if(!parcelTiles){
-    parcelTiles = L.tileLayer(TILES.parcels, {
-      pane:"landParcelPane", minZoom:15, maxNativeZoom:17, maxZoom:22, opacity:.9,
+    parcelTiles = new ParcelBoundaryLayer(TILES.parcels, {
+      pane:"landParcelPane", maxNativeZoom:17, maxZoom:22, opacity:.9,
       className:"land-parcel-tile",
       attribution:'Parcel boundaries &copy; <a href="https://regrid.com/">Regrid</a> / Esri'
     }).addTo(map);
   }
+  updateLandVisibility();
   schedulePublicLandRefresh();
 }
 function toggleLand(){
@@ -4023,7 +4038,8 @@ function initMap(){
   map.addControl(new FullscreenToggle({ position: "topleft" }));
   map.addControl(new LocateToggle({ position: "topleft" }));
   map.on("moveend", ()=>{ updateAllButton(); schedulePublicLandRefresh(); });
-  map.on("zoomend", ()=>{ updateAllButton(); updateOutdoorsDensity(); schedulePublicLandRefresh(); });
+  map.on("zoom", updateLandVisibility);
+  map.on("zoomend", ()=>{ updateAllButton(); updateOutdoorsDensity(); updateLandVisibility(); schedulePublicLandRefresh(); });
   map.on("click", e=>{ clearMapSelection(); if(landOn) inspectLandAt(e.latlng); });
   setTiles();
   setLandOverlay();
@@ -4699,7 +4715,9 @@ $("#exportImage").addEventListener("click",()=>runExport(async()=>{
     if(stop.addr){x.fillStyle="#7D7A6B";x.font="400 17px Arial, sans-serif";x.fillText(stop.addr.slice(0,82),margin+64,y+98);}
   });
   x.fillStyle="#7D7A6B";x.font="400 16px Arial, sans-serif";x.fillText("Saved from LemonCoords · exact coordinates stay useful without the website.",margin,height-42);
-  const blob=await canvasBlob(c); await exportShareOrDownload(blob,`${safeFilename(exportTripTitle())}.png`,exportTripTitle()); setExportStatus("Image ready.","good");
+  const blob=await canvasBlob(c);
+  downloadBlob(blob,`${safeFilename(exportTripTitle())}.png`);
+  setExportStatus("PNG saved.","good");
 }));
 
 async function createPdfMapRenderer(){

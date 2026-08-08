@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lemoncoords-v15.21-land-ownership';
+const CACHE_NAME = 'lemoncoords-v15.21.1-parcel-export-fix';
 const RUNTIME_CACHE = 'lemoncoords-runtime-v2';
 const MAP_CACHE = 'lemoncoords-map-v2';
 const MAX_MAP_ENTRIES = 2100;
