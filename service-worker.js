@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lemoncoords-v15.16.2-address-fix';
+const CACHE_NAME = 'lemoncoords-v15.17-butter-touch';
 const APP_SHELL = [
   './',
   './index.html',
