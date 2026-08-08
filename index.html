@@ -3797,9 +3797,17 @@ function openPin(p, opts = {}){
   const { push = true, idx = 0, defaultBaseMap = null } = opts;
   const list = Array.isArray(p) ? p : [p];
   tripDefaultBaseMap = normalizedBaseMap(defaultBaseMap);
-  /* Multi-pin trips intentionally default to the drawn Map. Single pins keep
-     LemonCoords' original Satellite default. A saved preference wins. */
-  satellite = effectiveTripBaseMap(list.length) === "satellite";
+
+  /* MapLibre's drawn basemap is happiest when it is swapped in after Leaflet
+     has finished its first layout/draw. Starting a brand-new multi-pin map
+     directly on the vector layer could race that first draw and leave the pin
+     page half-rendered. So a fresh map boots on the proven satellite layer,
+     LemonCoords draws/fits the trip, then we swap to the requested/default
+     basemap on the next frame. Existing maps can switch immediately. */
+  const wantsSatellite = effectiveTripBaseMap(list.length) === "satellite";
+  const creatingMap = !map;
+  satellite = creatingMap && !wantsSatellite ? true : wantsSatellite;
+
   setStops(list, idx);
   showPinPage();
   $("#farWrap").classList.toggle("hidden", !isRecipient);
@@ -3807,7 +3815,16 @@ function openPin(p, opts = {}){
   else setTiles(true);
   if(push) history.pushState({ view:"pin" }, "", location.pathname + location.hash);
   refreshPin();
-  setTimeout(()=> map.invalidateSize(), 60);
+
+  if(creatingMap && satellite !== wantsSatellite){
+    requestAnimationFrame(()=>{
+      satellite = wantsSatellite;
+      setTiles(true);
+      map.invalidateSize();
+    });
+  }else{
+    setTimeout(()=> map.invalidateSize(), 60);
+  }
 }
 
 /* note → url, debounced */
