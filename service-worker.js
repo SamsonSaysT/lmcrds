@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lemoncoords-v15.11-designed-basemap';
+const CACHE_NAME = 'lemoncoords-v15.12-wetland-allpins';
 const APP_SHELL = [
   './',
   './index.html',

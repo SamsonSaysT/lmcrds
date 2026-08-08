@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>LEMONCOORDS.</title>
-<!-- v15.11 designed vector basemap + floated route control -->
+<!-- v15.12 wetland hatch + all-pins quip-slot navigation -->
 <meta name="description" content="Drop a pin. Send it. Every way to find you, in one link.">
 <meta property="og:title" content="LEMONCOORDS.">
 <meta property="og:description" content="Someone sent you a pin. Open it.">
@@ -174,9 +174,27 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
   font-size:clamp(1.7rem,7.6vw,2.7rem);line-height:1.12;letter-spacing:-.01em;
   font-variant-numeric:tabular-nums;user-select:all;
 }
+.quipslot{
+  min-height:42px;margin:12px auto 0;display:grid;place-items:center;
+}
 .quip{
-  max-width:34ch;margin:12px auto 0;color:var(--muted);
+  max-width:34ch;margin:0 auto;color:var(--muted);
   font-size:.87rem;line-height:1.45;text-wrap:balance;
+}
+.pinallbtn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:33px;padding:7px 11px;border-radius:999px;
+  color:var(--ink);background:color-mix(in srgb,var(--pith) 92%,transparent);
+  box-shadow:0 8px 26px rgba(35,36,27,.12);
+  font-size:.78rem;font-weight:720;letter-spacing:.01em;white-space:nowrap;
+  transition:transform .18s cubic-bezier(.16,1,.3,1),background .18s ease,color .18s ease;
+}
+.pinallbtn:hover{transform:translateY(-1px)}
+.pinallbtn:active{transform:scale(.97)}
+.pinallbtn[aria-expanded="true"]{background:var(--ink);color:var(--pith)}
+.pinallcount{
+  min-width:20px;height:20px;padding:0 6px;border-radius:999px;display:grid;place-items:center;
+  background:var(--zest);color:#23241B;font-family:var(--display);font-weight:700;font-size:.72rem;
 }
 .sharehero{margin-top:16px;font-size:1rem;padding:13px 26px}
 .openin{margin-top:14px;color:var(--muted);font-size:.88rem}
@@ -324,10 +342,7 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 :root[data-theme="dark"] .fsroutebtn{box-shadow:0 22px 62px rgba(0,0,0,.5)}
 .fsroutepanel.open{opacity:1;transform:none;pointer-events:auto}
 /* Compact preview: route navigation stays available without entering fullscreen. */
-.mapwrap:not(.is-fullscreen) .fsroutebtn{
-  right:4px;top:-39px;padding:7px 11px;gap:7px;min-height:33px;
-  white-space:nowrap;
-}
+.mapwrap:not(.is-fullscreen) .fsroutebtn{display:none}
 .mapwrap:not(.is-fullscreen) .fsroutepanel{
   right:10px;top:8px;width:min(390px,calc(100% - 20px));
   max-height:calc(100% - 16px);
@@ -437,7 +452,7 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .fscandidate{filter:drop-shadow(0 7px 12px rgba(35,36,27,.24));opacity:.82}
 @media(max-width:600px){
   .mapwrap:not(.is-fullscreen) .fsroutepanel{left:8px;right:8px;width:auto;top:8px;max-height:calc(100% - 16px)}
-  .mapwrap:not(.is-fullscreen) .fsroutebtn{right:3px;top:-37px;padding:7px 10px;gap:6px;min-height:32px}
+  .mapwrap:not(.is-fullscreen) .fsroutebtn{display:none}
   .mapwrap.is-fullscreen .fsroutepanel{left:10px;right:10px;width:auto;top:calc(max(10px,env(safe-area-inset-top)) + 46px);max-height:62dvh}
   .mapwrap.is-fullscreen .fsroutebtn{right:145px;top:max(10px,env(safe-area-inset-top));padding:8px 10px;gap:6px}
   .mapwrap.is-fullscreen .mapui{right:8px;top:max(10px,env(safe-area-inset-top));gap:4px}
@@ -1262,7 +1277,17 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
           </div>
           <div class="stepcount hidden" id="stepCount"></div>
         </div>
-        <p class="quip" id="quip"></p>
+        <div class="quipslot" id="quipSlot">
+          <p class="quip" id="quip"></p>
+          <button class="pinallbtn hidden" id="previewRouteBtn" type="button" aria-expanded="false" aria-controls="fsRoutePanel">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+              <circle cx="6" cy="6" r="2.2" stroke="currentColor" stroke-width="1.8"/>
+              <circle cx="18" cy="18" r="2.2" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M6 8.5v4.2a3.3 3.3 0 0 0 3.3 3.3h6.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="1.7 2.5"/>
+            </svg>
+            <span>all pins</span><span class="pinallcount" id="previewRouteCount">2</span>
+          </button>
+        </div>
         <button class="btn sharehero" id="shareTopBtn">Share this pin</button>
         <p class="openin">open in
           <a id="gViewTop" target="_blank" rel="noopener">google maps</a> or
@@ -2968,6 +2993,42 @@ function roadTier(id){
   if(n.includes('rail')) return 'rail';
   return 'local';
 }
+function hexRgb(hex){
+  const h = String(hex || "").replace("#","").trim();
+  const n = h.length === 3
+    ? h.split("").map(x=>x+x).join("")
+    : h.padEnd(6,"0").slice(0,6);
+  return [parseInt(n.slice(0,2),16),parseInt(n.slice(2,4),16),parseInt(n.slice(4,6),16)];
+}
+function ensureWetlandPattern(gl, name, baseHex, lineHex){
+  if(!gl || gl.hasImage?.(name)) return;
+  const width = 48, height = 48;
+  const data = new Uint8Array(width * height * 4);
+  const base = hexRgb(baseHex), line = hexRgb(lineHex);
+  for(let i=0;i<width*height;i++){
+    const o=i*4;
+    data[o]=base[0]; data[o+1]=base[1]; data[o+2]=base[2]; data[o+3]=255;
+  }
+  const put=(x,y,a=170)=>{
+    if(x<0||y<0||x>=width||y>=height) return;
+    const o=(y*width+x)*4;
+    const t=a/255;
+    data[o]=Math.round(base[0]*(1-t)+line[0]*t);
+    data[o+1]=Math.round(base[1]*(1-t)+line[1]*t);
+    data[o+2]=Math.round(base[2]*(1-t)+line[2]*t);
+    data[o+3]=255;
+  };
+  /* Two quiet water-line bands per repeat. No grass/reed glyphs: at map scale
+     this reads as marshy ground without turning wetlands into a wallpaper. */
+  [13,35].forEach((mid, band)=>{
+    for(let x=0;x<width;x++){
+      const y=Math.round(mid + Math.sin((x/width)*Math.PI*4 + band*.7)*1.6);
+      put(x,y,178);
+      if(x%3!==0) put(x,y+1,82);
+    }
+  });
+  try{ gl.addImage(name,{width,height,data},{pixelRatio:2}); }catch(_){ }
+}
 function applyLemonBasemapPalette(gl, theme = currentTheme()){
   if(!gl?.getStyle) return;
   const dark = theme === 'dark';
@@ -2986,6 +3047,9 @@ function applyLemonBasemapPalette(gl, theme = currentTheme()){
     roadCasing:'#F7ECCB', rail:'#827963', label:'#443A2B', labelMuted:'#625B48',
     labelHalo:'#F5EACB', waterLabel:'#386D82'
   };
+
+  const wetlandPattern = dark ? "lemon-wetland-lines-dark" : "lemon-wetland-lines-light";
+  ensureWetlandPattern(gl, wetlandPattern, c.wetland, dark ? "#5F9187" : "#6F9F93");
 
   const layers = gl.getStyle()?.layers || [];
   layers.forEach(layer=>{
@@ -3008,7 +3072,11 @@ function applyLemonBasemapPalette(gl, theme = currentTheme()){
       else if(sl === 'landcover'){
         if(n.includes('wood') || n.includes('forest')) safePaint(gl,id,'fill-color',c.wood);
         else if(n.includes('grass')) safePaint(gl,id,'fill-color',c.grass);
-        else if(n.includes('wetland')) safePaint(gl,id,'fill-color',c.wetland);
+        else if(n.includes('wetland')){
+          safePaint(gl,id,'fill-color',c.wetland);
+          safePaint(gl,id,'fill-pattern',wetlandPattern);
+          safePaint(gl,id,'fill-opacity',1);
+        }
         else if(n.includes('sand')) safePaint(gl,id,'fill-color',c.sand);
         else safePaint(gl,id,'fill-color',c.generic);
       }else if(sl === 'landuse'){
@@ -3500,6 +3568,7 @@ function setFsRouteOpen(open){
   fsRouteOpen = !!open;
   $("#fsRoutePanel")?.classList.toggle("open", fsRouteOpen);
   $("#fsRouteBtn")?.setAttribute("aria-expanded", String(fsRouteOpen));
+  $("#previewRouteBtn")?.setAttribute("aria-expanded", String(fsRouteOpen));
   $("#fsSearchBox")?.blur();
   if(fsRouteOpen){
     renderFullscreenRoute();
@@ -3547,6 +3616,7 @@ window.addEventListener("keydown", e=>{
   else if(mapFullscreen && !document.fullscreenElement) setMapFullscreen(false, true);
 });
 $("#fsRouteBtn")?.addEventListener("click", ()=> setFsRouteOpen(!fsRouteOpen));
+$("#previewRouteBtn")?.addEventListener("click", ()=> setFsRouteOpen(!fsRouteOpen));
 $("#fsEditLock")?.addEventListener("click", ()=>{
   if(!sharedTrip) return;
   openSharedSheet(!!sharedTrip.editable && !sharedTrip.unlocked);
@@ -3584,6 +3654,10 @@ function refreshPin(opts = {}){
     updateAllButton();
   }
   $("#tripBtn").classList.toggle("on", multi);
+  const previewRouteBtn = $("#previewRouteBtn");
+  const quip = $("#quip");
+  previewRouteBtn?.classList.toggle("hidden", !multi);
+  quip?.classList.toggle("hidden", multi);
   renderFullscreenRoute();
 
   $("#dropWhen").textContent = fmtWhen(pin.ts);
@@ -4302,6 +4376,8 @@ function renderFullscreenRoute(){
   const editable = canChangeTrip();
   const count = $("#fsRouteCount");
   if(count) count.textContent = stops.length || 0;
+  const previewCount = $("#previewRouteCount");
+  if(previewCount) previewCount.textContent = stops.length || 0;
   const mode = $("#fsRouteMode");
   if(mode) mode.textContent = ordered ? "in order" : "loose list";
   updateFullscreenEditLock();
