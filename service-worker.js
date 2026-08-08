@@ -1,4 +1,7 @@
-const CACHE_NAME = 'lemoncoords-v15.17-butter-touch';
+const CACHE_NAME = 'lemoncoords-v15.19-offline-unsaved';
+const RUNTIME_CACHE = 'lemoncoords-runtime-v2';
+const MAP_CACHE = 'lemoncoords-map-v2';
+const MAX_MAP_ENTRIES = 1600;
 const APP_SHELL = [
   './',
   './index.html',
@@ -9,6 +12,19 @@ const APP_SHELL = [
   './icons/apple-touch-icon.png',
   './icons/favicon-32.png'
 ];
+
+const MAP_HOSTS = new Set([
+  'tiles.openfreemap.org',
+  'tiles.openstreetmap.us',
+  'server.arcgisonline.com',
+  'apps.fs.usda.gov'
+]);
+const STATIC_HOSTS = new Set([
+  'cdnjs.cloudflare.com',
+  'unpkg.com',
+  'fonts.googleapis.com',
+  'fonts.gstatic.com'
+]);
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -21,26 +37,109 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys
+        .filter(k => k.startsWith('lemoncoords-v') && k !== CACHE_NAME)
+        .map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
+});
+
+async function cacheableFetch(request){
+  try{
+    const response = await fetch(request);
+    if(response.ok || response.type === 'opaque') return response;
+  }catch{}
+  return null;
+}
+
+async function cacheFirst(request, cacheName){
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request, { ignoreVary:true });
+  if(cached) return cached;
+  const response = await cacheableFetch(request);
+  if(response){
+    await cache.put(request, response.clone());
+    return response;
+  }
+  return Response.error();
+}
+
+async function staleWhileRevalidate(request, cacheName){
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request, { ignoreVary:true });
+  const fresh = cacheableFetch(request).then(async response => {
+    if(response) await cache.put(request, response.clone());
+    return response;
+  });
+  return cached || (await fresh) || Response.error();
+}
+
+async function trimMapCache(){
+  const cache = await caches.open(MAP_CACHE);
+  const keys = await cache.keys();
+  const over = keys.length - MAX_MAP_ENTRIES;
+  if(over > 0) await Promise.all(keys.slice(0, over).map(key => cache.delete(key)));
+}
+
+function prefetchRequest(url){
+  const u = new URL(url);
+  const init = { credentials:'omit', cache:'no-store' };
+  if(u.hostname === 'server.arcgisonline.com' || u.hostname === 'apps.fs.usda.gov' || STATIC_HOSTS.has(u.hostname)) init.mode = 'no-cors';
+  return new Request(u.href, init);
+}
+
+async function prefetchUrls(urls){
+  const unique = [...new Set((urls || []).filter(u => typeof u === 'string'))].slice(0, 650);
+  const mapCache = await caches.open(MAP_CACHE);
+  const runtimeCache = await caches.open(RUNTIME_CACHE);
+  /* Keep concurrency modest so opening a trip never fights the visible map. */
+  const workers = Array.from({ length:4 }, async (_, workerIndex) => {
+    for(let i = workerIndex; i < unique.length; i += 4){
+      const url = unique[i];
+      try{
+        const req = prefetchRequest(url);
+        const target = MAP_HOSTS.has(new URL(url).hostname) ? mapCache : runtimeCache;
+        if(await target.match(req, { ignoreVary:true })) continue;
+        const response = await cacheableFetch(req);
+        if(response) await target.put(req, response.clone());
+      }catch{}
+    }
+  });
+  await Promise.all(workers);
+  await trimMapCache();
+}
+
+self.addEventListener('message', event => {
+  if(event.data?.type === 'PREFETCH_URLS'){
+    event.waitUntil(prefetchUrls(event.data.urls));
+  }
 });
 
 self.addEventListener('fetch', event => {
   const request = event.request;
   const url = new URL(request.url);
+  if(request.method !== 'GET') return;
 
-  if (request.method !== 'GET') return;
+  /* Never cache live geocoder/API answers. */
+  if(url.hostname === 'nominatim.openstreetmap.org' ||
+     url.hostname === 'photon.komoot.io' ||
+     url.hostname === 'geocoding.geo.census.gov' ||
+     url.hostname === 'go.lemoncoords.com') return;
 
-  // Geocoders, map tiles, and fonts stay live — a cached search result is a
-  // wrong search result, and stale tiles look broken.
-  if (url.origin !== self.location.origin) return;
+  if(MAP_HOSTS.has(url.hostname)){
+    event.respondWith(cacheFirst(request, MAP_CACHE));
+    return;
+  }
+  if(STATIC_HOSTS.has(url.hostname)){
+    event.respondWith(staleWhileRevalidate(request, RUNTIME_CACHE));
+    return;
+  }
 
-  // Navigations: try the network so a deploy lands immediately, fall back to
-  // the cached shell when offline. The pin itself lives in the URL, so an
-  // offline open of a shared link still shows coordinates, formats and links —
-  // only the basemap and address lookup need the network.
-  if (request.mode === 'navigate') {
+  if(url.origin !== self.location.origin) return;
+
+  /* Navigations stay network-first so deployments land immediately, with the
+     cached app shell as the offline fallback. Trip data lives in the URL hash. */
+  if(request.mode === 'navigate'){
     event.respondWith(
       fetch(request)
         .then(response => {

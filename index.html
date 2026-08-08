@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>LEMONCOORDS.</title>
-<!-- v15.17 native butter-smooth two-finger preview map gesture -->
+<!-- v15.19 unsaved-change guard + offline trip/map resilience + last-updated status -->
 <meta name="description" content="Drop a pin. Send it. Every way to find you, in one link.">
 <meta property="og:title" content="LEMONCOORDS.">
 <meta property="og:description" content="Someone sent you a pin. Open it.">
@@ -90,6 +90,17 @@ header.site{padding:22px 0 10px;border-bottom:1px solid var(--ink)}
 }
 
 footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--muted);font-size:.78rem;line-height:1.7;margin-top:44px}
+
+/* ---------- unpublished-change guard ---------- */
+.unsavedsheet{position:fixed;inset:0;z-index:calc(var(--z-modal) + 6);display:grid;place-items:center;padding:22px;background:rgba(35,36,27,.34);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}
+:root[data-theme="dark"] .unsavedsheet{background:rgba(0,0,0,.56)}
+.unsavedcard{width:min(390px,100%);background:var(--pith);color:var(--ink);border-radius:22px;padding:24px 22px 20px;box-shadow:0 26px 72px rgba(35,36,27,.24);text-align:left}
+.unsavedlemon{width:38px;height:38px;border-radius:50%;background:var(--zest);border:2px solid var(--ink);position:relative;margin-bottom:14px}
+.unsavedlemon::after{content:"";position:absolute;width:10px;height:6px;border-radius:100% 0 100% 0;background:var(--leaf);right:-4px;top:-3px;transform:rotate(-22deg)}
+.unsavedtitle{font-family:var(--display);font-size:1.15rem;font-weight:640}
+.unsavedcopy{font-size:.83rem;line-height:1.5;color:var(--muted);margin-top:6px}
+.unsavedactions{display:flex;justify-content:flex-end;gap:9px;margin-top:19px}
+.unsavedactions .btn{font-size:.8rem;padding:9px 14px}
 
 /* ---------- shared bits ---------- */
 .btn{
@@ -185,12 +196,13 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 .pinallbtn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   min-height:33px;padding:7px 11px;border-radius:999px;
-  color:var(--ink);background:color-mix(in srgb,var(--pith) 92%,transparent);
-  box-shadow:0 8px 26px rgba(35,36,27,.12);
+  color:var(--pith);background:var(--ink);
+  box-shadow:none;
   font-size:.78rem;font-weight:720;letter-spacing:.01em;white-space:nowrap;
   transition:transform .18s cubic-bezier(.16,1,.3,1),background .18s ease,color .18s ease;
 }
-.pinallbtn:hover{transform:translateY(-1px)}
+.pinallbtn:hover{background:#000;transform:translateY(-1px)}
+:root[data-theme="dark"] .pinallbtn:hover{background:#fff}
 .pinallbtn:active{transform:scale(.97)}
 .pinallbtn[aria-expanded="true"]{background:var(--ink);color:var(--pith)}
 .pinallcount{
@@ -842,6 +854,8 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .sharedk{font-size:.64rem;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:600}
 .sharedtitle{font-family:var(--display);font-weight:640;font-size:1.06rem;margin-top:2px;overflow-wrap:anywhere}
 .sharedrev{font-size:.68rem;color:var(--muted);white-space:nowrap;margin-top:2px}
+.sharedupdated{font-size:.69rem;color:var(--muted);margin-top:5px;letter-spacing:.005em}
+.sharedupdated::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--leaf);margin:0 7px 1px 1px;opacity:.72}
 .sharedstatus{font-size:.82rem;line-height:1.5;color:var(--muted);margin-top:8px}
 .sharedactions{display:flex;flex-wrap:wrap;gap:9px;margin-top:13px}
 .sharedactions .btn{font-size:.82rem;padding:9px 15px}
@@ -1686,6 +1700,7 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
       <div class="sharedrev" id="sharedRev"></div>
     </div>
     <p class="sharedstatus" id="sharedStatus">Checking this link's edit settings…</p>
+    <div class="sharedupdated hidden" id="sharedUpdated"></div>
     <div class="sharedbasemap hidden" id="sharedBaseMap">
       <div class="sharedbasemaplabel">Choose default base map</div>
       <div class="sharedbasemapchoices" role="group" aria-label="Default base map">
@@ -1710,6 +1725,20 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
     </div>
     <div class="sharedmsg" id="sharedMsg"></div>
     <p class="sharedfine">The custom address and expiration can never be changed. The password only unlocks the trip plan.</p>
+  </div>
+</div>
+
+
+<!-- ============ UNSAVED SHARED-TRIP CHANGES ============ -->
+<div class="unsavedsheet hidden" id="unsavedSheet" role="dialog" aria-modal="true" aria-labelledby="unsavedTitle">
+  <div class="unsavedcard">
+    <div class="unsavedlemon" aria-hidden="true"></div>
+    <div class="unsavedtitle" id="unsavedTitle">Unpublished changes</div>
+    <p class="unsavedcopy">This shared trip has changes that have not been published yet. Leaving now keeps the public link on its previous version.</p>
+    <div class="unsavedactions">
+      <button class="btn btn-ghost" id="unsavedStay" type="button">Keep editing</button>
+      <button class="btn" id="unsavedLeave" type="button">Leave anyway</button>
+    </div>
   </div>
 </div>
 
@@ -2942,11 +2971,23 @@ function showPinPage(){
 }
 $("#brandlink").addEventListener("click", e=>{
   e.preventDefault();
-  clearSharedTripContext();
-  history.pushState(null, "", location.pathname);
-  showFront();
+  requestUnsavedLeave(()=>{
+    clearSharedTripContext();
+    history.pushState(null, "", location.pathname);
+    showFront();
+  });
 });
+let sharedHistoryBypass = false;
 window.addEventListener("popstate", ()=>{
+  if(!sharedHistoryBypass && hasUnpublishedSharedChanges() && sharedTrip?.guardUrl){
+    history.pushState({ view:"pin" }, "", sharedTrip.guardUrl);
+    requestUnsavedLeave(()=>{
+      sharedHistoryBypass = true;
+      history.back();
+      setTimeout(()=>{ sharedHistoryBypass = false; }, 80);
+    });
+    return;
+  }
   const rawHash = location.hash.slice(1);
   if(rawHash.startsWith("P")){
     clearSharedTripContext();
@@ -3380,7 +3421,7 @@ const SatToggle = L.Control.extend({
     b.setAttribute("aria-label", "Show the drawn map");
     b.title = "Map";
     L.DomEvent.disableClickPropagation(b);
-    L.DomEvent.on(b, "click", ()=>{ satellite = !satellite; setTiles(); });
+    L.DomEvent.on(b, "click", ()=>{ satellite = !satellite; setTiles(); scheduleOfflineTripPack(); });
     satBtn = b;
     return b;
   }
@@ -3835,6 +3876,8 @@ function refreshPin(opts = {}){
   const quip = $("#quip");
   previewRouteBtn?.classList.toggle("hidden", !multi);
   quip?.classList.toggle("hidden", multi);
+  const shareTopBtn = $("#shareTopBtn");
+  if(shareTopBtn) shareTopBtn.textContent = multi ? "Share these pins" : "Share this pin";
   renderFullscreenRoute();
 
   $("#dropWhen").textContent = fmtWhen(pin.ts);
@@ -3915,6 +3958,8 @@ function openPin(p, opts = {}){
   else setTiles(true);
   if(push) history.pushState({ view:"pin" }, "", location.pathname + location.hash);
   refreshPin();
+  persistOfflineTripSnapshot();
+  scheduleOfflineTripPack();
 
   if(creatingMap && satellite !== wantsSatellite){
     requestAnimationFrame(()=>{
@@ -5285,7 +5330,10 @@ function sharedStateFromLocation(){
     unlockTimer: null,
     loading: true,
     baseline: hash,
-    dirty: false
+    dirty: false,
+    updatedAt: 0,
+    offline: false,
+    guardUrl: location.href
   };
 }
 
@@ -5357,6 +5405,8 @@ function clearSharedTripContext(){
   $("#sharedAuth")?.classList.add("hidden");
   $("#sharedReload")?.classList.add("hidden");
   if($("#sharedMsg")) sharedMessage("");
+  if($("#sharedUpdated")){ $("#sharedUpdated").textContent = ""; $("#sharedUpdated").classList.add("hidden"); }
+  if(sharedUpdatedTimer){ clearInterval(sharedUpdatedTimer); sharedUpdatedTimer = null; }
   if($("#noteInput")) $("#noteInput").disabled = false;
   if($("#dragBtn")) $("#dragBtn").disabled = false;
   if($("#addStopBtn")) $("#addStopBtn").disabled = false;
@@ -5385,6 +5435,92 @@ function blockSharedChange(){
     sharedMessage("This shared trip was created permanently read-only.", "bad");
   }
   return true;
+}
+
+let sharedUpdatedTimer = null;
+let allowUnsavedLeave = false;
+let pendingUnsavedLeave = null;
+
+function hasUnpublishedSharedChanges(){
+  if(!sharedTrip?.unlocked) return false;
+  syncSharedDirty();
+  return !!sharedTrip.dirty;
+}
+function relativeUpdatedTime(epochSeconds){
+  const t = Number(epochSeconds || 0) * 1000;
+  if(!t) return "";
+  const delta = Math.max(0, Date.now() - t);
+  const min = Math.floor(delta / 60000);
+  if(min < 1) return "just now";
+  if(min < 60) return `${min} min${min === 1 ? "" : "s"} ago`;
+  const hr = Math.floor(min / 60);
+  if(hr < 24) return `${hr} hr${hr === 1 ? "" : "s"} ago`;
+  const day = Math.floor(hr / 24);
+  if(day < 14) return `${day} day${day === 1 ? "" : "s"} ago`;
+  return new Date(t).toLocaleDateString(undefined, { month:"short", day:"numeric", year:new Date(t).getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
+}
+function updateSharedLastUpdated(){
+  const el = $("#sharedUpdated");
+  if(!el) return;
+  const show = !!sharedTrip?.editable && Number(sharedTrip.updatedAt || 0) > 0;
+  el.classList.toggle("hidden", !show);
+  if(!show) return;
+  const exact = new Date(Number(sharedTrip.updatedAt) * 1000);
+  el.textContent = `Last updated ${relativeUpdatedTime(sharedTrip.updatedAt)}`;
+  el.title = exact.toLocaleString();
+}
+function startSharedUpdatedClock(){
+  if(sharedUpdatedTimer) clearInterval(sharedUpdatedTimer);
+  updateSharedLastUpdated();
+  sharedUpdatedTimer = setInterval(updateSharedLastUpdated, 60000);
+}
+function requestUnsavedLeave(action){
+  if(!hasUnpublishedSharedChanges()){
+    allowUnsavedLeave = true;
+    try{ action(); }finally{ setTimeout(()=>{ allowUnsavedLeave = false; }, 0); }
+    return;
+  }
+  pendingUnsavedLeave = action;
+  $("#unsavedSheet")?.classList.remove("hidden");
+}
+function closeUnsavedSheet(){
+  $("#unsavedSheet")?.classList.add("hidden");
+  pendingUnsavedLeave = null;
+}
+$("#unsavedStay")?.addEventListener("click", closeUnsavedSheet);
+$("#unsavedSheet")?.addEventListener("click", e=>{ if(e.target === $("#unsavedSheet")) closeUnsavedSheet(); });
+$("#unsavedLeave")?.addEventListener("click", ()=>{
+  const action = pendingUnsavedLeave;
+  pendingUnsavedLeave = null;
+  $("#unsavedSheet")?.classList.add("hidden");
+  if(!action) return;
+  allowUnsavedLeave = true;
+  try{ action(); }finally{ setTimeout(()=>{ allowUnsavedLeave = false; }, 120); }
+});
+window.addEventListener("beforeunload", e=>{
+  if(allowUnsavedLeave || !hasUnpublishedSharedChanges()) return;
+  e.preventDefault();
+  e.returnValue = "";
+});
+
+const SHARED_META_PREFIX = "lemoncoords.shared.meta.v1.";
+function cacheSharedMeta(){
+  if(!sharedTrip?.slug) return;
+  try{
+    localStorage.setItem(SHARED_META_PREFIX + sharedTrip.slug, JSON.stringify({
+      editable:!!sharedTrip.editable,
+      isPrivate:!!sharedTrip.isPrivate,
+      revision:Number(sharedTrip.revision || 1),
+      updatedAt:Number(sharedTrip.updatedAt || 0),
+      savedAt:Date.now()
+    }));
+  }catch{}
+}
+function cachedSharedMeta(slug){
+  try{
+    const j = JSON.parse(localStorage.getItem(SHARED_META_PREFIX + slug) || "null");
+    return j && Date.now() - Number(j.savedAt || 0) < 1000 * 60 * 60 * 24 * 30 ? j : null;
+  }catch{ return null; }
 }
 
 function updateSharedLockButton(){
@@ -5432,6 +5568,7 @@ function chooseSharedDefaultBaseMap(value){
   if(map) setTiles(true);
   syncSharedDirty();
   updateSharedBaseMapChooser();
+  scheduleOfflineTripPack(true);
 }
 
 function setSharedControlState(){
@@ -5461,6 +5598,7 @@ function setSharedControlState(){
   $("#sharedSave").classList.toggle("hidden", !sharedTrip.unlocked);
   $("#sharedSave").disabled = !sharedTrip.dirty;
   $("#sharedRev").textContent = sharedTrip.revision ? `version ${sharedTrip.revision}` : "";
+  updateSharedLastUpdated();
   updateSharedBaseMapChooser();
 
   if(sharedTrip.loading){
@@ -5526,15 +5664,36 @@ async function initSharedTrip(){
       sharedTrip.encryptedPayload = privateHash || location.hash.slice(1);
     }
     sharedTrip.revision = Number(j.revision || sharedTrip.revision || 1);
+    sharedTrip.updatedAt = Number(j.updatedAt || 0);
+    sharedTrip.offline = false;
     sharedTrip.loading = false;
     putSharedRevisionInUrl();
+    sharedTrip.guardUrl = location.href;
+    cacheSharedMeta();
+    startSharedUpdatedClock();
     setSharedControlState();
+    persistOfflineTripSnapshot();
+    scheduleOfflineTripPack();
   }catch{
+    const cached = cachedSharedMeta(sharedTrip.slug);
     sharedTrip.loading = false;
-    sharedTrip.editable = false;
-    $("#sharedStatus").textContent = "The edit settings could not be verified, so this trip is staying locked for safety.";
-    sharedMessage("The trip still works for viewing and sharing.", "bad");
+    if(cached){
+      sharedTrip.editable = !!cached.editable;
+      sharedTrip.isPrivate = !!cached.isPrivate;
+      sharedTrip.revision = Number(cached.revision || sharedTrip.revision || 1);
+      sharedTrip.updatedAt = Number(cached.updatedAt || 0);
+      sharedTrip.offline = true;
+      $("#sharedStatus").textContent = "Offline copy. The saved trip and cached map are available; reconnect before publishing edits.";
+      sharedMessage("Viewing the last saved copy on this device.", "good");
+      startSharedUpdatedClock();
+    }else{
+      sharedTrip.editable = false;
+      $("#sharedStatus").textContent = "The edit settings could not be verified, so this trip is staying locked for safety.";
+      sharedMessage("The trip still works for viewing and sharing.", "bad");
+    }
     setSharedControlState();
+    persistOfflineTripSnapshot();
+    scheduleOfflineTripPack();
   }
 }
 
@@ -5684,6 +5843,8 @@ async function saveSharedTrip(){
       return;
     }
     sharedTrip.revision = Number(j.revision);
+    sharedTrip.updatedAt = Number(j.updatedAt || Math.floor(Date.now()/1000));
+    sharedTrip.offline = false;
     sharedTrip.baseline = plainPayload;
     sharedTrip.dirty = false;
     if(sharedTrip.isPrivate){
@@ -5691,6 +5852,11 @@ async function saveSharedTrip(){
       privateHash = payload;
     }
     putSharedRevisionInUrl(payload);
+    sharedTrip.guardUrl = location.href;
+    cacheSharedMeta();
+    updateSharedLastUpdated();
+    persistOfflineTripSnapshot();
+    scheduleOfflineTripPack(true);
     sharedMessage("Updated. Everyone opening the same short link will now get this version.", "good");
     setSharedControlState();
     renderQR();
@@ -5964,11 +6130,154 @@ $("#stepNext").addEventListener("click", ()=> setActive((active + 1) % stops.len
   });
 })();
 
+/* ---------- offline trip + map pack ---------- */
+const OFFLINE_SNAPSHOT_KEY = "lemoncoords.offline.last-trip.v1";
+let offlinePackTimer = null;
+let offlinePackSignature = "";
+function persistOfflineTripSnapshot(){
+  if(!stops.length) return;
+  try{
+    const hash = sharedTrip?.isPrivate
+      ? (sharedTrip.encryptedPayload || privateHash || location.hash.slice(1))
+      : tripHash();
+    localStorage.setItem(OFFLINE_SNAPSHOT_KEY, JSON.stringify({
+      hash,
+      ordered,
+      defaultBaseMap:effectiveTripBaseMap(),
+      shared:sharedTrip?.slug || "",
+      revision:Number(sharedTrip?.revision || 1),
+      savedAt:Date.now()
+    }));
+  }catch{}
+}
+function loadOfflineTripSnapshot(){
+  try{
+    const j = JSON.parse(localStorage.getItem(OFFLINE_SNAPSHOT_KEY) || "null");
+    return j && j.hash && Date.now() - Number(j.savedAt || 0) < 1000 * 60 * 60 * 24 * 30 ? j : null;
+  }catch{ return null; }
+}
+function tileXY(lat, lon, z){
+  const n = 2 ** z;
+  const x = Math.floor((lon + 180) / 360 * n);
+  const rad = Math.max(-85.05112878, Math.min(85.05112878, lat)) * Math.PI / 180;
+  const y = Math.floor((1 - Math.asinh(Math.tan(rad)) / Math.PI) / 2 * n);
+  return { x:Math.max(0, Math.min(n-1, x)), y:Math.max(0, Math.min(n-1, y)) };
+}
+function buildOfflineBasemapUrls(list, baseMap, maxTiles = 520){
+  if(!list?.length) return [];
+  const urls = [];
+  const seen = new Set();
+  const add = u=>{ if(urls.length < maxTiles && !seen.has(u)){ seen.add(u); urls.push(u); } };
+  const zooms = baseMap === "satellite" ? [8,9,10,11,12,13,14,15] : [8,9,10,11,12,13,14];
+  for(const z of zooms){
+    if(urls.length >= maxTiles) break;
+    const pts = list.map(p=>tileXY(p.lat,p.lon,z));
+    let minX=Math.min(...pts.map(p=>p.x)), maxX=Math.max(...pts.map(p=>p.x));
+    let minY=Math.min(...pts.map(p=>p.y)), maxY=Math.max(...pts.map(p=>p.y));
+    minX--; minY--; maxX++; maxY++;
+    const n = 2 ** z;
+    minX=Math.max(0,minX); minY=Math.max(0,minY); maxX=Math.min(n-1,maxX); maxY=Math.min(n-1,maxY);
+    const bboxCount=(maxX-minX+1)*(maxY-minY+1);
+    const remaining=maxTiles-urls.length;
+    if(bboxCount <= remaining && bboxCount <= 150){
+      for(let x=minX;x<=maxX;x++) for(let y=minY;y<=maxY;y++){
+        add(baseMap === "satellite"
+          ? `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`
+          : `https://tiles.openfreemap.org/planet/latest/${z}/${x}/${y}.pbf`);
+      }
+    }else{
+      /* At high zooms a long route can span thousands of tiles. Keep a useful
+         3x3 neighborhood around every stop instead of burning the device quota. */
+      for(const p of pts){
+        for(let dx=-1;dx<=1;dx++) for(let dy=-1;dy<=1;dy++){
+          const x=p.x+dx, y=p.y+dy;
+          if(x<0||y<0||x>=n||y>=n) continue;
+          add(baseMap === "satellite"
+            ? `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`
+            : `https://tiles.openfreemap.org/planet/latest/${z}/${x}/${y}.pbf`);
+          if(urls.length >= maxTiles) break;
+        }
+        if(urls.length >= maxTiles) break;
+      }
+    }
+  }
+  return urls;
+}
+function buildOfflineTrailUrls(list, maxTiles = 120){
+  if(!outdoorsOn || !list?.length) return [];
+  const urls=[], seen=new Set();
+  const add=u=>{ if(urls.length<maxTiles && !seen.has(u)){ seen.add(u); urls.push(u); } };
+  for(const z of [12,13,14]){
+    const n=2**z;
+    for(const stop of list){
+      const p=tileXY(stop.lat,stop.lon,z);
+      for(let dx=-1;dx<=1;dx++) for(let dy=-1;dy<=1;dy++){
+        const x=p.x+dx,y=p.y+dy;
+        if(x<0||y<0||x>=n||y>=n) continue;
+        add(`https://tiles.openstreetmap.us/vector/trails/${z}/${x}/${y}.mvt`);
+      }
+      if(urls.length>=maxTiles) break;
+    }
+    if(urls.length>=maxTiles) break;
+  }
+  return urls;
+}
+function coreOfflineUrls(){
+  const urls = [
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css",
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js",
+    "https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css",
+    "https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js",
+    "https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.3/leaflet-maplibre-gl.js",
+    "https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.min.js",
+    TILES.drawnStyle,
+    "https://tiles.openfreemap.org/planet",
+    "https://tiles.openfreemap.org/sprites/ofm_f384/ofm.json",
+    "https://tiles.openfreemap.org/sprites/ofm_f384/ofm.png",
+    "https://tiles.openfreemap.org/sprites/ofm_f384/ofm@2x.json",
+    "https://tiles.openfreemap.org/sprites/ofm_f384/ofm@2x.png"
+  ];
+  /* Basic Latin glyph ranges cover the road/place labels users are most likely
+     to encounter in an offline US trip. The map still degrades gracefully if a
+     rarer script was never seen online. */
+  for(const face of ["Noto Sans Regular","Noto Sans Italic","Noto Sans Bold"]){
+    for(const range of ["0-255","256-511"]){
+      urls.push(`https://tiles.openfreemap.org/fonts/${encodeURIComponent(face)}/${range}.pbf`);
+    }
+  }
+  return urls;
+}function sendOfflinePrefetch(urls){
+  if(!("serviceWorker" in navigator) || !urls?.length) return;
+  navigator.serviceWorker.ready.then(reg=>{
+    (reg.active || navigator.serviceWorker.controller)?.postMessage({ type:"PREFETCH_URLS", urls });
+  }).catch(()=>{});
+}
+function scheduleOfflineTripPack(force = false){
+  clearTimeout(offlinePackTimer);
+  offlinePackTimer = setTimeout(()=>{
+    if(!stops.length || !navigator.onLine) return;
+    const baseMap = effectiveTripBaseMap();
+    const signature = `${baseMap}:${tripHash()}`;
+    if(!force && offlinePackSignature === signature) return;
+    const urls = coreOfflineUrls()
+      .concat(buildOfflineBasemapUrls(stops, baseMap))
+      .concat(buildOfflineTrailUrls(stops));
+    sendOfflinePrefetch(urls);
+    offlinePackSignature = signature;
+    navigator.storage?.persist?.().catch(()=>{});
+  }, 1300);
+}
+window.addEventListener("online", ()=> scheduleOfflineTripPack());
+
 /* ---------- offline shell ---------- */
 if("serviceWorker" in navigator &&
    (location.protocol === "https:" || location.hostname === "localhost")){
   window.addEventListener("load", ()=>{
-    navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+    navigator.serviceWorker.register("./service-worker.js").then(()=>{
+      sendOfflinePrefetch(coreOfflineUrls());
+      if(stops.length){ persistOfflineTripSnapshot(); scheduleOfflineTripPack(); }
+    }).catch(()=>{});
   });
 }
 
@@ -5999,9 +6308,38 @@ function readHash(){
     openPin(got.stops, { push:false, defaultBaseMap:got.defaultBaseMap });
     if(sharedTrip) initSharedTrip();
   } else {
-    /* clean slate every visit, same as the weather */
-    history.replaceState(null, "", location.pathname);
-    showFront();
+    const offlineSnap = !navigator.onLine ? loadOfflineTripSnapshot() : null;
+    if(offlineSnap){
+      isRecipient = !!offlineSnap.shared;
+      if(offlineSnap.hash[0] === "P"){
+        if(offlineSnap.shared){
+          const q = new URLSearchParams(); q.set("shared", offlineSnap.shared); q.set("rev", String(offlineSnap.revision || 1));
+          history.replaceState(null, "", `${location.pathname}?${q.toString()}#${offlineSnap.hash}`);
+          sharedTrip = sharedStateFromLocation();
+        }
+        openPrivateGate(offlineSnap.hash);
+      }else{
+        const trip = decodeTrip(offlineSnap.hash) || (()=>{ const one=unpackPin(offlineSnap.hash); return one ? {stops:[one],ordered:true,defaultBaseMap:null} : null; })();
+        if(trip){
+          if(offlineSnap.shared){
+            const q = new URLSearchParams(); q.set("shared", offlineSnap.shared); q.set("rev", String(offlineSnap.revision || 1));
+            history.replaceState(null, "", `${location.pathname}?${q.toString()}#${offlineSnap.hash}`);
+            sharedTrip = sharedStateFromLocation();
+          }
+          ordered = trip.ordered;
+          openPin(trip.stops, { push:false, defaultBaseMap:trip.defaultBaseMap || offlineSnap.defaultBaseMap });
+          if(sharedTrip) initSharedTrip();
+          flash("offline trip restored");
+        }else{
+          history.replaceState(null, "", location.pathname);
+          showFront();
+        }
+      }
+    }else{
+      /* clean slate every visit, same as the weather */
+      history.replaceState(null, "", location.pathname);
+      showFront();
+    }
   }
 })();
 </script>
