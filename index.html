@@ -530,6 +530,37 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .leaflet-control-attribution{background:rgba(255,253,244,.88);padding:2px 6px;font-size:10px;color:var(--muted)}
 :root[data-theme="dark"] .leaflet-control-attribution{background:rgba(21,21,15,.85);color:var(--muted)}
 :root[data-theme="dark"] .leaflet-control-attribution a{color:var(--rind-text)}
+/* ---------- land ownership / parcel layer ---------- */
+.landinfo{
+  position:absolute;left:12px;bottom:12px;z-index:calc(var(--z-mapui) + 18);
+  width:min(350px,calc(100% - 24px));max-height:min(62%,430px);overflow:auto;
+  padding:15px 16px 13px;border-radius:17px;background:color-mix(in srgb,var(--pith) 97%,transparent);
+  color:var(--ink);box-shadow:0 16px 42px rgba(35,36,27,.18);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  opacity:1;transform:none;transition:opacity .16s ease,transform .2s cubic-bezier(.16,1,.3,1);
+}
+.landinfo.hidden{display:none}
+.landinfohead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.landinfotitle{font-family:var(--display);font-size:1rem;font-weight:650;line-height:1.1}
+.landinfoclose{width:29px;height:29px;border-radius:50%;display:grid;place-items:center;color:var(--ink);background:transparent;font-size:1.05rem}
+.landinfostatus{font-size:.75rem;color:var(--muted);line-height:1.42;margin:-2px 0 8px}
+.landinfosection{padding:10px 0 2px;border-top:1px solid color-mix(in srgb,var(--ink) 12%,transparent)}
+.landinfosection:first-child{border-top:0;padding-top:0}
+.landinfosectiontitle{font-size:.61rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.landrow{display:grid;grid-template-columns:minmax(82px,.78fr) minmax(0,1.65fr);gap:10px;padding:4px 0;align-items:start}
+.landrow dt{font-size:.7rem;color:var(--muted)}
+.landrow dd{margin:0;font-size:.77rem;line-height:1.35;overflow-wrap:anywhere}
+.landowner{font-family:var(--display);font-size:.95rem !important;font-weight:620}
+.landnote{margin-top:9px;font-size:.63rem;line-height:1.38;color:var(--muted)}
+.landlegend{display:flex;gap:11px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:.64rem;color:var(--muted)}
+.landlegend span{display:inline-flex;align-items:center;gap:5px}
+.landlegend i{display:block;width:17px;height:8px;border-radius:2px}
+.landlegend .publicswatch{background:rgba(89,127,68,.26);box-shadow:inset 0 0 0 1px rgba(63,93,48,.8)}
+.landlegend .parcelswatch{background:transparent;box-shadow:inset 0 0 0 1.5px #d0aa2c}
+:root[data-theme="dark"] .landinfo{box-shadow:0 18px 52px rgba(0,0,0,.42)}
+#map .land-parcel-tile{opacity:.88}
+:root[data-theme="dark"] #map .land-parcel-tile{filter:brightness(1.22) contrast(1.06)}
+.mapwrap.is-fullscreen .landinfo{left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));max-height:46dvh}
 .lemonpinicon{filter:drop-shadow(0 6px 10px rgba(35,36,27,.22))}
 :root[data-theme="dark"] .lemonpinicon{filter:drop-shadow(0 6px 12px rgba(0,0,0,.5))}
 .youdot{background:var(--leaf);border:2.5px solid var(--pith);border-radius:50%;box-shadow:0 0 0 3px rgba(78,122,58,.3)}
@@ -605,6 +636,61 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 @media (min-width:600px){.qrframe{max-width:300px;padding:14px}}
 #qr img,#qr canvas{width:100% !important;height:auto !important;display:block;image-rendering:pixelated}
 .qrsection .microhead{margin-top:12px}
+
+
+/* ---------- export / import ---------- */
+.importtiny{
+  display:inline-flex;align-items:center;gap:6px;margin:12px auto 0;padding:4px 3px;
+  color:var(--muted);font-size:.69rem;font-weight:600;letter-spacing:.04em;
+  transition:color .15s ease,transform .16s cubic-bezier(.16,1,.3,1);
+}
+.importtiny:hover{color:var(--ink)}
+.importtiny:active{transform:scale(.97)}
+.importtiny svg{width:13px;height:13px;display:block}
+.exportrow{padding:18px 0 0;display:flex;justify-content:center}
+.exportmain{font-size:.82rem;padding:9px 18px;gap:7px}
+.exportmain svg{width:15px;height:15px}
+.exportsheet .sheetcontent{max-width:500px}
+.exportsheet .bigmoon{width:128px;height:128px;margin-bottom:0}
+.exportpicker{margin-top:22px;text-align:left}
+.exportpickhead{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:8px}
+.exportpickhead>span,.exportgroup>h3{
+  margin:0;color:var(--muted);font-size:.66rem;font-weight:650;letter-spacing:.12em;text-transform:uppercase;
+}
+.exportall{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:.72rem;font-weight:600;cursor:pointer}
+.exportall input,.exportpoint input{accent-color:var(--ink)}
+.exportpoints{border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline);max-height:min(232px,32dvh);overflow:auto;overscroll-behavior:contain}
+.exportpoint{display:grid;grid-template-columns:auto 1fr;gap:11px;align-items:center;padding:10px 2px;cursor:pointer}
+.exportpoint + .exportpoint{border-top:1px solid var(--hairline)}
+.exportpoint input{width:17px;height:17px;margin:0}
+.exportpointcopy{min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:9px}
+.exportpointicon{width:29px;height:29px;border-radius:50%;display:grid;place-items:center;background:var(--flesh);color:var(--ink);font-size:.72rem;font-weight:700;flex:none}
+.exportpointtext{min-width:0}
+.exportpointtitle{font-family:var(--display);font-weight:620;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exportpointcoord{margin-top:1px;color:var(--muted);font-size:.68rem;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exportgroups{margin-top:20px;text-align:left}
+.exportgroup{padding:14px 0}
+.exportgroup + .exportgroup{border-top:1px solid var(--hairline)}
+.exportactions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:9px}
+.exportaction{
+  min-height:42px;padding:9px 12px;border:1px solid var(--hairline);border-radius:8px;
+  background:transparent;color:var(--ink);font-size:.8rem;font-weight:650;text-align:left;
+  display:flex;align-items:center;gap:9px;transition:background .15s ease,border-color .15s ease,transform .16s cubic-bezier(.16,1,.3,1);
+}
+.exportaction:hover{background:var(--flesh);border-color:color-mix(in srgb,var(--ink) 28%,var(--hairline))}
+.exportaction:active{transform:scale(.985)}
+.exportaction:disabled{opacity:.42;cursor:default;transform:none}
+.exportaction svg{width:17px;height:17px;display:block;flex:none}
+.exportaction.backup{background:var(--ink);border-color:var(--ink);color:var(--pith)}
+.exportaction.backup:hover{background:color-mix(in srgb,var(--ink) 88%,var(--pith))}
+.exportsmallnote{margin:8px 0 0;color:var(--muted);font-size:.7rem;line-height:1.45}
+.exportstatus{min-height:18px;margin:9px 0 0;color:var(--muted);font-size:.72rem;text-align:center}
+.exportstatus.good{color:var(--rind-text)}
+.exportstatus.bad{color:#A74A38}
+@media(max-width:410px){
+  .exportactions{grid-template-columns:1fr 1fr}
+  .exportsheet .sheetcontent{max-width:100%}
+}
 
 /* ---------- quick share modal ---------- */
 .sheet{
@@ -1294,6 +1380,13 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
         <ul class="results" id="results"></ul>
       </div>
       <p class="lochelp">Type a name, a street, a Plus Code, or coordinates in any format. Results lead with what's near you.</p>
+      <button class="importtiny" id="importLemonBtn" type="button" aria-label="Import a LemonCoords trip file">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 3v11m0 0-4-4m4 4 4-4M5 16.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        import .lemon
+      </button>
+      <input id="importLemonFile" type="file" accept=".lemon,application/json,application/vnd.lemoncoords.trip+json" hidden>
       <p class="locerror hidden" id="frontError"></p>
     </section>
 
@@ -1370,6 +1463,19 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
           <button class="adjustbtn" id="lockBtn" aria-pressed="false">unlock map</button>
           <button class="adjustbtn" id="dragBtn" aria-pressed="false">adjust pin</button>
         </div>
+        <section class="landinfo hidden" id="landInfo" aria-live="polite" aria-label="Land and parcel information">
+          <div class="landinfohead">
+            <div class="landinfotitle">land details</div>
+            <button class="landinfoclose" id="landInfoClose" type="button" aria-label="Close land details">×</button>
+          </div>
+          <p class="landinfostatus" id="landInfoStatus"></p>
+          <div id="landInfoBody"></div>
+          <div class="landlegend" aria-label="Land layer legend">
+            <span><i class="publicswatch"></i>public / protected</span>
+            <span><i class="parcelswatch"></i>parcel boundary</span>
+          </div>
+          <p class="landnote">Boundary and ownership data are reference information. Confirm legal boundaries, access and ownership with the responsible county or land agency.</p>
+        </section>
         <div class="pointdelete hidden" id="pointDelete" data-step="1" role="dialog" aria-modal="true" aria-labelledby="pointDeleteTitle">
           <section class="pointdeletecard">
             <div class="pointdeletelemon" aria-hidden="true">
@@ -1460,6 +1566,14 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
             <a class="minibtn ghost" id="gaView" target="_blank" rel="noopener">View</a>
             <a class="minibtn" id="gaRoute" target="_blank" rel="noopener">Route</a>
           </div>
+        </div>
+        <div class="exportrow">
+          <button class="btn exportmain" id="exportBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17.5V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Export
+          </button>
         </div>
       </div>
 
@@ -1671,6 +1785,64 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
 </div>
 
 
+<!-- ============ EXPORT ============ -->
+<div class="sheet exportsheet hidden" id="exportSheet" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+  <button class="modalclose" id="exportClose" aria-label="Close">×</button>
+  <div class="sheetcontent">
+    <div id="exportMoon"></div>
+    <h2 id="exportTitle">Take it with you</h2>
+    <p class="lede">Pick the pins once, then save them however you need. Every file is made here in your browser.</p>
+
+    <div class="exportpicker">
+      <div class="exportpickhead">
+        <span>Choose pins</span>
+        <label class="exportall" for="exportAll"><input id="exportAll" type="checkbox" checked> all</label>
+      </div>
+      <div class="exportpoints" id="exportPoints"></div>
+    </div>
+
+    <div class="exportgroups">
+      <section class="exportgroup">
+        <h3>Save a backup</h3>
+        <div class="exportactions">
+          <button class="exportaction backup" id="exportLemon" type="button">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 3h7l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.8"/><path d="M14 3v5h5M9 14h6M9 17h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            LemonCoords trip
+          </button>
+        </div>
+        <p class="exportsmallnote hidden" id="exportPrivateNote">A .lemon backup contains readable coordinates and notes, even when the source link is private. Keep the file somewhere you trust.</p>
+      </section>
+
+      <section class="exportgroup">
+        <h3>Maps + GPS</h3>
+        <div class="exportactions">
+          <button class="exportaction" id="exportKml" type="button"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 18 9 6l6 12M7 14h6M15 6v12m0-5 4-7m-4 7 4 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>KML</button>
+          <button class="exportaction" id="exportGpx" type="button"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="6" cy="17" r="2" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="7" r="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 16c4-1 3-7 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="2 2"/></svg>GPX</button>
+        </div>
+      </section>
+
+      <section class="exportgroup">
+        <h3>Keep + share</h3>
+        <div class="exportactions">
+          <button class="exportaction" id="exportPdf" type="button"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 3h7l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.8"/><path d="M14 3v5h5M9 13h6M9 16h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>PDF</button>
+          <button class="exportaction" id="exportText" type="button"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5h16M8 9h8M6 13h12M9 17h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Text</button>
+          <button class="exportaction" id="exportImage" type="button"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="10" r="1.6" fill="currentColor"/><path d="m6 17 4-4 3 3 2-2 3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Image</button>
+        </div>
+      </section>
+
+      <section class="exportgroup">
+        <h3>More</h3>
+        <div class="exportactions">
+          <button class="exportaction" id="exportCsv" type="button"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 5h14v14H5zM5 10h14M10 5v14" stroke="currentColor" stroke-width="1.7"/></svg>CSV</button>
+          <button class="exportaction" id="exportGeojson" type="button"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="6" cy="12" r="2" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="6" r="2" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="18" r="2" stroke="currentColor" stroke-width="1.8"/><path d="m8 11 8-4M8 13l8 4" stroke="currentColor" stroke-width="1.8"/></svg>GeoJSON</button>
+        </div>
+      </section>
+    </div>
+    <p class="exportstatus" id="exportStatus" aria-live="polite"></p>
+  </div>
+</div>
+
+
 <!-- ============ PRIVATE TRIP PASSWORD SCREEN ============ -->
 <div class="lockscreen hidden" id="lockScreen" role="dialog" aria-modal="true" aria-label="This trip is private">
   <div class="lockfield">
@@ -1762,6 +1934,7 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
 <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.3/leaflet-maplibre-gl.js"></script>
 <script src="https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 "use strict";
 /* =====================================================================
@@ -3022,12 +3195,19 @@ const TILES = {
      route shields, POIs, centerpoints, parks and barriers are explicitly hidden. */
   trails:    "https://tiles.openstreetmap.us/vector/trails/{z}/{x}/{y}.mvt",
   /* Official unlabeled U.S. Forest Service motor-vehicle-use roads + trails. */
-  overland:  "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_MVUM_01/MapServer"
+  overland:  "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_MVUM_01/MapServer",
+  /* Free nationwide parcel outlines from Regrid's ArcGIS Living Atlas layer. */
+  parcels:   "https://tiles.arcgis.com/tiles/KzeiCaQsMoeCfoCq/arcgis/rest/services/Regrid_Nationwide_Parcel_Boundaries_v1/MapServer/tile/{z}/{y}/{x}",
+  /* USGS PAD-US 4.1 fee-owned public/protected lands. */
+  publicLandQuery: "https://services.arcgis.com/v01gqwM5QqNysAAi/arcgis/rest/services/Fee_Managers_PADUS/FeatureServer/0/query"
 };
 let tileLayer = null, satRoads = null, satLabels = null, tileKey = null, satellite = true;
 let outdoorsTrails = null, outdoorsOverland = null;
 let outdoorsOn = store.get("lemoncoords.outdoors") === "on";
-let satBtn = null, outdoorsBtn = null, fullscreenBtn = null, locateBtn = null;
+let parcelTiles = null, publicLandLayer = null, selectedParcelLayer = null;
+let landOn = store.get("lemoncoords.land") === "on";
+let padusAbort = null, padusTimer = 0, landLookupSeq = 0;
+let satBtn = null, outdoorsBtn = null, landBtn = null, fullscreenBtn = null, locateBtn = null;
 let mapFullscreen = false, fullscreenWasUnlocked = false;
 let fsRouteOpen = false, fsRouteHost = "fullscreen", fsCandidate = null, fsCandidateMarker = null;
 function currentTheme(){ return document.documentElement.dataset.theme === "dark" ? "dark" : "light"; }
@@ -3155,6 +3335,209 @@ function toggleOutdoors(){
   store.set("lemoncoords.outdoors", outdoorsOn ? "on" : "off");
   setOutdoorsOverlay(true);
   flash(outdoorsOn ? "roads + marked trails on" : "roads + trails off");
+}
+
+function updateLandButton(){
+  if(!landBtn) return;
+  landBtn.setAttribute("aria-pressed", String(landOn));
+  landBtn.setAttribute("aria-label", landOn ? "Hide land ownership and parcel boundaries" : "Show land ownership and parcel boundaries");
+  landBtn.title = landOn ? "Hide land & parcels" : "Land & parcels";
+}
+function hideLandInfo(){
+  $("#landInfo")?.classList.add("hidden");
+  if(selectedParcelLayer){ selectedParcelLayer.remove(); selectedParcelLayer = null; }
+}
+function landRow(section, label, value, className=""){
+  if(value === undefined || value === null || String(value).trim() === "") return;
+  const dl = document.createElement("dl");
+  dl.className = "landrow";
+  const dt = document.createElement("dt");
+  dt.textContent = label;
+  const dd = document.createElement("dd");
+  dd.textContent = String(value);
+  if(className) dd.className = className;
+  dl.append(dt, dd);
+  section.append(dl);
+}
+function moneyMaybe(value){
+  const n = Number(value);
+  if(!Number.isFinite(n) || n === 0) return value || "";
+  try{ return new Intl.NumberFormat(undefined,{style:"currency",currency:"USD",maximumFractionDigits:0}).format(n); }
+  catch{ return `$${Math.round(n).toLocaleString()}`; }
+}
+function joinMailingAddress(f){
+  if(!f) return "";
+  const first = [f.mailadd || f.eo_mail_address, f.mail_address2].filter(Boolean).join(" · ");
+  const second = [f.mail_city || f.eo_mail_city, f.mail_state2 || f.eo_mail_state2, f.mail_zip || f.eo_mail_zip].filter(Boolean).join(" ");
+  return [first, second].filter(Boolean).join(", ");
+}
+function formatPublicAccess(value){
+  const map = { OA:"Open", RA:"Restricted / seasonal", XA:"Closed", UK:"Unknown" };
+  return map[value] || value || "";
+}
+function renderLandInfo(parcelFeature, publicFeature, statusText=""){
+  const panel = $("#landInfo");
+  const body = $("#landInfoBody");
+  const status = $("#landInfoStatus");
+  if(!panel || !body || !status) return;
+  panel.classList.remove("hidden");
+  status.textContent = statusText;
+  body.textContent = "";
+
+  const parcel = parcelFeature?.properties?.fields || parcelFeature?.properties || null;
+  if(parcel){
+    const sec = document.createElement("section");
+    sec.className = "landinfosection";
+    const h = document.createElement("div");
+    h.className = "landinfosectiontitle";
+    h.textContent = "parcel";
+    sec.append(h);
+    landRow(sec, "owner", parcel.eo_owner || parcel.owner, "landowner");
+    if(parcel.owner2 && parcel.owner2 !== parcel.owner) landRow(sec, "co-owner", parcel.owner2);
+    landRow(sec, "mailing / tax", joinMailingAddress(parcel));
+    const situs = [parcel.address, parcel.scity, parcel.state2, parcel.szip].filter(Boolean).join(", ");
+    landRow(sec, "parcel address", situs);
+    const acres = Number(parcel.ll_gisacre ?? parcel.gisacre);
+    if(Number.isFinite(acres)) landRow(sec, "acreage", `${acres.toLocaleString(undefined,{maximumFractionDigits:3})} acres`);
+    landRow(sec, "parcel ID", parcel.parcelnumb || parcel.state_parcelnumb || parcel.tax_id);
+    landRow(sec, "land use", parcel.usedesc || parcel.lbcs_activity_desc || parcel.zoning);
+    if(parcel.taxamt) landRow(sec, "annual tax", moneyMaybe(parcel.taxamt));
+    if(parcel.parval) landRow(sec, "assessed value", moneyMaybe(parcel.parval));
+    landRow(sec, "last refresh", parcel.eo_last_refresh || parcel.ll_last_refresh || parcel.ll_updated_at);
+    body.append(sec);
+  }
+
+  const pub = publicFeature?.properties || null;
+  if(pub){
+    const sec = document.createElement("section");
+    sec.className = "landinfosection";
+    const h = document.createElement("div");
+    h.className = "landinfosectiontitle";
+    h.textContent = "public / protected land";
+    sec.append(h);
+    landRow(sec, "unit", pub.Unit_Nm || pub.Loc_Nm);
+    landRow(sec, "manager", pub.Loc_Mang || pub.Mang_Name || pub.Loc_Own || pub.Own_Name, "landowner");
+    landRow(sec, "owner type", pub.Own_Type || pub.Mang_Type);
+    landRow(sec, "public access", formatPublicAccess(pub.Pub_Access));
+    if(pub.GIS_Acres) landRow(sec, "mapped area", `${Number(pub.GIS_Acres).toLocaleString()} acres`);
+    landRow(sec, "source date", pub.Src_Date);
+    body.append(sec);
+  }
+
+  if(!parcel && !pub){
+    const empty = document.createElement("p");
+    empty.className = "landinfostatus";
+    empty.textContent = "No parcel or PAD-US public-land record was returned for this spot.";
+    body.append(empty);
+  }
+}
+async function fetchPadusAt(lat, lon){
+  const q = new URLSearchParams({
+    where:"1=1", geometry:`${lon},${lat}`, geometryType:"esriGeometryPoint",
+    inSR:"4326", spatialRel:"esriSpatialRelIntersects", outSR:"4326",
+    outFields:"Own_Type,Own_Name,Loc_Own,Mang_Type,Mang_Name,Loc_Mang,Unit_Nm,Loc_Nm,Pub_Access,GIS_Acres,Src_Date",
+    returnGeometry:"false", f:"geojson", resultRecordCount:"4"
+  });
+  try{ return (await fetchJsonTimed(`${TILES.publicLandQuery}?${q}`, 5200))?.features?.[0] || null; }
+  catch{ return null; }
+}
+async function fetchParcelAt(lat, lon){
+  if(!SHORTENER) return { feature:null, unavailable:true };
+  try{
+    const r = await fetch(`${SHORTENER}/api/parcel?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`, { cache:"no-store" });
+    const j = await r.json().catch(()=>({}));
+    if(r.status === 503 && j.error === "parcel_data_not_configured") return { feature:null, unavailable:true };
+    if(!r.ok) throw new Error(j.error || `http ${r.status}`);
+    return { feature:j.feature || null, unavailable:false };
+  }catch{
+    return { feature:null, unavailable:false, failed:true };
+  }
+}
+async function inspectLandAt(latlng){
+  if(!landOn || !latlng) return;
+  const seq = ++landLookupSeq;
+  const panel = $("#landInfo");
+  if(panel) panel.classList.remove("hidden");
+  if($("#landInfoStatus")) $("#landInfoStatus").textContent = "checking the land beneath that point…";
+  if($("#landInfoBody")) $("#landInfoBody").textContent = "";
+  const [parcelResult, publicFeature] = await Promise.all([
+    fetchParcelAt(latlng.lat, latlng.lng),
+    fetchPadusAt(latlng.lat, latlng.lng)
+  ]);
+  if(seq !== landLookupSeq) return;
+  if(selectedParcelLayer){ selectedParcelLayer.remove(); selectedParcelLayer = null; }
+  const parcelFeature = parcelResult.feature;
+  if(parcelFeature?.geometry){
+    try{
+      selectedParcelLayer = L.geoJSON(parcelFeature, {
+        pane:"landSelectedPane", interactive:false,
+        style:{ color:"#23241B", weight:3, opacity:.95, fillColor:"#F4CE3E", fillOpacity:.12 }
+      }).addTo(map);
+    }catch{}
+  }
+  let status = "tap another parcel to inspect it";
+  if(parcelResult.unavailable) status = "parcel boundaries are on · owner details need the optional Regrid connection";
+  else if(parcelResult.failed) status = "parcel owner lookup is temporarily unavailable · public-land data still works";
+  renderLandInfo(parcelFeature, publicFeature, status);
+}
+function publicLandStyle(){
+  return { color:"#4f713f", weight:1.25, opacity:.82, fillColor:"#76975d", fillOpacity:.16 };
+}
+async function refreshPublicLand(){
+  if(!landOn || !map || map.getZoom() < 8){
+    if(publicLandLayer){ publicLandLayer.remove(); publicLandLayer = null; }
+    return;
+  }
+  const bounds = map.getBounds().pad(.16);
+  padusAbort?.abort();
+  padusAbort = new AbortController();
+  const q = new URLSearchParams({
+    where:"1=1",
+    geometry:`${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`,
+    geometryType:"esriGeometryEnvelope", inSR:"4326", spatialRel:"esriSpatialRelIntersects", outSR:"4326",
+    outFields:"Own_Type,Own_Name,Loc_Own,Mang_Type,Mang_Name,Loc_Mang,Unit_Nm,Loc_Nm,Pub_Access,GIS_Acres,Src_Date",
+    returnGeometry:"true", f:"geojson", resultRecordCount:"2000"
+  });
+  try{
+    const r = await fetch(`${TILES.publicLandQuery}?${q}`, { signal:padusAbort.signal });
+    if(!r.ok) return;
+    const data = await r.json();
+    if(!landOn) return;
+    if(publicLandLayer) publicLandLayer.remove();
+    publicLandLayer = L.geoJSON(data, { pane:"landPublicPane", interactive:false, style:publicLandStyle }).addTo(map);
+  }catch(err){ if(err?.name !== "AbortError") console.warn("PAD-US land layer", err); }
+}
+function schedulePublicLandRefresh(){
+  clearTimeout(padusTimer);
+  if(!landOn) return;
+  padusTimer = setTimeout(refreshPublicLand, 260);
+}
+function removeLandOverlay(){
+  padusAbort?.abort();
+  clearTimeout(padusTimer);
+  [parcelTiles, publicLandLayer, selectedParcelLayer].forEach(layer=>layer?.remove());
+  parcelTiles = publicLandLayer = selectedParcelLayer = null;
+  hideLandInfo();
+}
+function setLandOverlay(){
+  updateLandButton();
+  if(!landOn){ removeLandOverlay(); return; }
+  if(!parcelTiles){
+    parcelTiles = L.tileLayer(TILES.parcels, {
+      pane:"landParcelPane", minZoom:15, maxNativeZoom:17, maxZoom:22, opacity:.9,
+      className:"land-parcel-tile",
+      attribution:'Parcel boundaries &copy; <a href="https://regrid.com/">Regrid</a> / Esri'
+    }).addTo(map);
+  }
+  schedulePublicLandRefresh();
+}
+function toggleLand(){
+  landOn = !landOn;
+  store.set("lemoncoords.land", landOn ? "on" : "off");
+  setLandOverlay();
+  if(landOn){
+    flash(map.getZoom() < 15 ? "land layer on · zoom closer for parcel lines" : "land + parcel boundaries on");
+  }else flash("land layer off");
 }
 
 const DRAWN_ATTRIBUTION = '<a href="https://openfreemap.org/">OpenFreeMap</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
@@ -3378,6 +3761,11 @@ const TRAILS_ICON = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none"
   <path d="M5.4 20.2c2.7-2.4 4.7-2.7 6.5-1.2 1.6 1.3 3.5 1.1 6.7-1.6"
     stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="2.5 2.5"/>
 </svg>`;
+const LAND_ICON = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
+  <path d="M4 5.2h7.3v6.6H4zM12.7 5.2H20v4.1h-7.3zM4 13.2h5.1v5.6H4zM10.5 10.7H20v8.1h-9.5z"
+    stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M7.6 5.2v6.6M15.8 10.7v8.1" stroke="currentColor" stroke-width="1.15" opacity=".52"/>
+</svg>`;
 const FULLSCREEN_ICON = `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" aria-hidden="true">
   <path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"
     stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
@@ -3435,6 +3823,18 @@ const OutdoorsToggle = L.Control.extend({
     L.DomEvent.on(b, "click", toggleOutdoors);
     outdoorsBtn = b;
     updateOutdoorsButton();
+    return b;
+  }
+});
+const LandToggle = L.Control.extend({
+  onAdd(){
+    const b = L.DomUtil.create("button", "satbtn landbtn");
+    b.type = "button";
+    b.innerHTML = LAND_ICON;
+    L.DomEvent.disableClickPropagation(b);
+    L.DomEvent.on(b, "click", toggleLand);
+    landBtn = b;
+    updateLandButton();
     return b;
   }
 });
@@ -3601,20 +4001,32 @@ function initMap(){
     zoomSnap: 0, bounceAtZoomLimits: false
   });
   document.getElementById("map").classList.add("locked");
+  map.createPane("landPublicPane");
+  map.getPane("landPublicPane").style.zIndex = 425;
+  map.getPane("landPublicPane").style.pointerEvents = "none";
+  map.createPane("landParcelPane");
+  map.getPane("landParcelPane").style.zIndex = 432;
+  map.getPane("landParcelPane").style.pointerEvents = "none";
   map.createPane("outdoorsTrailsPane");
   map.getPane("outdoorsTrailsPane").style.zIndex = 440;
   map.getPane("outdoorsTrailsPane").style.pointerEvents = "none";
+  map.createPane("landSelectedPane");
+  map.getPane("landSelectedPane").style.zIndex = 455;
+  map.getPane("landSelectedPane").style.pointerEvents = "none";
   L.control.zoom({ position: "topleft" }).addTo(map);
   map.addControl(new ShowAll({ position: "topleft" }));
   map.addControl(new SatToggle({ position: "topleft" }));
   /* Clean marked-route overlay directly below the map/satellite toggle. */
   map.addControl(new OutdoorsToggle({ position: "topleft" }));
+  /* Land ownership / parcels sits directly above fullscreen as requested. */
+  map.addControl(new LandToggle({ position: "topleft" }));
   map.addControl(new FullscreenToggle({ position: "topleft" }));
   map.addControl(new LocateToggle({ position: "topleft" }));
-  map.on("moveend", updateAllButton);
-  map.on("zoomend", ()=>{ updateAllButton(); updateOutdoorsDensity(); });
-  map.on("click", clearMapSelection);
+  map.on("moveend", ()=>{ updateAllButton(); schedulePublicLandRefresh(); });
+  map.on("zoomend", ()=>{ updateAllButton(); updateOutdoorsDensity(); schedulePublicLandRefresh(); });
+  map.on("click", e=>{ clearMapSelection(); if(landOn) inspectLandAt(e.latlng); });
   setTiles();
+  setLandOverlay();
 }
 
 /* redraw every stop, the line between them, and the accuracy ring */
@@ -3991,6 +4403,7 @@ $("#noteInput").addEventListener("input", ()=>{
 });
 
 /* copies */
+$("#landInfoClose")?.addEventListener("click", hideLandInfo);
 document.querySelectorAll("[data-copy]").forEach(btn=>{
   btn.addEventListener("click", ()=>{
     const kind = btn.dataset.copy;
@@ -4053,7 +4466,8 @@ $("#shareTopBtn").addEventListener("click", ()=> openSheet("pin"));
 $("#sheetClose").addEventListener("click", closeSheet);
 document.addEventListener("keydown", e=>{
   if(e.key !== "Escape") return;
-  if(!$("#sharedSheet").classList.contains("hidden")) closeSharedSheet();
+  if(!$("#exportSheet").classList.contains("hidden")) closeExportSheet();
+  else if(!$("#sharedSheet").classList.contains("hidden")) closeSharedSheet();
   else if(!$("#sheet").classList.contains("hidden")) closeSheet();
   else if(!$("#iosSheet").classList.contains("hidden")) $("#iosSheet").classList.add("hidden");
 });
@@ -4071,6 +4485,316 @@ $("#sheetOpen").addEventListener("click", ()=>{
   sheetFrom = "pin";
   closeSheet();
   openPin(pin, { push:false });
+});
+
+
+/* ---------- take it with you: export + .lemon import ---------- */
+const LEMON_FILE_TYPE = "application/vnd.lemoncoords.trip+json";
+let exportSelected = new Set();
+let exportBusy = false;
+const exportTileBitmaps = new Map();
+
+function exportTripTitle(){
+  if(sharedTrip?.slug) return sharedTrip.slug.replace(/[-_]+/g," ").replace(/\b\w/g,c=>c.toUpperCase());
+  if(stops.length === 1 && stops[0]?.note) return stops[0].note.trim();
+  return stops.length > 1 ? "LemonCoords Trip" : "LemonCoords Pin";
+}
+function exportPinTitle(stop, index){
+  const note = String(stop?.note || "").trim();
+  return note || `Pin ${index + 1}`;
+}
+function exportEntries(){
+  return stops.map((stop,index)=>({ stop,index,title:exportPinTitle(stop,index) }))
+    .filter(entry=>exportSelected.has(entry.index));
+}
+function safeFilename(value){
+  const clean = String(value || "lemoncoords-trip").trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,72);
+  return clean || "lemoncoords-trip";
+}
+function downloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.rel = "noopener";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1600);
+}
+function xmlEscape(value){
+  return String(value ?? "").replace(/[<>&'\"]/g,ch=>({"<":"&lt;",">":"&gt;","&":"&amp;","'":"&apos;",'\"':"&quot;"}[ch]));
+}
+function csvEscape(value){
+  const s = String(value ?? "");
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+}
+function googleMapsLink(stop){
+  return `https://www.google.com/maps/search/?api=1&query=${stop.lat.toFixed(6)},${stop.lon.toFixed(6)}`;
+}
+function setExportStatus(message = "", kind = ""){
+  const el = $("#exportStatus");
+  el.textContent = message;
+  el.classList.toggle("good", kind === "good");
+  el.classList.toggle("bad", kind === "bad");
+}
+function setExportBusy(on){
+  exportBusy = !!on;
+  document.querySelectorAll(".exportaction").forEach(b=>b.disabled = on || exportSelected.size === 0);
+  $("#exportAll").disabled = on;
+  document.querySelectorAll("#exportPoints input").forEach(i=>i.disabled = on);
+}
+async function runExport(task){
+  if(exportBusy || !exportSelected.size) return;
+  setExportBusy(true); setExportStatus("");
+  try{ await task(); }
+  catch(err){ console.error(err); setExportStatus(err?.message || "That export didn't finish.", "bad"); }
+  finally{ setExportBusy(false); }
+}
+function updateExportSelectionUI(){
+  const all = $("#exportAll");
+  all.checked = !!stops.length && exportSelected.size === stops.length;
+  all.indeterminate = exportSelected.size > 0 && exportSelected.size < stops.length;
+  document.querySelectorAll(".exportaction").forEach(b=>b.disabled = exportBusy || exportSelected.size === 0);
+}
+function renderExportPoints(){
+  const box = $("#exportPoints"); box.innerHTML = "";
+  stops.forEach((stop,index)=>{
+    const label = document.createElement("label"); label.className = "exportpoint";
+    const check = document.createElement("input"); check.type = "checkbox"; check.checked = exportSelected.has(index);
+    check.addEventListener("change",()=>{
+      if(check.checked) exportSelected.add(index); else exportSelected.delete(index);
+      updateExportSelectionUI();
+    });
+    const copy = document.createElement("span"); copy.className = "exportpointcopy";
+    const icon = document.createElement("span"); icon.className = "exportpointicon";
+    icon.innerHTML = stop.icon ? iconSvg(stop.icon,15) : String(index+1);
+    const words = document.createElement("span"); words.className = "exportpointtext";
+    const title = document.createElement("span"); title.className = "exportpointtitle"; title.textContent = exportPinTitle(stop,index);
+    const coord = document.createElement("span"); coord.className = "exportpointcoord"; coord.textContent = fmtDec(stop);
+    words.append(title,coord); copy.append(icon,words); label.append(check,copy); box.append(label);
+  });
+  updateExportSelectionUI();
+}
+function openExportSheet(){
+  if(!stops.length) return;
+  exportSelected = new Set(stops.map((_,i)=>i));
+  $("#exportMoon").innerHTML = bigMoonLemon(moonPhase(), 128);
+  $("#exportPrivateNote").classList.toggle("hidden", !sharedTrip?.isPrivate);
+  renderExportPoints(); setExportStatus("");
+  $("#exportSheet").classList.remove("hidden");
+}
+function closeExportSheet(){ if(!exportBusy) $("#exportSheet").classList.add("hidden"); }
+$("#exportBtn").addEventListener("click", openExportSheet);
+$("#exportClose").addEventListener("click", closeExportSheet);
+$("#exportAll").addEventListener("change", e=>{
+  if(e.target.checked) exportSelected = new Set(stops.map((_,i)=>i)); else exportSelected.clear();
+  renderExportPoints();
+});
+
+function lemonBackupObject(entries){
+  return {
+    format:"lemoncoords-trip",
+    version:1,
+    exportedAt:new Date().toISOString(),
+    title:exportTripTitle(),
+    trip:{
+      ordered:ordered !== false,
+      defaultBaseMap:effectiveTripBaseMap(entries.length),
+      stops:entries.map(({stop})=>({
+        lat:Number(stop.lat), lon:Number(stop.lon), ts:Number(stop.ts || Date.now()), acc:Number(stop.acc || 0),
+        note:String(stop.note || ""), icon:Number.isInteger(stop.icon) ? stop.icon : 0, off:!!stop.off,
+        addr:String(stop.addr || "")
+      }))
+    }
+  };
+}
+$("#exportLemon").addEventListener("click",()=>runExport(async()=>{
+  const entries=exportEntries();
+  const blob=new Blob([JSON.stringify(lemonBackupObject(entries),null,2)],{type:LEMON_FILE_TYPE});
+  downloadBlob(blob,`${safeFilename(exportTripTitle())}.lemon`);
+  setExportStatus("LemonCoords backup saved.","good");
+}));
+
+function buildKml(entries){
+  const docName=xmlEscape(exportTripTitle());
+  const placemarks=entries.map(({stop,title})=>{
+    const desc=[stop.note && stop.note!==title ? stop.note : "", stop.addr || "", fmtDec(stop), googleMapsLink(stop)].filter(Boolean).join("\n");
+    return `<Placemark><name>${xmlEscape(title)}</name><description>${xmlEscape(desc)}</description><Point><coordinates>${stop.lon.toFixed(7)},${stop.lat.toFixed(7)},0</coordinates></Point></Placemark>`;
+  }).join("");
+  const routePoints=entries.filter(({stop})=>!stop.off);
+  const line=(ordered && routePoints.length>1)
+    ? `<Placemark><name>${docName} route</name><Style><LineStyle><color>ff3ecdf4</color><width>3</width></LineStyle></Style><LineString><tessellate>1</tessellate><coordinates>${routePoints.map(({stop})=>`${stop.lon.toFixed(7)},${stop.lat.toFixed(7)},0`).join(" ")}</coordinates></LineString></Placemark>` : "";
+  return `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${docName}</name>${placemarks}${line}</Document></kml>`;
+}
+$("#exportKml").addEventListener("click",()=>runExport(async()=>{
+  const blob=new Blob([buildKml(exportEntries())],{type:"application/vnd.google-earth.kml+xml;charset=utf-8"});
+  downloadBlob(blob,`${safeFilename(exportTripTitle())}.kml`); setExportStatus("KML saved.","good");
+}));
+
+function buildGpx(entries){
+  const docName=xmlEscape(exportTripTitle());
+  const wpts=entries.map(({stop,title})=>`<wpt lat="${stop.lat.toFixed(7)}" lon="${stop.lon.toFixed(7)}"><name>${xmlEscape(title)}</name><desc>${xmlEscape([stop.note,stop.addr,fmtDec(stop)].filter(Boolean).join(" · "))}</desc></wpt>`).join("");
+  const routePoints=entries.filter(({stop})=>!stop.off);
+  const rte=(ordered && routePoints.length>1) ? `<rte><name>${docName}</name>${routePoints.map(({stop,title})=>`<rtept lat="${stop.lat.toFixed(7)}" lon="${stop.lon.toFixed(7)}"><name>${xmlEscape(title)}</name></rtept>`).join("")}</rte>` : "";
+  return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="LemonCoords" xmlns="http://www.topografix.com/GPX/1/1"><metadata><name>${docName}</name><time>${new Date().toISOString()}</time></metadata>${wpts}${rte}</gpx>`;
+}
+$("#exportGpx").addEventListener("click",()=>runExport(async()=>{
+  const blob=new Blob([buildGpx(exportEntries())],{type:"application/gpx+xml;charset=utf-8"});
+  downloadBlob(blob,`${safeFilename(exportTripTitle())}.gpx`); setExportStatus("GPX saved.","good");
+}));
+
+function buildTextExport(entries){
+  return entries.map(({stop,title})=>`${title}\n${fmtDec(stop)}\n${googleMapsLink(stop)}`).join("\n\n");
+}
+$("#exportText").addEventListener("click",()=>runExport(async()=>{
+  const body=buildTextExport(exportEntries());
+  if(navigator.share){
+    try{ await navigator.share({title:exportTripTitle(),text:body}); setExportStatus("Ready to send.","good"); return; }
+    catch(err){ if(err?.name === "AbortError") return; }
+  }
+  await copyText(body,"trip text copied"); setExportStatus("Text copied — paste it into Messages, Notes, or email.","good");
+}));
+
+$("#exportCsv").addEventListener("click",()=>runExport(async()=>{
+  const rows=[["order","title","note","latitude","longitude","decimal","degrees_dms","plus_code","approximate_address","google_maps_url","icon","off_route","timestamp"]];
+  exportEntries().forEach(({stop,title},i)=>rows.push([i+1,title,stop.note||"",stop.lat,stop.lon,fmtDec(stop),fmtDMS(stop),fmtPlus(stop),stop.addr||"",googleMapsLink(stop),stop.icon||0,stop.off?1:0,new Date(stop.ts||Date.now()).toISOString()]));
+  const csv=rows.map(r=>r.map(csvEscape).join(",")).join("\r\n");
+  downloadBlob(new Blob([csv],{type:"text/csv;charset=utf-8"}),`${safeFilename(exportTripTitle())}.csv`); setExportStatus("CSV saved.","good");
+}));
+
+$("#exportGeojson").addEventListener("click",()=>runExport(async()=>{
+  const entries=exportEntries();
+  const features=entries.map(({stop,title},i)=>({type:"Feature",geometry:{type:"Point",coordinates:[stop.lon,stop.lat]},properties:{order:i+1,title,note:stop.note||"",approximateAddress:stop.addr||"",decimal:fmtDec(stop),dms:fmtDMS(stop),plusCode:fmtPlus(stop),googleMaps:googleMapsLink(stop),icon:stop.icon||0,offRoute:!!stop.off,timestamp:new Date(stop.ts||Date.now()).toISOString()}}));
+  const route=entries.filter(({stop})=>!stop.off);
+  if(ordered && route.length>1) features.push({type:"Feature",geometry:{type:"LineString",coordinates:route.map(({stop})=>[stop.lon,stop.lat])},properties:{title:exportTripTitle(),kind:"route"}});
+  const geo={type:"FeatureCollection",name:exportTripTitle(),features};
+  downloadBlob(new Blob([JSON.stringify(geo,null,2)],{type:"application/geo+json;charset=utf-8"}),`${safeFilename(exportTripTitle())}.geojson`); setExportStatus("GeoJSON saved.","good");
+}));
+
+function canvasBlob(canvas,type="image/png",quality=.92){
+  return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error("Couldn't build the image.")),type,quality));
+}
+async function exportShareOrDownload(blob,filename,title){
+  const file=new File([blob],filename,{type:blob.type});
+  if(navigator.canShare?.({files:[file]}) && navigator.share){
+    try{ await navigator.share({files:[file],title}); return true; }catch(err){ if(err?.name === "AbortError") return true; }
+  }
+  downloadBlob(blob,filename); return false;
+}
+$("#exportImage").addEventListener("click",()=>runExport(async()=>{
+  const entries=exportEntries(); const width=1080, margin=84, header=180, row=118, footer=90;
+  const height=header + entries.length*row + footer;
+  const c=document.createElement("canvas"); c.width=width; c.height=height; const x=c.getContext("2d");
+  x.fillStyle="#FFFDF4";x.fillRect(0,0,width,height);
+  x.fillStyle="#F4CE3E";x.strokeStyle="#23241B";x.lineWidth=5;x.beginPath();x.arc(margin+38,72,31,0,Math.PI*2);x.fill();x.stroke();
+  x.fillStyle="#628C45";x.beginPath();x.ellipse(margin+63,43,17,8,-.55,0,Math.PI*2);x.fill();
+  x.fillStyle="#23241B";x.font="600 38px Georgia, serif";x.fillText("LEMONCOORDS.",margin+88,82);
+  x.font="600 29px Georgia, serif";x.fillText(exportTripTitle(),margin,140);
+  x.font="500 18px Arial, sans-serif";x.fillStyle="#7D7A6B";x.fillText(`${entries.length} ${entries.length===1?"pin":"pins"} · saved ${new Date().toLocaleDateString()}`,margin,169);
+  entries.forEach(({stop,title},i)=>{
+    const y=header+i*row;
+    x.strokeStyle="#DDD8C5";x.lineWidth=2;x.beginPath();x.moveTo(margin,y);x.lineTo(width-margin,y);x.stroke();
+    x.fillStyle="#F4CE3E";x.beginPath();x.arc(margin+25,y+49,22,0,Math.PI*2);x.fill();
+    x.fillStyle="#23241B";x.font="700 16px Arial, sans-serif";x.textAlign="center";x.fillText(String(i+1),margin+25,y+55);x.textAlign="left";
+    x.font="600 25px Georgia, serif";x.fillText(title.slice(0,55),margin+64,y+42);
+    x.fillStyle="#23241B";x.font="500 20px ui-monospace, SFMono-Regular, Menlo, monospace";x.fillText(fmtDec(stop),margin+64,y+72);
+    if(stop.addr){x.fillStyle="#7D7A6B";x.font="400 17px Arial, sans-serif";x.fillText(stop.addr.slice(0,82),margin+64,y+98);}
+  });
+  x.fillStyle="#7D7A6B";x.font="400 16px Arial, sans-serif";x.fillText("Saved from LemonCoords · exact coordinates stay useful without the website.",margin,height-42);
+  const blob=await canvasBlob(c); await exportShareOrDownload(blob,`${safeFilename(exportTripTitle())}.png`,exportTripTitle()); setExportStatus("Image ready.","good");
+}));
+
+async function createPdfMapRenderer(){
+  if(!window.maplibregl) return null;
+  const host=document.createElement("div");
+  host.setAttribute("aria-hidden","true");
+  Object.assign(host.style,{position:"fixed",left:"-10000px",top:"0",width:"640px",height:"246px",pointerEvents:"none",opacity:"0"});
+  document.body.appendChild(host);
+  let gl=null;
+  try{
+    gl=new maplibregl.Map({
+      container:host,style:TILES.drawnStyle,center:[0,0],zoom:14,
+      interactive:false,attributionControl:false,preserveDrawingBuffer:true,fadeDuration:0
+    });
+    await new Promise((resolve,reject)=>{
+      const timer=setTimeout(()=>reject(new Error("map preview timed out")),7000);
+      gl.once("load",()=>{clearTimeout(timer);resolve()});
+      gl.once("error",e=>{ if(!gl.loaded()){clearTimeout(timer);reject(e?.error||new Error("map preview failed"));} });
+    });
+    applyLemonBasemapPalette(gl,"light");
+    await new Promise(resolve=>{const timer=setTimeout(resolve,2200);gl.once("idle",()=>{clearTimeout(timer);resolve()})});
+    return {
+      async snapshot(stop){
+        gl.jumpTo({center:[stop.lon,stop.lat],zoom:14});
+        await new Promise(resolve=>{const timer=setTimeout(resolve,2200);gl.once("idle",()=>{clearTimeout(timer);resolve()})});
+        const source=gl.getCanvas();
+        const c=document.createElement("canvas");c.width=640;c.height=246;const x=c.getContext("2d");
+        x.fillStyle="#E8D9A8";x.fillRect(0,0,c.width,c.height);
+        x.drawImage(source,0,0,c.width,c.height);
+        const cx=c.width/2,cy=c.height/2;
+        x.fillStyle="#F4CE3E";x.strokeStyle="#23241B";x.lineWidth=5;x.beginPath();x.arc(cx,cy,13,0,Math.PI*2);x.fill();x.stroke();
+        x.fillStyle="#23241B";x.beginPath();x.arc(cx,cy,3.5,0,Math.PI*2);x.fill();
+        return c.toDataURL("image/jpeg",.87);
+      },
+      destroy(){try{gl?.remove()}catch{}host.remove()}
+    };
+  }catch(err){
+    try{gl?.remove()}catch{}host.remove();
+    console.warn("PDF map renderer unavailable",err);
+    return null;
+  }
+}
+function pdfRgb(hex){const n=parseInt(hex.slice(1),16);return[(n>>16)&255,(n>>8)&255,n&255]}
+$("#exportPdf").addEventListener("click",()=>runExport(async()=>{
+  const JsPDF=window.jspdf?.jsPDF; if(!JsPDF) throw new Error("PDF tools didn't load. Reopen LemonCoords online once, then try again.");
+  const entries=exportEntries(); const doc=new JsPDF({unit:"mm",format:"letter",orientation:"portrait",compress:true});
+  const ink=pdfRgb("#23241B"),muted=pdfRgb("#7D7A6B"),zest=pdfRgb("#F4CE3E"),leaf=pdfRgb("#628C45"),paper=pdfRgb("#FFFDF4"),hair=pdfRgb("#DDD8C5");
+  const renderer=await createPdfMapRenderer();
+  try{
+    for(let i=0;i<entries.length;i++){
+      if(i) doc.addPage(); const {stop,title}=entries[i];
+      doc.setFillColor(...paper);doc.rect(0,0,216,279,"F");
+      doc.setFillColor(...zest);doc.setDrawColor(...ink);doc.setLineWidth(.7);doc.circle(19,17,4.5,"FD");doc.setFillColor(...leaf);doc.ellipse(23,12.5,2.7,1.3,"F");
+      doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.setFontSize(13);doc.text("LEMONCOORDS.",27,19);
+      doc.setTextColor(...muted);doc.setFont("helvetica","normal");doc.setFontSize(8);doc.text(exportTripTitle(),198,18,{align:"right",maxWidth:88});
+      doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.setFontSize(18);doc.text(title,18,33,{maxWidth:180});
+      doc.setTextColor(...muted);doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.text(`Pin ${i+1} of ${entries.length}`,18,39);
+      setExportStatus(`Building PDF · map ${i+1} of ${entries.length}`);
+      let mapImg=null;try{mapImg=await renderer?.snapshot(stop)}catch{}
+      if(mapImg){doc.addImage(mapImg,"JPEG",18,45,180,69,undefined,"FAST");}
+      else{doc.setFillColor(240,236,218);doc.rect(18,45,180,69,"F");doc.setTextColor(...muted);doc.setFontSize(10);doc.text("Map preview unavailable right now.",108,80,{align:"center"});}
+      let y=123;
+      if(stop.addr){doc.setTextColor(...muted);doc.setFontSize(8);doc.text("APPROXIMATE ADDRESS",18,y);y+=5;doc.setTextColor(...ink);doc.setFontSize(10);doc.text(stop.addr,18,y,{maxWidth:180});y+=12;}
+      const rows=[["DECIMAL",fmtDec(stop)],["DEGREES (DMS)",fmtDMS(stop)],["PLUS CODE",fmtPlus(stop)]];
+      rows.forEach(([label,value])=>{
+        doc.setDrawColor(...hair);doc.setLineWidth(.25);doc.line(18,y,198,y);y+=6;
+        doc.setTextColor(...muted);doc.setFontSize(7.6);doc.setFont("helvetica","bold");doc.text(label,18,y);
+        doc.setTextColor(...ink);doc.setFontSize(11);doc.setFont("courier","normal");doc.text(value,18,y+6,{maxWidth:180});y+=17;
+      });
+      doc.setDrawColor(...hair);doc.line(18,y,198,y);y+=7;
+      const glink=googleMapsLink(stop);doc.setTextColor(...muted);doc.setFont("helvetica","bold");doc.setFontSize(7.6);doc.text("GOOGLE MAPS",18,y);y+=6;
+      doc.setTextColor(55,90,125);doc.setFont("helvetica","normal");doc.setFontSize(9);doc.textWithLink("Open this pin in Google Maps",18,y,{url:glink});
+      doc.setTextColor(...muted);doc.setFontSize(7.4);doc.text(`Exported ${new Date().toLocaleString()} · Map © OpenFreeMap / OpenMapTiles / OpenStreetMap contributors`,18,268);
+    }
+  }finally{renderer?.destroy()}
+  doc.save(`${safeFilename(exportTripTitle())}.pdf`);setExportStatus("PDF saved with a map for each pin.","good");
+}));
+
+async function importLemonFile(file){
+  const raw=JSON.parse(await file.text());
+  if(raw?.format!=="lemoncoords-trip" || Number(raw?.version)!==1 || !Array.isArray(raw?.trip?.stops)) throw new Error("That isn't a LemonCoords .lemon trip file.");
+  const list=raw.trip.stops.slice(0,32).map((s,i)=>{
+    const lat=Number(s.lat),lon=Number(s.lon);if(!Number.isFinite(lat)||!Number.isFinite(lon)||lat<-90||lat>90||lon<-180||lon>180) throw new Error(`Pin ${i+1} has invalid coordinates.`);
+    return {lat,lon,ts:Number(s.ts)||Date.now(),acc:Number(s.acc)||0,note:String(s.note||"").slice(0,120),icon:Math.max(0,Math.min(41,Number(s.icon)||0)),off:!!s.off,addr:String(s.addr||"").slice(0,240)};
+  });
+  if(!list.length) throw new Error("That .lemon file has no pins.");
+  clearSharedTripContext(); isRecipient=false; ordered=raw.trip.ordered!==false;
+  openPin(list,{push:false,defaultBaseMap:normalizedBaseMap(raw.trip.defaultBaseMap)});
+  history.replaceState({view:"pin"},"",`${location.pathname}#${tripHash()}`);
+  persistOfflineTripSnapshot();scheduleOfflineTripPack(true);flash(`imported ${list.length} ${list.length===1?"pin":"pins"}`);
+}
+$("#importLemonBtn").addEventListener("click",()=>$("#importLemonFile").click());
+$("#importLemonFile").addEventListener("change",async e=>{
+  const file=e.target.files?.[0];e.target.value="";if(!file)return;
+  try{await importLemonFile(file)}catch(err){frontError(err?.message||"Couldn't import that trip.")}
 });
 
 /* how far am i */
@@ -6203,6 +6927,20 @@ function buildOfflineBasemapUrls(list, baseMap, maxTiles = 520){
   }
   return urls;
 }
+function buildOfflineExportMapUrls(list, maxTiles = 180){
+  if(!list?.length) return [];
+  const urls=[],seen=new Set(),z=14,n=2**z;
+  const add=u=>{if(urls.length<maxTiles&&!seen.has(u)){seen.add(u);urls.push(u)}};
+  for(const stop of list){
+    const p=tileXY(stop.lat,stop.lon,z);
+    for(let dx=-1;dx<=1;dx++) for(let dy=-1;dy<=1;dy++){
+      const x=p.x+dx,y=p.y+dy;if(x<0||y<0||x>=n||y>=n)continue;
+      add(`https://tiles.openfreemap.org/planet/latest/${z}/${x}/${y}.pbf`);
+    }
+    if(urls.length>=maxTiles) break;
+  }
+  return urls;
+}
 function buildOfflineTrailUrls(list, maxTiles = 120){
   if(!outdoorsOn || !list?.length) return [];
   const urls=[], seen=new Set();
@@ -6227,6 +6965,7 @@ function coreOfflineUrls(){
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css",
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js",
     "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
     "https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css",
     "https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js",
     "https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.3/leaflet-maplibre-gl.js",
@@ -6262,6 +7001,7 @@ function scheduleOfflineTripPack(force = false){
     if(!force && offlinePackSignature === signature) return;
     const urls = coreOfflineUrls()
       .concat(buildOfflineBasemapUrls(stops, baseMap))
+      .concat(buildOfflineExportMapUrls(stops))
       .concat(buildOfflineTrailUrls(stops));
     sendOfflinePrefetch(urls);
     offlinePackSignature = signature;

@@ -1,7 +1,7 @@
-const CACHE_NAME = 'lemoncoords-v15.19-offline-unsaved';
+const CACHE_NAME = 'lemoncoords-v15.21-land-ownership';
 const RUNTIME_CACHE = 'lemoncoords-runtime-v2';
 const MAP_CACHE = 'lemoncoords-map-v2';
-const MAX_MAP_ENTRIES = 1600;
+const MAX_MAP_ENTRIES = 2100;
 const APP_SHELL = [
   './',
   './index.html',
@@ -17,7 +17,8 @@ const MAP_HOSTS = new Set([
   'tiles.openfreemap.org',
   'tiles.openstreetmap.us',
   'server.arcgisonline.com',
-  'apps.fs.usda.gov'
+  'apps.fs.usda.gov',
+  'tiles.arcgis.com'
 ]);
 const STATIC_HOSTS = new Set([
   'cdnjs.cloudflare.com',
@@ -84,12 +85,12 @@ async function trimMapCache(){
 function prefetchRequest(url){
   const u = new URL(url);
   const init = { credentials:'omit', cache:'no-store' };
-  if(u.hostname === 'server.arcgisonline.com' || u.hostname === 'apps.fs.usda.gov' || STATIC_HOSTS.has(u.hostname)) init.mode = 'no-cors';
+  if(u.hostname === 'server.arcgisonline.com' || u.hostname === 'apps.fs.usda.gov' || u.hostname === 'tiles.arcgis.com' || STATIC_HOSTS.has(u.hostname)) init.mode = 'no-cors';
   return new Request(u.href, init);
 }
 
 async function prefetchUrls(urls){
-  const unique = [...new Set((urls || []).filter(u => typeof u === 'string'))].slice(0, 650);
+  const unique = [...new Set((urls || []).filter(u => typeof u === 'string'))].slice(0, 860);
   const mapCache = await caches.open(MAP_CACHE);
   const runtimeCache = await caches.open(RUNTIME_CACHE);
   /* Keep concurrency modest so opening a trip never fights the visible map. */
