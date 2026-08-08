@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lemoncoords-v15.15.1-multipin-map-fix';
+const CACHE_NAME = 'lemoncoords-v15.16.2-address-fix';
 const APP_SHELL = [
   './',
   './index.html',

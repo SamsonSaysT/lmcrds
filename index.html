@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>LEMONCOORDS.</title>
-<!-- v15.12 wetland hatch + all-pins quip-slot navigation -->
+<!-- v15.16.1 reliable two-finger preview map gesture -->
 <meta name="description" content="Drop a pin. Send it. Every way to find you, in one link.">
 <meta property="og:title" content="LEMONCOORDS.">
 <meta property="og:description" content="Someone sent you a pin. Open it.">
@@ -239,6 +239,10 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 .locatebtn.locating svg{animation:locatePulse .8s ease-in-out infinite alternate}
 @keyframes locatePulse{to{transform:scale(.78);opacity:.46}}
 #map.locked{cursor:default}
+/* The embedded preview is intentionally one-finger page-scroll / two-finger map.
+   pan-y keeps a normal thumb swipe scrolling the page, while excluding browser
+   pinch-zoom over the map so our two-touch handler owns that gesture. */
+#map.locked:not(.fullscreen-gesture){touch-action:pan-y !important;-ms-touch-action:pan-y !important}
 /* Drawn map: the actual vector basemap is styled feature-by-feature in JS.
    No CSS color filter, no black veil, and no duplicate road/label layer.
    This small block only supplies the canvas background while vector tiles load. */
@@ -1387,7 +1391,7 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
           <div class="rowline">
             <div>
               <div class="k">Approximate Address</div>
-              <div class="v addr" id="addrVal"><span class="pending">finding the address…</span></div>
+              <div class="v addr" id="addrVal"><span class="pending">finding approximate address…</span></div>
             </div>
             <button class="linkish" data-copy="addr">copy</button>
           </div>
@@ -1736,6 +1740,17 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
    ===================================================================== */
 
 const $ = s => document.querySelector(s);
+
+/* LemonCoords owns pinch gestures inside its maps. Prevent the browser itself
+   from scaling the entire page on multi-touch; the embedded-map handler below
+   converts two fingers into map pan/zoom instead. */
+["gesturestart","gesturechange","gestureend"].forEach(type=>{
+  document.addEventListener(type, e=>e.preventDefault(), {passive:false});
+});
+document.addEventListener("touchmove", e=>{
+  if(e.touches && e.touches.length > 1 && !e.target.closest?.("#map")) e.preventDefault();
+}, {passive:false});
+
 const B62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const EPOCH_2026 = Date.UTC(2026, 0, 1);
 
@@ -2277,6 +2292,7 @@ function parsePasted(text){
    the moment it lands, then re-rank when Nominatim catches up. */
 const NOM = "https://nominatim.openstreetmap.org";
 const PHOTON = "https://photon.komoot.io/api";
+const PHOTON_REVERSE = "https://photon.komoot.io/reverse";
 
 /* A rough anchor from the browser's timezone, so the very first search already
    knows what continent you're on. No permission prompt, no network call. */
@@ -2521,16 +2537,81 @@ function dedupe(list){
   });
 }
 
+const reverseAddressCache = new Map();
+let nomReverseChain = Promise.resolve();
+let lastNomReverseAt = 0;
+
+function reverseKey(p){
+  return `${Number(p.lat).toFixed(5)},${Number(p.lon).toFixed(5)}`;
+}
+function sleep(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
+async function fetchJsonTimed(url, timeoutMs = 4200){
+  const ac = new AbortController();
+  const timer = setTimeout(()=>ac.abort(), timeoutMs);
+  try{
+    const r = await fetch(url, { signal: ac.signal });
+    if(!r.ok) throw new Error(`http ${r.status}`);
+    return await r.json();
+  }finally{
+    clearTimeout(timer);
+  }
+}
+function photonReverseAddress(j){
+  const f = j?.features?.[0];
+  const a = f?.properties || {};
+  if(!f) return null;
+  const street = [a.housenumber, a.street].filter(Boolean).join(" ");
+  const place = a.city || a.district || a.locality || a.county || "";
+  const region = [a.state, a.postcode].filter(Boolean).join(" ");
+  const lower = String(a.countrycode || "").toLowerCase();
+  const tail = [place, region].filter(Boolean).join(", ");
+  const named = a.name && a.name !== a.street ? a.name : "";
+  const first = street || named;
+  const country = a.country && lower && lower !== "us" ? a.country : "";
+  return [first, tail, country].filter(Boolean).join(", ") || null;
+}
+async function reverseViaPhoton(p){
+  const url = `${PHOTON_REVERSE}?lat=${encodeURIComponent(p.lat)}&lon=${encodeURIComponent(p.lon)}&limit=1`;
+  return photonReverseAddress(await fetchJsonTimed(url, 3800));
+}
+async function reverseViaNominatim(p){
+  /* Public Nominatim asks clients to stay at or below one request/second.
+     Keep this as a sparse fallback only, and serialize it across the page. */
+  const job = nomReverseChain.then(async()=>{
+    const wait = Math.max(0, 1100 - (Date.now() - lastNomReverseAt));
+    if(wait) await sleep(wait);
+    lastNomReverseAt = Date.now();
+    const j = await fetchJsonTimed(
+      `${NOM}/reverse?format=jsonv2&lat=${encodeURIComponent(p.lat)}&lon=${encodeURIComponent(p.lon)}&zoom=18&addressdetails=1`,
+      4300
+    );
+    const a = j.address || {};
+    const line1 = [a.house_number, a.road].filter(Boolean).join(" ");
+    const city  = a.city || a.town || a.village || a.hamlet || a.county || "";
+    const line2 = [city, a.state, a.postcode].filter(Boolean).join(", ");
+    if(a.country_code) biasCC = a.country_code.toLowerCase();
+    return [line1, line2].filter(Boolean).join(", ") || j.display_name || null;
+  });
+  nomReverseChain = job.catch(()=>null);
+  return job;
+}
 async function reverseGeocode(p){
-  const r = await fetch(`${NOM}/reverse?format=jsonv2&lat=${p.lat}&lon=${p.lon}&zoom=18`);
-  if(!r.ok) throw new Error("geocode failed");
-  const j = await r.json();
-  const a = j.address || {};
-  const line1 = [a.house_number, a.road].filter(Boolean).join(" ");
-  const city  = a.city || a.town || a.village || a.hamlet || a.county || "";
-  const line2 = [city, a.state, a.postcode].filter(Boolean).join(", ");
-  if(a.country_code) biasCC = a.country_code.toLowerCase();
-  return [line1, line2].filter(Boolean).join(", ") || j.display_name || null;
+  const key = reverseKey(p);
+  if(reverseAddressCache.has(key)) return reverseAddressCache.get(key);
+  const lookup = (async()=>{
+    try{
+      const photon = await reverseViaPhoton(p);
+      if(photon) return photon;
+    }catch(_){ /* fall through to the throttled backup */ }
+    return await reverseViaNominatim(p);
+  })();
+  reverseAddressCache.set(key, lookup);
+  try{
+    return await lookup;
+  }catch(err){
+    reverseAddressCache.delete(key); // a later tap may retry after a temporary outage
+    throw err;
+  }
 }
 
 /* ---------- geolocation ----------
@@ -3455,12 +3536,80 @@ function lemonIcon(num, isActive, iconIdx, off){
 }
 const youIcon = L.divIcon({ className: "youdot", iconSize: [15, 15], iconAnchor: [8, 8] });
 
+/* Locked preview gesture: one finger belongs to the page, two fingers belong
+   to the map. This is deliberately independent of browser page pinch-zoom and
+   Leaflet's one-finger dragging state so it behaves consistently on mobile. */
+let lockedPreviewGesture = null;
+function installLockedPreviewTwoFingerGesture(){
+  const el = document.getElementById("map");
+  if(!el || el.dataset.twoFingerInstalled === "1") return;
+  el.dataset.twoFingerInstalled = "1";
+
+  const point = (touch, rect)=>L.point(touch.clientX - rect.left, touch.clientY - rect.top);
+  const midpoint = (a,b)=>L.point((a.x+b.x)/2,(a.y+b.y)/2);
+  const distance = (a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const clear = ()=>{ lockedPreviewGesture = null; };
+
+  el.addEventListener("touchstart", e=>{
+    if(mapFullscreen || unlocked || e.touches.length !== 2) return;
+    const rect = el.getBoundingClientRect();
+    const a = point(e.touches[0], rect), b = point(e.touches[1], rect);
+    const dist = distance(a,b);
+    if(!Number.isFinite(dist) || dist < 8) return;
+    e.preventDefault();
+    map.stop();
+    lockedPreviewGesture = { mid: midpoint(a,b), dist };
+  }, {passive:false});
+
+  el.addEventListener("touchmove", e=>{
+    if(!lockedPreviewGesture) return;
+    if(mapFullscreen || unlocked || e.touches.length !== 2){ clear(); return; }
+    e.preventDefault();
+    const rect = el.getBoundingClientRect();
+    const a = point(e.touches[0], rect), b = point(e.touches[1], rect);
+    const mid = midpoint(a,b);
+    const dist = distance(a,b);
+    if(!Number.isFinite(dist) || dist < 8) return;
+
+    map.stop();
+
+    /* Follow the midpoint first: moving both fingers together pans the map. */
+    const pan = lockedPreviewGesture.mid.subtract(mid);
+    if(Math.abs(pan.x) > .1 || Math.abs(pan.y) > .1){
+      map.panBy(pan, {animate:false, noMoveStart:true});
+    }
+
+    /* Then apply the relative pinch around the live midpoint. Fractional zoom
+       makes this feel continuous; ordinary +/- controls still move by 1 level. */
+    const ratio = dist / lockedPreviewGesture.dist;
+    if(Number.isFinite(ratio) && ratio > 0){
+      const minZ = map.getMinZoom(), maxZ = map.getMaxZoom();
+      const target = Math.max(minZ, Math.min(maxZ, map.getZoom() + Math.log2(ratio)));
+      if(Math.abs(target - map.getZoom()) > .01){
+        map.setZoomAround(mid, target, {animate:false});
+      }
+    }
+
+    lockedPreviewGesture = { mid, dist };
+  }, {passive:false});
+
+  el.addEventListener("touchend", e=>{
+    if(!lockedPreviewGesture) return;
+    if(e.touches.length < 2) clear();
+  }, {passive:false});
+  el.addEventListener("touchcancel", clear, {passive:true});
+}
+
 function initMap(){
   /* locked by default so a thumb-scroll down the page doesn't get eaten by the map */
   map = L.map("map", {
     zoomControl: false,
+    /* Preview stays one-finger locked so normal page scrolling feels natural.
+       A dedicated two-touch handler below owns locked-preview pinch + pan;
+       native Leaflet touchZoom is enabled again whenever the map is unlocked. */
     dragging: false, scrollWheelZoom: false, touchZoom: false,
-    doubleClickZoom: false, boxZoom: false, keyboard: false
+    doubleClickZoom: false, boxZoom: false, keyboard: false,
+    zoomSnap: 0.25
   });
   document.getElementById("map").classList.add("locked");
   map.createPane("outdoorsTrailsPane");
@@ -3477,6 +3626,7 @@ function initMap(){
   map.on("zoomend", ()=>{ updateAllButton(); updateOutdoorsDensity(); });
   map.on("click", clearMapSelection);
   setTiles();
+  installLockedPreviewTwoFingerGesture();
 }
 
 /* redraw every stop, the line between them, and the accuracy ring */
@@ -3592,9 +3742,16 @@ function showWholeTrip(){
 let unlocked = false;
 function setMapUnlocked(value){
   unlocked = !!value;
-  const on = unlocked ? "enable" : "disable";
-  ["dragging","scrollWheelZoom","touchZoom","doubleClickZoom","boxZoom","keyboard"]
-    .forEach(h => map[h] && map[h][on]());
+  /* Full unlock enables Leaflet's normal gestures. Locked preview deliberately
+     disables native touchZoom because our dedicated two-finger handler owns it;
+     that prevents the browser and Leaflet from fighting over the same pinch. */
+  ["dragging","scrollWheelZoom","doubleClickZoom","boxZoom","keyboard"]
+    .forEach(h => map[h] && map[h][unlocked ? "enable" : "disable"]());
+  if(map.touchZoom){
+    if(unlocked) map.touchZoom.enable();
+    else map.touchZoom.disable();
+  }
+  if(unlocked) lockedPreviewGesture = null;
   document.getElementById("map").classList.toggle("locked", !unlocked);
   $("#lockBtn").textContent = unlocked ? "lock map" : "unlock map";
   $("#lockBtn").setAttribute("aria-pressed", String(unlocked));
@@ -3769,13 +3926,13 @@ function refreshPin(opts = {}){
   if(target.addr){
     $("#addrVal").textContent = target.addr;
   }else{
-    $("#addrVal").innerHTML = '<span class="pending">finding the address…</span>';
+    $("#addrVal").innerHTML = '<span class="pending">finding approximate address…</span>';
     reverseGeocode(target).then(a=>{
       target.addr = a || "";
       if(pin !== target) return;               /* they moved on while we waited */
       addrText = target.addr;
       $("#addrVal").textContent = a || "No address out here — pure wilderness.";
-    }).catch(()=>{ if(pin === target) $("#addrVal").textContent = "Address unavailable right now."; });
+    }).catch(()=>{ if(pin === target) $("#addrVal").textContent = "Approximate address unavailable right now."; });
   }
 
   renderQR();
@@ -4563,14 +4720,6 @@ function renderFullscreenRoute(){
       if(closeAfterPick) setFsRouteOpen(false);
       else renderFullscreenRoute();
     });
-    if(!s.addr){
-      reverseGeocode(s).then(a=>{
-        if(!a) return;
-        s.addr = a;
-        if(sub.isConnected) sub.textContent = a;
-        if(title.isConnected && !s.note) title.textContent = a;
-      }).catch(()=>{});
-    }
   });
 
   if($("#fsSearchBox")) $("#fsSearchBox").disabled = !editable;
@@ -4709,7 +4858,6 @@ function renderTrip(){
     });
 
     li.append(num, body, skip, handle, del);
-    if(!s.addr) fillAddr(s, null);
     if(tripLocked) startPlayDragOn(li, body);
     else startDragOn(li, handle, body);
     list.appendChild(li);
