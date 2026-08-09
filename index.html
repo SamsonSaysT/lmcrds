@@ -260,8 +260,8 @@ footer.site{border-top:1px solid var(--ink);padding:20px 0 44px;color:var(--mute
 }
 .fullscreenexitbtn{display:none}
 .mapwrap.is-fullscreen .fullscreenexitbtn{
-  display:grid;place-items:center;width:36px;min-width:36px;padding:0;
-  font-size:1.08rem;line-height:1;font-weight:650;
+  display:grid;place-items:center;width:44px;min-width:44px;height:44px;min-height:44px;padding:0;
+  font-size:1.32rem;line-height:1;font-weight:650;
 }
 .locatebtn.locating svg{animation:locatePulse .8s ease-in-out infinite alternate}
 @keyframes locatePulse{to{transform:scale(.78);opacity:.46}}
@@ -329,7 +329,7 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .mapwrap.is-fullscreen .mapui{
   right:max(12px,env(safe-area-inset-right));
   top:max(12px,env(safe-area-inset-top));bottom:auto;
-  z-index:calc(var(--z-mapui) + 4);flex-direction:row;align-items:center;gap:5px;
+  z-index:calc(var(--z-mapui) + 4);flex-direction:column;align-items:flex-end;gap:6px;
 }
 .mapwrap.is-fullscreen .adjustbtn{
   min-height:36px;height:36px;padding:0 8px;font-size:.63rem;
@@ -497,8 +497,9 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
   .mapwrap:not(.is-fullscreen) .fsroutebtn{display:none}
   .mapwrap.is-fullscreen .fsroutepanel{left:10px;right:10px;width:auto;top:calc(max(10px,env(safe-area-inset-top)) + 46px);max-height:62dvh}
   .mapwrap.is-fullscreen .fsroutebtn{right:145px;top:max(10px,env(safe-area-inset-top));padding:8px 10px;gap:6px}
-  .mapwrap.is-fullscreen .mapui{right:8px;top:max(10px,env(safe-area-inset-top));gap:4px}
-  .mapwrap.is-fullscreen .adjustbtn{height:34px;min-height:34px;padding:0 7px;font-size:.59rem}
+  .mapwrap.is-fullscreen .mapui{right:8px;top:max(10px,env(safe-area-inset-top));gap:6px}
+  .mapwrap.is-fullscreen .adjustbtn{height:36px;min-height:36px;padding:0 9px;font-size:.61rem}
+  .mapwrap.is-fullscreen .fullscreenexitbtn{width:44px;min-width:44px;height:44px;min-height:44px;padding:0;font-size:1.32rem}
   .fssearch{grid-template-columns:42px minmax(0,1fr);padding:11px 11px 9px}
   .fssearchfield{grid-column:1/-1}
   .fseditlock{grid-column:1}
@@ -1471,8 +1472,8 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
           </section>
         </div>
         <div class="mapui">
-          <button class="adjustbtn" id="lockBtn" aria-pressed="false">unlock map</button>
           <button class="adjustbtn fullscreenexitbtn" id="fullscreenExitBtn" type="button" aria-label="Exit fullscreen map" title="Exit fullscreen map">×</button>
+          <button class="adjustbtn" id="lockBtn" aria-pressed="false">unlock map</button>
           <button class="adjustbtn" id="dragBtn" aria-pressed="false">adjust pin</button>
         </div>
         <section class="landinfo hidden" id="landInfo" aria-live="polite" aria-label="Land and parcel information">

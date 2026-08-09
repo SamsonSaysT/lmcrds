@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lemoncoords-v15.23-preview-point-titles';
+const CACHE_NAME = 'lemoncoords-v15.24-fullscreen-stack';
 const RUNTIME_CACHE = 'lemoncoords-runtime-v2';
 const MAP_CACHE = 'lemoncoords-map-v2';
 const MAX_MAP_ENTRIES = 2100;
