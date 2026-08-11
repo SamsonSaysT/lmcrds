@@ -432,6 +432,8 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .fsresults:empty{display:none}
 .fsresults button{display:block;width:100%;padding:10px 12px;text-align:left;color:var(--ink)}
 .fsresults li+li{border-top:1px solid var(--hairline)}
+.fssearchmore{display:block;margin:7px auto 0;color:var(--muted);font-size:.68rem;padding:4px 7px}
+.fssearchmore:hover{color:var(--ink)}
 .fsresults button:hover,.fsresults button.on{background:var(--flesh)}
 .fsresultname{display:block;font-weight:650;font-size:.86rem}
 .fsresultctx{display:block;margin-top:2px;color:var(--muted);font-size:.72rem;line-height:1.3}
@@ -788,6 +790,13 @@ body.mapfullscreen{overflow:hidden;overscroll-behavior:none}
 .tripskip:hover{color:var(--ink)}
 .tripskip.isoff{color:var(--rind-text)}
 .tripskip svg{display:block}
+.tripedit{
+  flex:none;color:var(--muted);padding:5px 3px;align-self:center;
+  transition:color .15s ease,transform .15s cubic-bezier(.16,1,.3,1);
+}
+.tripedit:hover{color:var(--ink)}
+.tripedit:active{transform:scale(.9)}
+.tripedit svg{display:block}
 .tripnum svg{display:block}
 .tripnum{cursor:pointer;border:none;padding:0}
 
@@ -982,6 +991,7 @@ body.sharedlocked #dragBtn,
 body.sharedlocked #addStopBtn,
 body.sharedlocked #modeSwitch{display:none !important}
 body.sharedlocked .tripitem.triplocked .triphandle,
+body.sharedlocked .tripitem.triplocked .tripedit,
 body.sharedlocked .tripitem.triplocked .tripskip,
 body.sharedlocked .tripitem.triplocked .tripdel{display:none !important}
 body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:none}
@@ -1052,6 +1062,36 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
   font-variant-numeric:tabular-nums;
 }
 
+/* ---------- trip planner point editor ---------- */
+.tripeditcontent{max-width:460px}
+.tripeditcontent .bigmoon{width:116px;height:116px;margin-bottom:2px}
+.tripeditgroup{margin-top:22px;text-align:left}
+.tripeditlabel{
+  display:block;margin-bottom:7px;color:var(--muted);font-size:.67rem;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;
+}
+.tripeditinput{
+  width:100%;border:0;border-bottom:1px solid var(--ink);background:transparent;color:var(--ink);
+  padding:9px 2px;font:inherit;font-size:.98rem;outline:none;border-radius:0;
+}
+.tripeditinput::placeholder{color:var(--muted)}
+.tripeditinput:focus{border-bottom-width:2px;padding-bottom:8px}
+.tripeditcurrent{
+  margin:11px 0 0;color:var(--muted);font-size:.77rem;line-height:1.4;overflow-wrap:anywhere;
+}
+.tripeditcurrent strong{color:var(--ink);font-weight:620}
+.tripeditresults{max-width:none;margin-top:8px}
+.tripeditdeep{display:block;margin:9px auto 0;font-size:.76rem}
+.tripeditactions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:24px}
+.tripeditactions .btn{font-size:.88rem;padding:11px 18px}
+.tripeditadjust{background:transparent;color:var(--ink);border:1px solid var(--ink)}
+.tripeditadjust:hover{background:var(--flesh)}
+.searchdeep{display:block;margin:9px auto 0;font-size:.76rem}
+@media(max-width:430px){
+  .tripitem{gap:8px;padding-right:9px}
+  .tripedit,.tripskip{padding-left:2px;padding-right:2px}
+  .triphandle{padding-left:2px;padding-right:2px}
+}
 
 /* ---------- mobile hold-to-drag lemon ---------- */
 .holdlemon{
@@ -1390,8 +1430,9 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
           autocorrect="off" spellcheck="false" enterkeyhint="search"
           placeholder="Search a place, address, or coordinates" aria-label="Search a place">
         <ul class="results" id="results"></ul>
+        <button class="linkish searchdeep hidden" id="searchDeepBtn" type="button">search more places</button>
       </div>
-      <p class="lochelp">Type a name, a street, a Plus Code, or coordinates in any format. Results lead with what's near you.</p>
+      <p class="lochelp">Type a name, exact address, restaurant, park, trailhead, hotel, town, Plus Code, or coordinates. Results lead with what's near you.</p>
       <button class="importtiny" id="importLemonBtn" type="button" aria-label="Import a LemonCoords trip file">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M12 3v11m0 0-4-4m4 4 4-4M5 16.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1462,6 +1503,7 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
                   autocorrect="off" spellcheck="false" enterkeyhint="search"
                   placeholder="Search to add a point" aria-label="Search for a point to add">
                 <ul class="fsresults" id="fsResults"></ul>
+                <button class="fssearchmore hidden" id="fsSearchMore" type="button">search more places</button>
               </div>
               <button class="fseditlock hidden" id="fsEditLock" type="button" aria-label="Shared trip editing" title="Shared trip editing"></button>
               <button class="fsadd" id="fsAddPoint" type="button" disabled>Add point</button>
@@ -1600,7 +1642,7 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
 
   <footer class="site">
     <b>How it works:</b> full links keep the trip inside the URL. Optional short links store only the trip payload and lock settings in Cloudflare D1.
-    Search by Photon, addresses by Nominatim, both on OpenStreetMap data · vector basemap by OpenFreeMap / OpenMapTiles.
+    Live search by Photon / OpenStreetMap, exact U.S. addresses by the Census Geocoder, with an optional user-triggered wider OpenStreetMap / raw-POI search · vector basemap by OpenFreeMap / OpenMapTiles.
     Made with 🍋 for people who are lost.
   </footer>
 </div>
@@ -1624,6 +1666,34 @@ body.sharedlocked .tripitem.triplocked .tripnum{cursor:default;pointer-events:no
     <button class="btn btn-ghost addstop" id="addStopBtn">Add a stop</button>
     <div class="tripfoot">
       <span id="tripSize"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ EDIT A TRIP STOP ============ -->
+<div class="sheet hidden" id="tripEditSheet">
+  <button class="modalclose" id="tripEditClose" aria-label="Close">&times;</button>
+  <div class="sheetcontent tripeditcontent">
+    <div id="tripEditMoon"></div>
+    <h2>Edit this stop</h2>
+    <p class="lede">Change the note, move it to a searched place, or fine-tune it directly on the map.</p>
+
+    <div class="tripeditgroup">
+      <label class="tripeditlabel" for="tripEditNote">Note</label>
+      <input class="tripeditinput" id="tripEditNote" type="text" maxlength="120" placeholder="Add a note for this stop">
+    </div>
+
+    <div class="tripeditgroup">
+      <label class="tripeditlabel" for="tripEditSearch">Location</label>
+      <input class="tripeditinput" id="tripEditSearch" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search" placeholder="Search a place or exact address">
+      <div class="tripeditcurrent" id="tripEditCurrent"></div>
+      <ul class="results tripeditresults" id="tripEditResults"></ul>
+      <button class="linkish tripeditdeep hidden" id="tripEditDeep" type="button">search more places</button>
+    </div>
+
+    <div class="tripeditactions">
+      <button class="btn tripeditadjust" id="tripEditAdjust" type="button">adjust on map</button>
+      <button class="btn" id="tripEditDone" type="button">Done</button>
     </div>
   </div>
 </div>
@@ -2512,6 +2582,7 @@ function parsePasted(text){
 const NOM = "https://nominatim.openstreetmap.org";
 const PHOTON = "https://photon.komoot.io/api";
 const PHOTON_REVERSE = "https://photon.komoot.io/reverse";
+const OVERPASS = "https://overpass-api.de/api/interpreter";
 
 /* A rough anchor from the browser's timezone, so the very first search already
    knows what continent you're on. No permission prompt, no network call. */
@@ -2618,15 +2689,17 @@ async function fromPhoton(q, near, signal, local){
                `${(near.lon+d).toFixed(3)},${(near.lat+d).toFixed(3)}`;
     }
   }
-  const r = await fetch(`${PHOTON}/?q=${encodeURIComponent(q)}&limit=8${extra}`, { signal });
+  const r = await fetch(`${PHOTON}/?q=${encodeURIComponent(q)}&limit=12${extra}`, { signal });
   if(!r.ok) throw new Error("photon");
   const j = await r.json();
   return (j.features || []).map((f, i) =>{
     const pr = f.properties || {}, c = f.geometry?.coordinates || [];
     const street = [pr.housenumber, pr.street].filter(Boolean).join(" ");
-    const name = pr.name || street || pr.city || pr.state || pr.country || "Unnamed";
+    /* When Photon knows the house number, show the actual address line first.
+       POIs still keep their real name (restaurant, park, hotel, trailhead, etc.). */
+    const name = pr.housenumber && street ? street : (pr.name || street || pr.city || pr.state || pr.country || "Unnamed");
     return {
-      lat: c[1], lon: c[0], name, rank: i, housenumber: pr.housenumber || "",
+      lat: c[1], lon: c[0], name, rank: i, housenumber: pr.housenumber || "", source:"photon",
       kind: prettyKind(pr), cc: (pr.countrycode || "").toLowerCase(),
       ctx: contextLine({
         street: pr.street, city: pr.city || pr.district || pr.county,
@@ -2669,7 +2742,7 @@ async function fromCensus(q){
     const hn = (line.match(/^(\d+[A-Za-z]?)\b/) || [])[1] || "";
     return {
       lat: +c.y, lon: +c.x, name: titleCase(line), rank: i,
-      housenumber: hn, kind: "address", cc: "us",
+      housenumber: hn, kind: "address", cc: "us", source:"census",
       ctx: contextLine({
         city: titleCase(parts[1] || ""), state: parts[2] || "",
         postcode: parts[3] || "", country: "United States", cc: "us"
@@ -2688,11 +2761,12 @@ async function fromNominatim(q, near, signal, local){
     box = `&viewbox=${(near.lon-d).toFixed(3)},${(near.lat+d).toFixed(3)},` +
           `${(near.lon+d).toFixed(3)},${(near.lat-d).toFixed(3)}&bounded=${local ? 1 : 0}`;
   }
-  const r = await fetch(
-    `${NOM}/search?format=jsonv2&limit=8&addressdetails=1${box}&q=${encodeURIComponent(q)}`,
-    { signal });
-  if(!r.ok) throw new Error("nominatim");
-  const j = await r.json();
+  if(signal?.aborted) throw new DOMException("Aborted", "AbortError");
+  const j = await queuedNominatimJson(
+    `${NOM}/search?format=jsonv2&limit=12&addressdetails=1${box}&q=${encodeURIComponent(q)}`,
+    4800
+  );
+  if(signal?.aborted) throw new DOMException("Aborted", "AbortError");
   return j.map((h, i) =>{
     const a = h.address || {};
     const city = a.city || a.town || a.village || a.hamlet || a.suburb || a.county || "";
@@ -2703,7 +2777,7 @@ async function fromNominatim(q, near, signal, local){
       lat: parseFloat(h.lat), lon: parseFloat(h.lon), name, rank: i,
       housenumber: a.house_number || "",
       kind: a.house_number ? "address" : (h.type || "place").replace(/_/g, " "),
-      cc,
+      cc, source:"nominatim",
       ctx: contextLine({ street: a.road, city, state: a.state,
                          postcode: a.postcode, country: a.country, cc }, name)
     };
@@ -2735,6 +2809,7 @@ function rankHits(list, q, near){
       if(h.housenumber === num) s -= 60;  /* the exact house, wherever it is */
       else if(h.kind === "address") s -= 4;
       else if(!h.approx) s += 6;
+      if(h.source === "census") s -= 24; /* authoritative US address-range match */
     }
     const hay = (h.name + " " + h.ctx).toLowerCase();
     if(words.length && words.every(w => hay.includes(w))) s -= 7;
@@ -2747,6 +2822,35 @@ function rankHits(list, q, near){
   }).sort((a, b) => a.score - b.score);
 }
 
+/* Raw OSM named-object fallback for explicit "search more places" taps.
+   Geocoders intentionally index only a subset/ranking of OSM. Overpass can
+   surface named restaurants, parks, trailheads, hotels, shops and other POIs
+   near the current trip without adding another paid database. */
+async function fromOverpass(q, near, signal){
+  if(!near || leadingNumber(q)) return [];
+  const raw = String(q || "").split(",")[0].trim();
+  if(raw.length < 4 || raw.length > 70) return [];
+  const escaped = raw.replace(/[\\.^$|?*+()[\]{}]/g, "\\$&").replace(/"/g, '\\"');
+  const query = `[out:json][timeout:8];(nwr(around:65000,${near.lat.toFixed(5)},${near.lon.toFixed(5)})["name"~"${escaped}",i];);out center tags 35;`;
+  const r = await fetch(OVERPASS, {
+    method:"POST", signal,
+    headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
+    body:"data=" + encodeURIComponent(query)
+  });
+  if(!r.ok) throw new Error("overpass");
+  const j = await r.json();
+  return (j.elements || []).map((e,i)=>{
+    const t=e.tags||{}, c=e.center||e;
+    const lat=Number(c.lat), lon=Number(c.lon);
+    const kind=(t.amenity||t.tourism||t.leisure||t.shop||t.place||t.highway||t.natural||"place").replace(/_/g," ");
+    const city=t["addr:city"]||t["addr:town"]||t["addr:village"]||t["addr:hamlet"]||"";
+    const state=ABBR[t["addr:state"]]||t["addr:state"]||"";
+    const street=[t["addr:housenumber"],t["addr:street"]].filter(Boolean).join(" ");
+    const ctx=[street,city,state].filter(Boolean).join(", ") || kind;
+    return {lat,lon,name:t.name||t.brand||"Unnamed",rank:i+2,housenumber:t["addr:housenumber"]||"",kind,cc:biasCC||"",ctx,source:"overpass"};
+  }).filter(x=>isFinite(x.lat)&&isFinite(x.lon)&&x.name!=="Unnamed");
+}
+
 function dedupe(list){
   const seen = new Set();
   return list.filter(x =>{
@@ -2757,8 +2861,10 @@ function dedupe(list){
 }
 
 const reverseAddressCache = new Map();
-let nomReverseChain = Promise.resolve();
-let lastNomReverseAt = 0;
+/* One queue for every public Nominatim call — forward and reverse — so the
+   whole app stays below the public service's one-request-per-second ceiling. */
+let nominatimChain = Promise.resolve();
+let lastNominatimAt = 0;
 
 function reverseKey(p){
   return `${Number(p.lat).toFixed(5)},${Number(p.lon).toFixed(5)}`;
@@ -2774,6 +2880,16 @@ async function fetchJsonTimed(url, timeoutMs = 4200){
   }finally{
     clearTimeout(timer);
   }
+}
+function queuedNominatimJson(url, timeoutMs = 4600){
+  const job = nominatimChain.then(async()=>{
+    const wait = Math.max(0, 1100 - (Date.now() - lastNominatimAt));
+    if(wait) await sleep(wait);
+    lastNominatimAt = Date.now();
+    return fetchJsonTimed(url, timeoutMs);
+  });
+  nominatimChain = job.catch(()=>null);
+  return job;
 }
 function photonReverseAddress(j){
   const f = j?.features?.[0];
@@ -2794,25 +2910,18 @@ async function reverseViaPhoton(p){
   return photonReverseAddress(await fetchJsonTimed(url, 3800));
 }
 async function reverseViaNominatim(p){
-  /* Public Nominatim asks clients to stay at or below one request/second.
-     Keep this as a sparse fallback only, and serialize it across the page. */
-  const job = nomReverseChain.then(async()=>{
-    const wait = Math.max(0, 1100 - (Date.now() - lastNomReverseAt));
-    if(wait) await sleep(wait);
-    lastNomReverseAt = Date.now();
-    const j = await fetchJsonTimed(
-      `${NOM}/reverse?format=jsonv2&lat=${encodeURIComponent(p.lat)}&lon=${encodeURIComponent(p.lon)}&zoom=18&addressdetails=1`,
-      4300
-    );
-    const a = j.address || {};
-    const line1 = [a.house_number, a.road].filter(Boolean).join(" ");
-    const city  = a.city || a.town || a.village || a.hamlet || a.county || "";
-    const line2 = [city, a.state, a.postcode].filter(Boolean).join(", ");
-    if(a.country_code) biasCC = a.country_code.toLowerCase();
-    return [line1, line2].filter(Boolean).join(", ") || j.display_name || null;
-  });
-  nomReverseChain = job.catch(()=>null);
-  return job;
+  /* Sparse fallback only; queuedNominatimJson also serializes explicit wider
+     searches so reverse lookups and searches never stampede the public API. */
+  const j = await queuedNominatimJson(
+    `${NOM}/reverse?format=jsonv2&lat=${encodeURIComponent(p.lat)}&lon=${encodeURIComponent(p.lon)}&zoom=18&addressdetails=1`,
+    4300
+  );
+  const a = j.address || {};
+  const line1 = [a.house_number, a.road].filter(Boolean).join(" ");
+  const city  = a.city || a.town || a.village || a.hamlet || a.county || "";
+  const line2 = [city, a.state, a.postcode].filter(Boolean).join(", ");
+  if(a.country_code) biasCC = a.country_code.toLowerCase();
+  return [line1, line2].filter(Boolean).join(", ") || j.display_name || null;
 }
 async function reverseGeocode(p){
   const key = reverseKey(p);
@@ -4893,12 +5002,20 @@ let searchTimer = null, searchAbort = null, activeIdx = -1, currentHits = [];
 function clearResults(){
   $("#results").innerHTML = "";
   currentHits = []; activeIdx = -1;
+  $("#searchDeepBtn")?.classList.add("hidden");
 }
 
 function renderResults(hits){
   const box = $("#results");
   box.innerHTML = "";
   currentHits = hits; activeIdx = -1;
+  const deep = $("#searchDeepBtn");
+  if(deep){
+    const q = $("#searchBox")?.value.trim() || "";
+    deep.classList.toggle("hidden", q.length < 3 || !!parsePasted(q));
+    deep.textContent = "search more places";
+    deep.disabled = false;
+  }
   hits.forEach((h, i)=>{
     const li = document.createElement("li");
     const b = document.createElement("button");
@@ -4911,7 +5028,7 @@ function renderResults(hits){
 
     const kind = document.createElement("span");
     kind.className = "rkind" + (h.approx ? " approx" : "");
-    kind.textContent = h.approx ? "street" : h.kind;
+    kind.textContent = h.approx ? "street" : (h.source === "census" ? "exact address" : h.kind);
 
     const sub = document.createElement("span");
     sub.className = "cc";
@@ -4928,7 +5045,8 @@ function choose(i){
   const h = currentHits[i];
   if(!h) return;
   if(h.cc) biasCC = h.cc;
-  const p = { lat: h.lat, lon: h.lon, ts: Date.now(), acc: 0, note: "" };
+  const exactAddr = h.housenumber ? [h.name, h.ctx].filter(Boolean).join(", ") : "";
+  const p = { lat: h.lat, lon: h.lon, ts: Date.now(), acc: 0, note: "", addr: exactAddr || null };
   if(pickMode) addStop(p); else openPin(p);
 }
 
@@ -5038,12 +5156,39 @@ function runAllSources(q){
   track(fromPhoton(q, near, ac.signal, false));
 
   if(num){
-    /* an address was typed — bring in the sources that know house numbers.
-       Nominatim stays unbounded so a distant address isn't boxed out. */
-    track(fromNominatim(q, near, ac.signal, false));
-    if(biasCC === "us" || STATE_TOKEN.test(q)) track(fromCensus(q));
+    /* US house numbers get an exact live second opinion from Census/TIGER.
+       Public Nominatim is deliberately NOT used for autocomplete — its public
+       usage policy forbids client-side autocomplete. The explicit "search more
+       places" action below may use it because that request is user-triggered. */
+    const enoughAddress = q.replace(/^\s*\d{1,6}\s*/, "").replace(/[^A-Za-z]/g, "").length >= 4;
+    if(enoughAddress && (biasCC === "us" || STATE_TOKEN.test(q) || /\b\d{5}(?:-\d{4})?\b/.test(q))) track(fromCensus(q));
   }
 }
+
+async function deepSearchMain(){
+  const q = $("#searchBox")?.value.trim() || "";
+  if(q.length < 3 || parsePasted(q)) return;
+  const btn = $("#searchDeepBtn");
+  if(btn){ btn.disabled = true; btn.textContent = "searching OpenStreetMap…"; }
+  const near = biasPoint();
+  const ac = new AbortController();
+  try{
+    const settled = await Promise.allSettled([
+      fromNominatim(q, near, ac.signal, false),
+      fromOverpass(q, near, ac.signal)
+    ]);
+    const more = settled.flatMap(r=>r.status === "fulfilled" ? (r.value || []) : []);
+    const ranked = rankHits(dedupe(currentHits.concat(more)), q, near).slice(0, 14);
+    renderResults(ranked);
+    searchCache.set(q, ranked);
+    if(!ranked.length) frontError("Nothing found. Try a nearby town, category, or street name.");
+  }catch{
+    frontError("The wider place search is busy right now. The live results above still work.");
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = "search more places"; }
+  }
+}
+$("#searchDeepBtn")?.addEventListener("click", deepSearchMain);
 
 $("#searchBox").addEventListener("input", liveSearch);
 $("#searchBox").addEventListener("paste", ()=> setTimeout(liveSearch, 40));
@@ -5087,6 +5232,7 @@ function clearFullscreenSearch(clearInput = true){
   if(fsSearchAbort){ fsSearchAbort.abort(); fsSearchAbort = null; }
   fsHits = []; fsActiveHit = -1;
   if($("#fsResults")) $("#fsResults").innerHTML = "";
+  $("#fsSearchMore")?.classList.add("hidden");
   if(clearInput && $("#fsSearchBox")) $("#fsSearchBox").value = "";
   removeFsCandidate();
   fsSetHint(canChangeTrip() ? "" : "unlock editing to add a point");
@@ -5097,6 +5243,8 @@ function renderFullscreenResults(hits){
   const box = $("#fsResults");
   if(!box) return;
   box.innerHTML = "";
+  const q = $("#fsSearchBox")?.value.trim() || "";
+  $("#fsSearchMore")?.classList.toggle("hidden", q.length < 3 || !!parsePasted(q));
   hits.forEach((h, i)=>{
     const li = document.createElement("li");
     const b = document.createElement("button");
@@ -5149,10 +5297,10 @@ async function runFullscreenSearch(q){
     }
     const tasks = [
       fromPhoton(q, near, ac.signal, true),
-      fromPhoton(q, near, ac.signal, false),
-      fromNominatim(q, near, ac.signal, false)
+      fromPhoton(q, near, ac.signal, false)
     ];
-    if((biasCC === "us" || STATE_TOKEN.test(q)) && leadingNumber(q)) tasks.push(fromCensus(q));
+    const enoughAddress = q.replace(/^\s*\d{1,6}\s*/, "").replace(/[^A-Za-z]/g, "").length >= 4;
+    if(enoughAddress && (biasCC === "us" || STATE_TOKEN.test(q) || /\b\d{5}(?:-\d{4})?\b/.test(q)) && leadingNumber(q)) tasks.push(fromCensus(q));
     const settled = await Promise.allSettled(tasks);
     if(fsSearchAbort !== ac || ac.signal.aborted) return;
     const pool = settled.flatMap(r => r.status === "fulfilled" ? (r.value || []) : []);
@@ -5173,10 +5321,29 @@ function fullscreenLiveSearch(){
   if(fsSearchAbort){ fsSearchAbort.abort(); fsSearchAbort = null; }
   removeFsCandidate();
   $("#fsResults").innerHTML = "";
+  $("#fsSearchMore")?.classList.add("hidden");
   if(q.length < 2){ fsSetHint(q ? "type one more character, or clear search to add the map center" : ""); fsSyncAddButton(); return; }
   fsSetHint("searching…");
   fsSearchTimer = setTimeout(()=> runFullscreenSearch(q), 170);
 }
+async function deepSearchFullscreen(){
+  const q = $("#fsSearchBox")?.value.trim() || "";
+  if(q.length < 3 || parsePasted(q)) return;
+  const btn = $("#fsSearchMore");
+  if(btn){ btn.disabled = true; btn.textContent = "searching…"; }
+  const near = biasPoint();
+  try{
+    const ac = new AbortController();
+    const settled = await Promise.allSettled([fromNominatim(q,near,ac.signal,false),fromOverpass(q,near,ac.signal)]);
+    const more = settled.flatMap(r=>r.status === "fulfilled" ? (r.value || []) : []);
+    const ranked = rankHits(dedupe(fsHits.concat(more)), q, near).slice(0, 12);
+    renderFullscreenResults(ranked);
+    fsSetHint(ranked.length ? "pick a result, then add it" : "nothing found — try adding the city", ranked.length ? "" : "bad");
+  }catch{ fsSetHint("wider place search is busy — live results still work", "bad"); }
+  finally{ if(btn){ btn.disabled = false; btn.textContent = "search more places"; } }
+}
+$("#fsSearchMore")?.addEventListener("click", deepSearchFullscreen);
+
 function fsHighlight(next){
   const btns = [...$("#fsResults").querySelectorAll("button")];
   if(!btns.length) return;
@@ -5509,6 +5676,152 @@ $("#fsAddPoint")?.addEventListener("click", addFullscreenCandidate);
   }
 })();
 
+/* ---------- trip planner point editor ---------- */
+let tripEditIndex = -1;
+let tripEditDraft = null;
+let tripEditHits = [];
+let tripEditSearchTimer = null;
+let tripEditSearchAbort = null;
+
+function tripEditCurrentText(){
+  const el = $("#tripEditCurrent");
+  if(!el || !tripEditDraft) return;
+  const label = tripEditDraft.label ? `<strong>${escapeHtml(tripEditDraft.label)}</strong><br>` : "";
+  el.innerHTML = `${label}${tripEditDraft.lat.toFixed(5)}, ${tripEditDraft.lon.toFixed(5)}`;
+}
+function escapeHtml(v){
+  return String(v ?? "").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function renderTripEditHits(hits){
+  const box = $("#tripEditResults");
+  if(!box) return;
+  box.innerHTML = "";
+  tripEditHits = hits || [];
+  tripEditHits.forEach((h,i)=>{
+    const li=document.createElement("li"), b=document.createElement("button");
+    b.type="button";
+    const top=document.createElement("span"); top.className="rname"; top.textContent=h.name;
+    const kind=document.createElement("span"); kind.className="rkind"+(h.approx?" approx":""); kind.textContent=h.approx?"street":(h.source==="census"?"exact address":h.kind);
+    const sub=document.createElement("span"); sub.className="cc"; sub.textContent=h.ctx||"";
+    b.append(top,kind,sub);
+    b.addEventListener("click",()=> chooseTripEditHit(i));
+    li.appendChild(b); box.appendChild(li);
+  });
+  const q=$("#tripEditSearch")?.value.trim()||"";
+  $("#tripEditDeep")?.classList.toggle("hidden",q.length<3||!!parsePasted(q));
+}
+function chooseTripEditHit(i){
+  const h=tripEditHits[i]; if(!h||!tripEditDraft) return;
+  tripEditDraft.lat=h.lat; tripEditDraft.lon=h.lon;
+  tripEditDraft.label=[h.name,h.ctx].filter(Boolean).join(", ");
+  tripEditDraft.addr=h.housenumber ? tripEditDraft.label : "";
+  tripEditCurrentText();
+  $("#tripEditSearch").value="";
+  renderTripEditHits([]);
+  flash("new location selected");
+}
+function openTripEditor(i){
+  if(blockSharedChange()) return;
+  const s=stops[i]; if(!s) return;
+  tripEditIndex=i;
+  tripEditDraft={lat:s.lat,lon:s.lon,addr:s.addr||"",label:s.addr||""};
+  $("#tripEditMoon").innerHTML=bigMoonLemon(moonPhase(),116);
+  $("#tripEditNote").value=s.note||"";
+  $("#tripEditSearch").value="";
+  renderTripEditHits([]);
+  tripEditCurrentText();
+  $("#tripEditSheet").classList.remove("hidden");
+  requestAnimationFrame(()=> $("#tripEditNote")?.focus({preventScroll:true}));
+}
+function closeTripEditor(){
+  clearTimeout(tripEditSearchTimer);
+  if(tripEditSearchAbort){tripEditSearchAbort.abort();tripEditSearchAbort=null;}
+  $("#tripEditSheet")?.classList.add("hidden");
+  tripEditIndex=-1; tripEditDraft=null; tripEditHits=[];
+}
+function commitTripEditor(){
+  if(tripEditIndex<0||!tripEditDraft) return false;
+  if(blockSharedChange()) return false;
+  const s=stops[tripEditIndex]; if(!s) return false;
+  const moved=Math.abs(s.lat-tripEditDraft.lat)>1e-9||Math.abs(s.lon-tripEditDraft.lon)>1e-9;
+  s.note=$("#tripEditNote").value.trim()||null;
+  if(moved){
+    s.lat=tripEditDraft.lat; s.lon=tripEditDraft.lon; s.acc=0; s.ts=Date.now();
+    s.addr=tripEditDraft.addr || null;
+  }
+  if(tripEditIndex===active) pin=s;
+  refreshPin({recenter:false});
+  renderTrip(); renderQR(); syncSharedDirty();
+  if(moved && !s.addr){
+    reverseGeocode(s).then(a=>{
+      if(!a)return; s.addr=a;
+      if(tripEditIndex===active) addrText=a;
+      if(!$("#tripSheet").classList.contains("hidden")) renderTrip();
+      refreshPin({recenter:false}); renderQR();
+    }).catch(()=>{});
+  }
+  flash(moved?(s.note?"stop + note updated":"stop moved"):(s.note?"note updated":"note cleared"));
+  return true;
+}
+async function runTripEditLiveSearch(q){
+  if(tripEditSearchAbort) tripEditSearchAbort.abort();
+  const ac=new AbortController(); tripEditSearchAbort=ac;
+  const near=tripEditDraft?{lat:tripEditDraft.lat,lon:tripEditDraft.lon,cc:biasCC}:biasPoint();
+  let pool=[]; const live=()=>tripEditSearchAbort===ac&&!ac.signal.aborted;
+  const paint=()=>{if(!live())return;renderTripEditHits(rankHits(dedupe(pool),q,near).slice(0,9));};
+  const add=list=>{if(list?.length){pool=pool.concat(list);paint();}};
+  const jobs=[fromPhoton(q,near,ac.signal,true),fromPhoton(q,near,ac.signal,false)];
+  const num=leadingNumber(q);
+  const enoughAddress=q.replace(/^\s*\d{1,6}\s*/,"").replace(/[^A-Za-z]/g,"").length>=4;
+  if(num&&enoughAddress&&(biasCC==="us"||STATE_TOKEN.test(q)||/\b\d{5}(?:-\d{4})?\b/.test(q))) jobs.push(fromCensus(q));
+  await Promise.allSettled(jobs.map(pr=>pr.then(add)));
+  if(live()) tripEditSearchAbort=null;
+}
+function tripEditorSearchInput(){
+  const q=$("#tripEditSearch").value.trim();
+  clearTimeout(tripEditSearchTimer);
+  if(tripEditSearchAbort){tripEditSearchAbort.abort();tripEditSearchAbort=null;}
+  if(q.length<2){renderTripEditHits([]);return;}
+  const parsed=parsePasted(q);
+  if(parsed){
+    renderTripEditHits([{lat:parsed.lat,lon:parsed.lon,name:`${parsed.lat.toFixed(5)}, ${parsed.lon.toFixed(5)}`,ctx:"use these coordinates",kind:"coordinates"}]);
+    return;
+  }
+  tripEditSearchTimer=setTimeout(()=>runTripEditLiveSearch(q),130);
+}
+async function deepSearchTripEditor(){
+  const q=$("#tripEditSearch")?.value.trim()||""; if(q.length<3)return;
+  const btn=$("#tripEditDeep"); if(btn){btn.disabled=true;btn.textContent="searching OpenStreetMap…";}
+  const near=tripEditDraft?{lat:tripEditDraft.lat,lon:tripEditDraft.lon,cc:biasCC}:biasPoint();
+  try{
+    const ac=new AbortController();
+    const settled=await Promise.allSettled([fromNominatim(q,near,ac.signal,false),fromOverpass(q,near,ac.signal)]);
+    const more=settled.flatMap(r=>r.status==="fulfilled"?(r.value||[]):[]);
+    renderTripEditHits(rankHits(dedupe(tripEditHits.concat(more)),q,near).slice(0,14));
+  }catch{ flash("wider search is busy"); }
+  finally{if(btn){btn.disabled=false;btn.textContent="search more places";}}
+}
+$("#tripEditSearch")?.addEventListener("input",tripEditorSearchInput);
+$("#tripEditSearch")?.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){e.preventDefault();renderTripEditHits([]);}
+  else if(e.key==="Enter"){
+    e.preventDefault();
+    if(tripEditHits.length) chooseTripEditHit(0);
+    else deepSearchTripEditor();
+  }
+});
+$("#tripEditDeep")?.addEventListener("click",deepSearchTripEditor);
+$("#tripEditClose")?.addEventListener("click",closeTripEditor);
+$("#tripEditSheet")?.addEventListener("click",e=>{if(e.target===$("#tripEditSheet"))closeTripEditor();});
+$("#tripEditDone")?.addEventListener("click",()=>{if(commitTripEditor())closeTripEditor();});
+$("#tripEditAdjust")?.addEventListener("click",()=>{
+  if(!commitTripEditor())return;
+  const i=tripEditIndex;
+  closeTripEditor(); closeTripSheet();
+  setActive(i); refreshPin({recenter:true});
+  if(!dragging) $("#dragBtn")?.click();
+});
+
 /* ---------- the trip sheet ----------
    Reordering is a free drag: the row you grab lifts out of the stack and
    follows your finger anywhere on screen, the others slide aside to show
@@ -5571,6 +5884,23 @@ function renderTrip(){
       <g stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
         <path d="M9 8h6M9 12h6M9 16h6"/></g></svg>`;
 
+    const edit = document.createElement("button");
+    edit.className = "tripedit";
+    edit.type = "button";
+    edit.title = "Edit note or location";
+    edit.setAttribute("aria-label", `Edit stop ${i + 1} note or location`);
+    edit.disabled = tripLocked;
+    edit.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" aria-hidden="true">
+      <path d="m5 16.5-.7 3.2 3.2-.7L18.6 7.9a2.2 2.2 0 0 0-3.1-3.1Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="m13.8 6.5 3.1 3.1" stroke="currentColor" stroke-width="1.8"/>
+    </svg>`;
+    edit.addEventListener("pointerdown", e => e.stopPropagation());
+    edit.addEventListener("click", e=>{
+      e.stopPropagation();
+      if(blockSharedChange()) return;
+      openTripEditor(i);
+    });
+
     const skip = document.createElement("button");
     skip.className = "tripskip" + (s.off ? " isoff" : "");
     skip.type = "button";
@@ -5605,7 +5935,7 @@ function renderTrip(){
       setTimeout(()=> removeStopAt(i, true), 190);
     });
 
-    li.append(num, body, skip, handle, del);
+    li.append(num, body, edit, skip, handle, del);
     if(tripLocked) startPlayDragOn(li, body);
     else startDragOn(li, handle, body);
     list.appendChild(li);
