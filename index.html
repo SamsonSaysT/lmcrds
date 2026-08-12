@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>LEMONCOORDS.</title>
-<!-- v15.19 unsaved-change guard + offline trip/map resilience + last-updated status -->
+<!-- v15.26 fast-map mode: offline map/trip caching removed; exports remain the durable backup -->
 <meta name="description" content="Drop a pin. Send it. Every way to find you, in one link.">
 <meta property="og:title" content="LEMONCOORDS.">
 <meta property="og:description" content="Someone sent you a pin. Open it.">
@@ -3408,6 +3408,26 @@ function updateOutdoorsButton(){
   outdoorsBtn.setAttribute("aria-label", outdoorsOn ? "Hide roads and trails" : "Show roads and trails");
   outdoorsBtn.title = outdoorsOn ? "Hide roads & trails" : "Roads & trails";
 }
+function syncSatelliteReferenceLayers(){
+  const shouldShow = !!(map && satellite && outdoorsOn);
+  if(!shouldShow){
+    [satRoads, satLabels].forEach(l=> l && l.remove());
+    satRoads = satLabels = null;
+    return;
+  }
+  const opts = { maxZoom:20, maxNativeZoom:19 };
+  if(!satRoads){
+    satRoads = L.tileLayer(TILES.satRoads, {
+      ...opts, zIndex:2, opacity:0, className:"sat-road-tile",
+      attribution:'Transportation &copy; <a href="https://www.esri.com/">Esri</a>'
+    }).addTo(map);
+  }
+  if(!satLabels){
+    satLabels = L.tileLayer(TILES.satLabels, {
+      ...opts, zIndex:3, opacity:0, className:"sat-label-tile"
+    }).addTo(map);
+  }
+}
 function updateOutdoorsDensity(){
   if(!map) return;
   const z = map.getZoom();
@@ -3424,6 +3444,7 @@ function updateOutdoorsDensity(){
 function setOutdoorsOverlay(force){
   if(!map) return;
   if(force) removeOutdoorsOverlay();
+  syncSatelliteReferenceLayers();
   if(!outdoorsOn){ removeOutdoorsOverlay(); updateOutdoorsDensity(); updateOutdoorsButton(); return; }
 
   if(!outdoorsTrails && L.vectorGrid?.protobuf){
@@ -3849,15 +3870,12 @@ function setTiles(force){
        rather than requesting tiles that come back as "no data" */
     const opts = { maxZoom: 20, maxNativeZoom: 19 };
     tileLayer = L.tileLayer(TILES.sat, { ...opts, zIndex: 1,
+      updateWhenIdle:true, keepBuffer:2,
       attribution: 'Imagery &copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics'
     }).addTo(map);
-    satRoads  = L.tileLayer(TILES.satRoads,  {
-      ...opts, zIndex: 2, opacity:0, className:"sat-road-tile",
-      attribution:'Transportation &copy; <a href="https://www.esri.com/">Esri</a>'
-    }).addTo(map);
-    satLabels = L.tileLayer(TILES.satLabels, {
-      ...opts, zIndex: 3, opacity:0, className:"sat-label-tile"
-    }).addTo(map);
+    /* Roads/labels are created only when Roads & Trails is actually enabled.
+       Older builds loaded two invisible Esri reference layers even when off,
+       tripling satellite tile traffic on some multi-pin views. */
   }else{
     tileLayer = addDrawnBasemap();
     /* Graceful fallback only if WebGL/MapLibre is unavailable. No styling layer
@@ -3946,7 +3964,7 @@ const SatToggle = L.Control.extend({
     b.setAttribute("aria-label", "Show the drawn map");
     b.title = "Map";
     L.DomEvent.disableClickPropagation(b);
-    L.DomEvent.on(b, "click", ()=>{ satellite = !satellite; setTiles(); scheduleOfflineTripPack(); });
+    L.DomEvent.on(b, "click", ()=>{ satellite = !satellite; setTiles(); });
     satBtn = b;
     return b;
   }
@@ -4168,6 +4186,14 @@ function initMap(){
   setLandOverlay();
 }
 
+/* One source of truth for the number printed on every route pin.
+   Keeping this separate from marker creation means a reorder can never leave
+   an old number baked into an existing Leaflet marker. */
+function currentRouteNumbers(){
+  let seq = 0;
+  return stops.map(s => (ordered && !s.off) ? ++seq : null);
+}
+
 /* redraw every stop, the line between them, and the accuracy ring */
 function drawStops(recenter){
   markers.forEach(m => m.remove());
@@ -4177,8 +4203,7 @@ function drawStops(recenter){
 
   /* off-route stops are skipped when counting, so the numbers you see are the
      order you'd actually drive */
-  let seq = 0;
-  const numberOf = stops.map(s => (ordered && !s.off) ? ++seq : null);
+  const numberOf = currentRouteNumbers();
 
   stops.forEach((s, i)=>{
     const isSelected = i === mapSelected;
@@ -4188,9 +4213,15 @@ function drawStops(recenter){
       keyboard: false,
       zIndexOffset: isSelected ? 1000 : 0
     }).addTo(map);
+    /* Keep the marker tied to the stop object, not the array index it happened
+       to have when the marker was created. This makes stale closures harmless
+       if a drag reorder completes between frames. */
+    m._lemonStop = s;
     m.on("click", ()=>{
-      mapSelected = i;
-      if(i !== active) setActive(i);
+      const currentIndex = stops.indexOf(s);
+      if(currentIndex < 0) return;
+      mapSelected = currentIndex;
+      if(currentIndex !== active) setActive(currentIndex);
       else{ drawStops(false); updateMapSelectionUI(); renderFullscreenRoute(); }
     });
     m.on("dragend", ()=>{
@@ -4227,6 +4258,30 @@ function drawStops(recenter){
     if(multi) map.fitBounds(L.latLngBounds(stops.map(s => [s.lat, s.lon])).pad(0.22));
     else map.setView([pin.lat, pin.lon], pin.acc > 200 ? 15 : 17);
   }
+  updateMapSelectionUI();
+}
+
+/* Reconcile marker DOM with the current trip array after planner edits/reorders.
+   Normally drawStops already does this, but this guard makes numbering
+   self-healing even if a drag animation, selection change, or future editor
+   path renders the planner before a full map redraw. */
+function syncMapMarkersToTrip(){
+  if(!map || !markers.length) return;
+  const staleOrder = markers.length !== stops.length
+    || markers.some((m, i) => m._lemonStop !== stops[i]);
+  if(staleOrder){
+    drawStops(false);
+    return;
+  }
+
+  const multi = stops.length > 1;
+  const numberOf = currentRouteNumbers();
+  markers.forEach((m, i)=>{
+    const s = stops[i];
+    const isSelected = i === mapSelected;
+    m.setIcon(lemonIcon(multi ? numberOf[i] : null, isSelected, s.icon || 0, !!s.off));
+    m.setZIndexOffset(isSelected ? 1000 : 0);
+  });
   updateMapSelectionUI();
 }
 
@@ -4513,8 +4568,6 @@ function openPin(p, opts = {}){
   else setTiles(true);
   if(push) history.pushState({ view:"pin" }, "", location.pathname + location.hash);
   refreshPin();
-  persistOfflineTripSnapshot();
-  scheduleOfflineTripPack();
 
   if(creatingMap && satellite !== wantsSatellite){
     requestAnimationFrame(()=>{
@@ -4934,7 +4987,7 @@ async function importLemonFile(file){
   clearSharedTripContext(); isRecipient=false; ordered=raw.trip.ordered!==false;
   openPin(list,{push:false,defaultBaseMap:normalizedBaseMap(raw.trip.defaultBaseMap)});
   history.replaceState({view:"pin"},"",`${location.pathname}#${tripHash()}`);
-  persistOfflineTripSnapshot();scheduleOfflineTripPack(true);flash(`imported ${list.length} ${list.length===1?"pin":"pins"}`);
+  flash(`imported ${list.length} ${list.length===1?"pin":"pins"}`);
 }
 $("#importLemonBtn").addEventListener("click",()=>$("#importLemonFile").click());
 $("#importLemonFile").addEventListener("change",async e=>{
@@ -5961,6 +6014,11 @@ function renderTrip(){
   $("#modeList").setAttribute("aria-pressed", !ordered);
   $("#modeList").disabled = tripLocked;
   $("#tripSize").textContent = `whole trip = ${pinUrl().length} characters of link`;
+
+  /* Planner order is authoritative. Reconcile the live map every time the
+     planner renders so pin numbers update immediately after a drag, skip, edit,
+     import, or any other operation that changes route order/state. */
+  syncMapMarkersToTrip();
 }
 
 function setMode(isOrdered){
@@ -6658,7 +6716,6 @@ function chooseSharedDefaultBaseMap(value){
   if(map) setTiles(true);
   syncSharedDirty();
   updateSharedBaseMapChooser();
-  scheduleOfflineTripPack(true);
 }
 
 function setSharedControlState(){
@@ -6762,8 +6819,6 @@ async function initSharedTrip(){
     cacheSharedMeta();
     startSharedUpdatedClock();
     setSharedControlState();
-    persistOfflineTripSnapshot();
-    scheduleOfflineTripPack();
   }catch{
     const cached = cachedSharedMeta(sharedTrip.slug);
     sharedTrip.loading = false;
@@ -6773,8 +6828,8 @@ async function initSharedTrip(){
       sharedTrip.revision = Number(cached.revision || sharedTrip.revision || 1);
       sharedTrip.updatedAt = Number(cached.updatedAt || 0);
       sharedTrip.offline = true;
-      $("#sharedStatus").textContent = "Offline copy. The saved trip and cached map are available; reconnect before publishing edits.";
-      sharedMessage("Viewing the last saved copy on this device.", "good");
+      $("#sharedStatus").textContent = "Couldn’t reach the shared-link service. The trip in this link can still be viewed, but publishing edits needs a connection.";
+      sharedMessage("Using the last known link settings on this device.", "good");
       startSharedUpdatedClock();
     }else{
       sharedTrip.editable = false;
@@ -6782,8 +6837,6 @@ async function initSharedTrip(){
       sharedMessage("The trip still works for viewing and sharing.", "bad");
     }
     setSharedControlState();
-    persistOfflineTripSnapshot();
-    scheduleOfflineTripPack();
   }
 }
 
@@ -6945,8 +6998,6 @@ async function saveSharedTrip(){
     sharedTrip.guardUrl = location.href;
     cacheSharedMeta();
     updateSharedLastUpdated();
-    persistOfflineTripSnapshot();
-    scheduleOfflineTripPack(true);
     sharedMessage("Updated. Everyone opening the same short link will now get this version.", "good");
     setSharedControlState();
     renderQR();
@@ -7220,172 +7271,35 @@ $("#stepNext").addEventListener("click", ()=> setActive((active + 1) % stops.len
   });
 })();
 
-/* ---------- offline trip + map pack ---------- */
-const OFFLINE_SNAPSHOT_KEY = "lemoncoords.offline.last-trip.v1";
-let offlinePackTimer = null;
-let offlinePackSignature = "";
-function persistOfflineTripSnapshot(){
-  if(!stops.length) return;
-  try{
-    const hash = sharedTrip?.isPrivate
-      ? (sharedTrip.encryptedPayload || privateHash || location.hash.slice(1))
-      : tripHash();
-    localStorage.setItem(OFFLINE_SNAPSHOT_KEY, JSON.stringify({
-      hash,
-      ordered,
-      defaultBaseMap:effectiveTripBaseMap(),
-      shared:sharedTrip?.slug || "",
-      revision:Number(sharedTrip?.revision || 1),
-      savedAt:Date.now()
-    }));
-  }catch{}
-}
-function loadOfflineTripSnapshot(){
-  try{
-    const j = JSON.parse(localStorage.getItem(OFFLINE_SNAPSHOT_KEY) || "null");
-    return j && j.hash && Date.now() - Number(j.savedAt || 0) < 1000 * 60 * 60 * 24 * 30 ? j : null;
-  }catch{ return null; }
-}
-function tileXY(lat, lon, z){
-  const n = 2 ** z;
-  const x = Math.floor((lon + 180) / 360 * n);
-  const rad = Math.max(-85.05112878, Math.min(85.05112878, lat)) * Math.PI / 180;
-  const y = Math.floor((1 - Math.asinh(Math.tan(rad)) / Math.PI) / 2 * n);
-  return { x:Math.max(0, Math.min(n-1, x)), y:Math.max(0, Math.min(n-1, y)) };
-}
-function buildOfflineBasemapUrls(list, baseMap, maxTiles = 520){
-  if(!list?.length) return [];
-  const urls = [];
-  const seen = new Set();
-  const add = u=>{ if(urls.length < maxTiles && !seen.has(u)){ seen.add(u); urls.push(u); } };
-  const zooms = baseMap === "satellite" ? [8,9,10,11,12,13,14,15] : [8,9,10,11,12,13,14];
-  for(const z of zooms){
-    if(urls.length >= maxTiles) break;
-    const pts = list.map(p=>tileXY(p.lat,p.lon,z));
-    let minX=Math.min(...pts.map(p=>p.x)), maxX=Math.max(...pts.map(p=>p.x));
-    let minY=Math.min(...pts.map(p=>p.y)), maxY=Math.max(...pts.map(p=>p.y));
-    minX--; minY--; maxX++; maxY++;
-    const n = 2 ** z;
-    minX=Math.max(0,minX); minY=Math.max(0,minY); maxX=Math.min(n-1,maxX); maxY=Math.min(n-1,maxY);
-    const bboxCount=(maxX-minX+1)*(maxY-minY+1);
-    const remaining=maxTiles-urls.length;
-    if(bboxCount <= remaining && bboxCount <= 150){
-      for(let x=minX;x<=maxX;x++) for(let y=minY;y<=maxY;y++){
-        add(baseMap === "satellite"
-          ? `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`
-          : `https://tiles.openfreemap.org/planet/latest/${z}/${x}/${y}.pbf`);
-      }
-    }else{
-      /* At high zooms a long route can span thousands of tiles. Keep a useful
-         3x3 neighborhood around every stop instead of burning the device quota. */
-      for(const p of pts){
-        for(let dx=-1;dx<=1;dx++) for(let dy=-1;dy<=1;dy++){
-          const x=p.x+dx, y=p.y+dy;
-          if(x<0||y<0||x>=n||y>=n) continue;
-          add(baseMap === "satellite"
-            ? `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`
-            : `https://tiles.openfreemap.org/planet/latest/${z}/${x}/${y}.pbf`);
-          if(urls.length >= maxTiles) break;
-        }
-        if(urls.length >= maxTiles) break;
-      }
-    }
-  }
-  return urls;
-}
-function buildOfflineExportMapUrls(list, maxTiles = 180){
-  if(!list?.length) return [];
-  const urls=[],seen=new Set(),z=14,n=2**z;
-  const add=u=>{if(urls.length<maxTiles&&!seen.has(u)){seen.add(u);urls.push(u)}};
-  for(const stop of list){
-    const p=tileXY(stop.lat,stop.lon,z);
-    for(let dx=-1;dx<=1;dx++) for(let dy=-1;dy<=1;dy++){
-      const x=p.x+dx,y=p.y+dy;if(x<0||y<0||x>=n||y>=n)continue;
-      add(`https://tiles.openfreemap.org/planet/latest/${z}/${x}/${y}.pbf`);
-    }
-    if(urls.length>=maxTiles) break;
-  }
-  return urls;
-}
-function buildOfflineTrailUrls(list, maxTiles = 120){
-  if(!outdoorsOn || !list?.length) return [];
-  const urls=[], seen=new Set();
-  const add=u=>{ if(urls.length<maxTiles && !seen.has(u)){ seen.add(u); urls.push(u); } };
-  for(const z of [12,13,14]){
-    const n=2**z;
-    for(const stop of list){
-      const p=tileXY(stop.lat,stop.lon,z);
-      for(let dx=-1;dx<=1;dx++) for(let dy=-1;dy<=1;dy++){
-        const x=p.x+dx,y=p.y+dy;
-        if(x<0||y<0||x>=n||y>=n) continue;
-        add(`https://tiles.openstreetmap.us/vector/trails/${z}/${x}/${y}.mvt`);
-      }
-      if(urls.length>=maxTiles) break;
-    }
-    if(urls.length>=maxTiles) break;
-  }
-  return urls;
-}
-function coreOfflineUrls(){
-  const urls = [
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css",
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js",
-    "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js",
-    "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
-    "https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css",
-    "https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js",
-    "https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.3/leaflet-maplibre-gl.js",
-    "https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.min.js",
-    TILES.drawnStyle,
-    "https://tiles.openfreemap.org/planet",
-    "https://tiles.openfreemap.org/sprites/ofm_f384/ofm.json",
-    "https://tiles.openfreemap.org/sprites/ofm_f384/ofm.png",
-    "https://tiles.openfreemap.org/sprites/ofm_f384/ofm@2x.json",
-    "https://tiles.openfreemap.org/sprites/ofm_f384/ofm@2x.png"
-  ];
-  /* Basic Latin glyph ranges cover the road/place labels users are most likely
-     to encounter in an offline US trip. The map still degrades gracefully if a
-     rarer script was never seen online. */
-  for(const face of ["Noto Sans Regular","Noto Sans Italic","Noto Sans Bold"]){
-    for(const range of ["0-255","256-511"]){
-      urls.push(`https://tiles.openfreemap.org/fonts/${encodeURIComponent(face)}/${range}.pbf`);
-    }
-  }
-  return urls;
-}function sendOfflinePrefetch(urls){
-  if(!("serviceWorker" in navigator) || !urls?.length) return;
-  navigator.serviceWorker.ready.then(reg=>{
-    (reg.active || navigator.serviceWorker.controller)?.postMessage({ type:"PREFETCH_URLS", urls });
-  }).catch(()=>{});
-}
-function scheduleOfflineTripPack(force = false){
-  clearTimeout(offlinePackTimer);
-  offlinePackTimer = setTimeout(()=>{
-    if(!stops.length || !navigator.onLine) return;
-    const baseMap = effectiveTripBaseMap();
-    const signature = `${baseMap}:${tripHash()}`;
-    if(!force && offlinePackSignature === signature) return;
-    const urls = coreOfflineUrls()
-      .concat(buildOfflineBasemapUrls(stops, baseMap))
-      .concat(buildOfflineExportMapUrls(stops))
-      .concat(buildOfflineTrailUrls(stops));
-    sendOfflinePrefetch(urls);
-    offlinePackSignature = signature;
-    navigator.storage?.persist?.().catch(()=>{});
-  }, 1300);
-}
-window.addEventListener("online", ()=> scheduleOfflineTripPack());
-
-/* ---------- offline shell ---------- */
+/* ---------- fast-map service worker ---------- */
+/*
+   v15.26 intentionally does not cache map imagery, vector tiles, parcel tiles,
+   trail tiles, trip snapshots, or export-map tiles. The .lemon/KML/GPX/PDF
+   exports are the durable offline path; the live map always talks directly to
+   its current providers. The tiny service worker exists only so installed/PWA
+   behavior stays intact and so it can purge the old aggressive caches.
+*/
 if("serviceWorker" in navigator &&
    (location.protocol === "https:" || location.hostname === "localhost")){
   window.addEventListener("load", ()=>{
-    navigator.serviceWorker.register("./service-worker.js").then(()=>{
-      sendOfflinePrefetch(coreOfflineUrls());
-      if(stops.length){ persistOfflineTripSnapshot(); scheduleOfflineTripPack(); }
-    }).catch(()=>{});
+    navigator.serviceWorker.register("./service-worker.js?v=15.26", { updateViaCache:"none" })
+      .then(reg=> reg.update().catch(()=>{}))
+      .catch(()=>{});
   });
 }
+
+/* Clean the old v15.19+ map/runtime caches immediately on capable browsers.
+   The new service worker repeats this during activation so existing installs
+   are cleaned even if this page was previously controlled by the old worker. */
+if("caches" in window){
+  caches.keys().then(keys=> Promise.all(keys
+    .filter(k=> k.startsWith("lemoncoords-map-") ||
+                k.startsWith("lemoncoords-runtime-") ||
+                k.startsWith("lemoncoords-v"))
+    .map(k=> caches.delete(k))
+  )).catch(()=>{});
+}
+try{ localStorage.removeItem("lemoncoords.offline.last-trip.v1"); }catch{}
 
 /* ---------- boot ---------- */
 function readHash(){
@@ -7414,38 +7328,9 @@ function readHash(){
     openPin(got.stops, { push:false, defaultBaseMap:got.defaultBaseMap });
     if(sharedTrip) initSharedTrip();
   } else {
-    const offlineSnap = !navigator.onLine ? loadOfflineTripSnapshot() : null;
-    if(offlineSnap){
-      isRecipient = !!offlineSnap.shared;
-      if(offlineSnap.hash[0] === "P"){
-        if(offlineSnap.shared){
-          const q = new URLSearchParams(); q.set("shared", offlineSnap.shared); q.set("rev", String(offlineSnap.revision || 1));
-          history.replaceState(null, "", `${location.pathname}?${q.toString()}#${offlineSnap.hash}`);
-          sharedTrip = sharedStateFromLocation();
-        }
-        openPrivateGate(offlineSnap.hash);
-      }else{
-        const trip = decodeTrip(offlineSnap.hash) || (()=>{ const one=unpackPin(offlineSnap.hash); return one ? {stops:[one],ordered:true,defaultBaseMap:null} : null; })();
-        if(trip){
-          if(offlineSnap.shared){
-            const q = new URLSearchParams(); q.set("shared", offlineSnap.shared); q.set("rev", String(offlineSnap.revision || 1));
-            history.replaceState(null, "", `${location.pathname}?${q.toString()}#${offlineSnap.hash}`);
-            sharedTrip = sharedStateFromLocation();
-          }
-          ordered = trip.ordered;
-          openPin(trip.stops, { push:false, defaultBaseMap:trip.defaultBaseMap || offlineSnap.defaultBaseMap });
-          if(sharedTrip) initSharedTrip();
-          flash("offline trip restored");
-        }else{
-          history.replaceState(null, "", location.pathname);
-          showFront();
-        }
-      }
-    }else{
-      /* clean slate every visit, same as the weather */
-      history.replaceState(null, "", location.pathname);
-      showFront();
-    }
+    /* No hidden trip restore. Durable backups now live in explicit exports. */
+    history.replaceState(null, "", location.pathname);
+    showFront();
   }
 })();
 </script>
