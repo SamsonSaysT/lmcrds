@@ -4535,11 +4535,60 @@ function refreshPin(opts = {}){
   syncSharedDirty();
 }
 
+/* A QR at the bottom of a saved trip should resolve through the saved short
+   link, not re-encode the giant standalone hash URL. Short-link pages always
+   win. We also remember a short URL made on this device for this exact trip
+   payload, so the QR switches immediately after the link is created and stays
+   correct if the same long trip is reopened later. */
+let madeShortForQr = null;
+const SHORT_QR_PREFIX = "lemoncoords.shortqr.v1.";
+
+function shortQrFingerprint(text){
+  text = String(text || "");
+  let a = 2166136261 >>> 0;
+  let b = 5381 >>> 0;
+  for(let i = 0; i < text.length; i++){
+    const c = text.charCodeAt(i);
+    a ^= c;
+    a = Math.imul(a, 16777619) >>> 0;
+    b = (Math.imul(b, 33) ^ c) >>> 0;
+  }
+  return `${a.toString(36)}.${b.toString(36)}.${text.length}`;
+}
+
+function rememberShortForQr(url){
+  const hash = tripHash();
+  madeShortForQr = { hash, url };
+  try{ localStorage.setItem(SHORT_QR_PREFIX + shortQrFingerprint(hash), url); }catch{}
+}
+
+function rememberedShortForQr(hash){
+  try{
+    const url = localStorage.getItem(SHORT_QR_PREFIX + shortQrFingerprint(hash)) || "";
+    if(!url) return "";
+    const parsed = new URL(url);
+    if(parsed.origin !== new URL(SHORTENER).origin) return "";
+    return url;
+  }catch{ return ""; }
+}
+
+function qrUrl(){
+  /* A page reached through go.lemoncoords.com already knows its canonical slug. */
+  const shared = originalSharedUrl();
+  if(shared) return shared;
+
+  const hash = tripHash();
+  if(madeShortForQr?.hash === hash && madeShortForQr.url) return madeShortForQr.url;
+
+  const remembered = rememberedShortForQr(hash);
+  return remembered || pinUrl();
+}
+
 function renderQR(){
   const el = $("#qr");
   el.innerHTML = "";
   new QRCode(el, {
-    text: pinUrl(),
+    text: qrUrl(),
     width: 512, height: 512,
     colorDark: "#23241B", colorLight: "#FFFDF4",
     correctLevel: QRCode.CorrectLevel.M
@@ -7149,6 +7198,8 @@ async function makeShortLink(){
     }
     $("#shortUrl").textContent = j.shortUrl.replace(/^https?:\/\//, "");
     $("#shortUrl").dataset.url = j.shortUrl;
+    rememberShortForQr(j.shortUrl);
+    renderQR();
     const expiryText = j.expiresAt
       ? `Gone ${new Date(j.expiresAt * 1000).toLocaleDateString([], {month:"long", day:"numeric"})}.`
       : "It never expires.";
@@ -7282,7 +7333,7 @@ $("#stepNext").addEventListener("click", ()=> setActive((active + 1) % stops.len
 if("serviceWorker" in navigator &&
    (location.protocol === "https:" || location.hostname === "localhost")){
   window.addEventListener("load", ()=>{
-    navigator.serviceWorker.register("./service-worker.js?v=15.26", { updateViaCache:"none" })
+    navigator.serviceWorker.register("./service-worker.js?v=15.26.1", { updateViaCache:"none" })
       .then(reg=> reg.update().catch(()=>{}))
       .catch(()=>{});
   });

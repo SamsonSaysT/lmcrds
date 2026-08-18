@@ -1,4 +1,4 @@
-/* LemonCoords v15.26 — fast-map / no offline tile cache.
+/* LemonCoords v15.26.1 — fast-map / no offline tile cache.
    This worker intentionally has no fetch handler: every map, imagery, trail,
    parcel, geocoder and app request goes directly to the network/browser cache.
    Activation only removes the aggressive Cache Storage entries used by older
